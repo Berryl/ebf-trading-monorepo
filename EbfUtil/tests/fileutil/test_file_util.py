@@ -86,4 +86,3 @@ class TestGetBaseDir:
     def test_get_testing_book_from_project_root(self, sut):
         file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=r'tests\fileutil')
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
-        # Open and verify the workbook (basic check for non-empty content)
