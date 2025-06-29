@@ -104,8 +104,12 @@ class TestUserBaseStructure:
 
     @pytest.mark.parametrize("filename", ['snapshot.xlsm', 'cagr.xlsm'])  # noqa
     def test_get_file_from_user_base(self, sut, filename):
-        path = str(sut.get_file_from_user_base(filename))
+        path = str(sut.get_file_from_user_base_dir(filename))
         assert path.endswith(filename)
+
+    def test_test_get_file_from_user_base_with_search_path(self, sut):
+        path = sut.get_file_from_user_base_dir('constants.xlsm', search_path='dev')
+        assert path.exists()
 
     def test_get_file_from_user_base_when_bad_filename_raises_error(self, sut):
         bad_filename = 'blah'
@@ -113,9 +117,9 @@ class TestUserBaseStructure:
         bad_path = re.escape(str(base_dir / bad_filename))
         err_msg = fr"The file {bad_path} does not exist in the {base_dir.name} directory."
         with pytest.raises(FileNotFoundError, match=err_msg):
-            sut.get_file_from_user_base(bad_filename)
+            sut.get_file_from_user_base_dir(bad_filename)
 
     @pytest.mark.parametrize("username", ['smith', 'jones'])
-    def test_get_user_specific_path_adjust_for_any_user(self, sut, username):
+    def test_get_user_base_dir_adjusts_for_any_user(self, sut, username):
         with patch('os.getlogin', return_value=username):  # noqa
-            assert username in str(sut.get_user_specific_path())
+            assert username in str(sut.get_user_base_dir())

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Union
 
-BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'
+BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'  # intentionally domain specific but overridable
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class FileUtil:
 
         Args:
             base_structure: Optional override for the standard Investing path.
-                noteL: different base structures should use different FileUtil instances
+                note: different base structures should use different FileUtil instances
             markers: Optional list of files/directories that indicate project root.
             priority_marker: Optional single marker to prioritize.
             project_root_override: Explicit path to force as project root.
@@ -219,34 +219,29 @@ class FileUtil:
         """
         Returns the user's base structure directory path.
         """
-        return self.get_user_specific_path()
-
-    def get_file_from_user_base(self, file_name: Union[str, Path]) -> Path:
-        """
-        Resolves a file path inside the user's base structure directory.
-        This ignores the project root entirely.
-
-        Raises:
-            FileNotFoundError if the file does not exist.
-        """
-        return self._resolve_file_in_dir(self.get_user_base_dir(), file_name)
-
-    def _resolve_file_in_dir(self, base: Path, file_name: Union[str, Path]) -> Path:
-        if isinstance(file_name, str):
-            file_name = Path(file_name)
-        full_path = base / file_name
-        self._ensure_path_exists(full_path, base.name)
-        return full_path
-
-    def get_user_specific_path(self) -> Path:
-        """
-        Returns the full path for the user's base_structure location.
-        """
         try:
             username = os.getlogin()
         except OSError:
             username = os.environ.get('USERNAME', 'default')
         return Path(f"C:/Users/{username}") / self.base_structure
+
+    def get_file_from_user_base_dir(self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path:
+        """
+        Resolves a file path inside the user's base structure directory.
+
+        Accepts an optional search_path to specify subdirectories.
+
+        This ignores the project root entirely.
+
+        Raises:
+            FileNotFoundError if the file does not exist.
+        """
+        base = self.get_user_base_dir()
+        if isinstance(search_path, str):
+            search_path = Path(search_path)
+        full_path = base / search_path / file_name
+        self._ensure_path_exists(full_path, base.name)
+        return full_path
 
     @staticmethod
     def _ensure_valid_marker_args(markers, priority_marker):
