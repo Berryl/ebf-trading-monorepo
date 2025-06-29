@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -74,6 +75,11 @@ class TestGetProjectRoot:
         file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path='tests/fileutil')
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
+    def test_get_file_from_project_root_when_bad_filename_raises_error(self, sut):
+        err_msg = f"The 'project root' file 'blah' does not exist in the '' folder. "
+        with pytest.raises(FileNotFoundError, match=err_msg):
+            sut.get_file_from_project_root('blah')
+
     def test_get_project_root_raises_error_if_marker_list_is_empty_strings(self, sut):
         with pytest.raises(ValueError, match="Markers must be non-empty strings"):
             sut.get_project_root(markers=['', ''])
@@ -112,12 +118,9 @@ class TestUserBaseStructure:
         assert path.exists()
 
     def test_get_file_from_user_base_when_bad_filename_raises_error(self, sut):
-        bad_filename = 'blah'
-        base_dir = sut.get_user_base_dir()
-        bad_path = re.escape(str(base_dir / bad_filename))
-        err_msg = fr"The file {bad_path} does not exist in the {base_dir.name} directory."
+        err_msg = f"The 'user' file 'blah' does not exist in the 'Investing' folder. "
         with pytest.raises(FileNotFoundError, match=err_msg):
-            sut.get_file_from_user_base_dir(bad_filename)
+            sut.get_file_from_user_base_dir('blah')
 
     @pytest.mark.parametrize("username", ['smith', 'jones'])
     def test_get_user_base_dir_adjusts_for_any_user(self, sut, username):

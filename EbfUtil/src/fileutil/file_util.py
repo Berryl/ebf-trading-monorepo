@@ -30,6 +30,8 @@ class FileUtil:
 
         # For user-based files:
         util.get_file_from_user_base("Dev/constants.xlsm")
+
+    Note: path support is currently Windows only
     """
 
     def __init__(
@@ -108,7 +110,8 @@ class FileUtil:
                             Useful for prioritizing .git over requirements.txt, etc.
             max_search_depth: Maximum number of parent directories to search before giving up.
                              Default is 5 levels up from the current file.
-                             # Add: "Set to -1 for unlimited search (use cautiously)"
+                             # Add: "Set to -1 for 'unlimited' search (use cautiously)"
+                             # unlimited means 100 levels (hardcoded for now)
 
         Returns:
             Path to the project root directory. Falls back to the directory
@@ -212,7 +215,7 @@ class FileUtil:
             search_path = Path(search_path)
 
         full_path = self.get_project_root() / search_path / file_name
-        self._ensure_path_exists(full_path, f"project root{'/' + str(search_path) if search_path else ''}")
+        self._ensure_path_exists(full_path, "project root", search_path)
         return full_path
 
     def get_user_base_dir(self) -> Path:
@@ -240,7 +243,7 @@ class FileUtil:
         if isinstance(search_path, str):
             search_path = Path(search_path)
         full_path = base / search_path / file_name
-        self._ensure_path_exists(full_path, base.name)
+        self._ensure_path_exists(full_path, 'user', base)
         return full_path
 
     @staticmethod
@@ -251,8 +254,9 @@ class FileUtil:
             raise ValueError("Priority marker must be a non-empty string")
 
     @staticmethod
-    def _ensure_path_exists(full_path: Path, dir_name: str):
+    def _ensure_path_exists(full_path: Path, file_qualifier: str, folder: Union[str, Path]):
         if not full_path.exists():
-            root = full_path.parents[-3] if len(full_path.parents) > 2 else 'N/A'
-            msg = f"The file {full_path} does not exist in the {dir_name} directory. Searched from project root: {root}"
+            folder_desc = folder.name if isinstance(folder, Path) else file_qualifier
+            msg = (f"The '{file_qualifier}' file '{full_path.name}' does not "
+                   f"exist in the '{folder_desc}' folder. [{(str(full_path.resolve()))}]")
             raise FileNotFoundError(msg)
