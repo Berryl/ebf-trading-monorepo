@@ -189,31 +189,37 @@ class FileUtil:
         logger.warning(f"No project markers found; falling back to: {fallback}")
         return fallback
 
-    def get_project_root_base_dir(self) -> Path:
+    def get_file_from_project_root(
+            self,
+            file_name: Union[str, Path],
+            search_path: Union[str, Path] = ""
+    ) -> Path:
         """
-        Resolves the base_structure directory under the *project root*.
+        Resolves a file path relative to the project root.
+
+        Example:
+            get_file_from_project_root("my file.txt", search_path="tests/data")
+
+        Equivalent to:
+            project_root / search_path / file_name
 
         Raises:
-            FileNotFoundError if the directory does not exist.
+            FileNotFoundError if the resulting file does not exist.
         """
-        base = self.get_project_root() / self.base_structure
-        self._ensure_path_exists(base, 'project root base')
-        return base
+        if isinstance(file_name, str):
+            file_name = Path(file_name)
+        if isinstance(search_path, str):
+            search_path = Path(search_path)
+
+        full_path = self.get_project_root() / search_path / file_name
+        self._ensure_path_exists(full_path, f"project root{'/' + str(search_path) if search_path else ''}")
+        return full_path
 
     def get_user_base_dir(self) -> Path:
         """
         Returns the user's base structure directory path.
         """
         return self.get_user_specific_path()
-
-    def get_file_from_project_root_base(self, file_name: Union[str, Path]) -> Path:
-        """
-        Resolves a file path inside the project-root-based base directory.
-
-        Raises:
-            FileNotFoundError if the file does not exist.
-        """
-        return self._resolve_file_in_dir(self.get_project_root_base_dir(), file_name)
 
     def get_file_from_user_base(self, file_name: Union[str, Path]) -> Path:
         """
