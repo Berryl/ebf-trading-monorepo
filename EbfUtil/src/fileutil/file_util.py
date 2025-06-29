@@ -10,18 +10,26 @@ logger = logging.getLogger(__name__)
 
 class FileUtil:
     """
-    Helper to locate files used in various investing-related projects,
-    including Office automation desktop & browser-based apps.
+    Utility for locating files in projects.
 
-    Supports resolving a "project root" by searching for known markers
-    (e.g., .idea, .git) upward from this library's location by default.
+    Supports *two clear resolution strategies*:
 
-    For projects embedding this as a dependency, you can explicitly
-    override the root to ensure resolution is relative to *that*
-    consuming project, not the installed package location.
+    1. Project-root-based:
+       - Uses either a marker search or explicit override to locate the project root.
+       - Resolves base_structure relative to that root. This is typical but not limited to testing files
 
-    Example usage for clients:
-        util = FileUtil(project_root_override=Path(__file__).parent.parent)
+    2. User based:
+       - Always resolves to USERPROFILE + base_structure.
+       - Ignores project root or markers entirely.
+       - This is typical of files used in production that reside outside of any python project
+
+    Example usage:
+
+        # For project-local files:
+        util.get_file_from_project_root_base("TestingWb.xlsm")
+
+        # For user-based files:
+        util.get_file_from_user_base("Dev/constants.xlsm")
     """
 
     def __init__(
