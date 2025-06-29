@@ -2,7 +2,7 @@
 name = "ebfutil"
 version = "0.1.0"
 description = "Utilities for locating investing-related files"
-authors = [{ name = "Your Name" }]
+authors = [{ name = "EBF" }]
 requires-python = ">=3.9"
 
 [build-system]
