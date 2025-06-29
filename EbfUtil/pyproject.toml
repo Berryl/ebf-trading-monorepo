@@ -1,0 +1,13 @@
+[project]
+name = "ebfutil"
+version = "0.1.0"
+description = "Utilities for locating investing-related files"
+authors = [{ name = "Your Name" }]
+requires-python = ">=3.9"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
