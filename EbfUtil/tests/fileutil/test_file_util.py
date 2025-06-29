@@ -78,7 +78,7 @@ class TestGetBaseDir:
         with pytest.raises(FileNotFoundError, match=err_msg):
             sut.get_file_from_investing(bad_filename)
 
-    @pytest.mark.parametrize("username", ['smith'])
+    @pytest.mark.parametrize("username", ['smith', 'jones'])
     def test_get_user_specific_path_adjust_for_any_user(self, sut, username):
         with patch('os.getlogin', return_value=username):  # noqa
             assert username in str(sut.get_user_specific_path())
