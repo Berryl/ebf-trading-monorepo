@@ -26,10 +26,10 @@ class FileUtil:
     Example usage:
 
         # For project-local files:
-        util.get_file_from_project_root_base("TestingWb.xlsm")
+        util.get_file_from_project_root("TestingWb.xlsm")
 
         # For user-based files:
-        util.get_file_from_user_base("Dev/constants.xlsm")
+        util.get_file_from_user_base_dir("Dev/constants.xlsm")
 
     Note: path support is currently Windows only
     """
