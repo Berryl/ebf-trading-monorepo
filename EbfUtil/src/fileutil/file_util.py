@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union, TypedDict
+from typing import Union
 
 BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'
 
@@ -21,7 +21,7 @@ class FileUtil:
     2. User based:
        - Always resolves to USERPROFILE + base_structure.
        - Ignores project root or markers entirely.
-       - This is typical of files used in production that reside outside of any python project
+       - This is typical of production files used outside any python project
 
     Example usage:
 
@@ -43,15 +43,13 @@ class FileUtil:
         Initialize FileUtil.
 
         Args:
-            base_structure:  Optional Path to the substructure under the project root (default is Investing)
-            markers: Optional list of file/directory names indicating a project root.
-                     If None, uses the default common_project_markers list.
-            priority_marker: Optional single marker to check first at each level.
-            project_root_override: Optional explicit Path to use as project root,
-                                   bypassing marker search entirely.
+            base_structure: Optional override for the standard Investing path.
+                noteL: different base structures should use different FileUtil instances
+            markers: Optional list of files/directories that indicate project root.
+            priority_marker: Optional single marker to prioritize.
+            project_root_override: Explicit path to force as project root.
          """
         self.base_structure = base_structure or BASE_DIR_STRUCTURE
-        self._cached_base_dir = None
         self._cached_project_root = None
         self._common_project_markers: list[str] = markers
         self._priority_marker = priority_marker
@@ -59,7 +57,7 @@ class FileUtil:
 
     def set_project_root_override(self, root_override_path: Path):
         """
-        Explicitly set the project root for this instance, overriding marker search.
+        Explicitly set the project root for this instance, overriding a marker search.
 
         Use this when your consuming project has a known root you want all
         resolution to be relative to.
@@ -71,11 +69,6 @@ class FileUtil:
             root_override_path: The path to treat as the project root.
         """
         self._project_root_override = root_override_path
-
-    def set_base_structure(self, new_base: Path):
-        """Update the base structure and clear related cache."""
-        self.base_structure = new_base
-        self._cached_base_dir = None  # Invalidate cache
 
     @property
     def common_project_markers(self) -> list[str]:
@@ -196,83 +189,58 @@ class FileUtil:
         logger.warning(f"No project markers found; falling back to: {fallback}")
         return fallback
 
-    def get_base_dir(self) -> Path:
-        """Returns the base directory, prioritizing project context (or user default)."""
-        if self._cached_base_dir is None:
-            project_base = self.get_project_root() / self.base_structure
-            self._cached_base_dir = project_base if project_base.exists() else self.get_default_base()
-        return self._cached_base_dir
-
-    def get_file_from_base(self, file_name: Union[str, Path]) -> Path:
-        """Returns the full path to a file within the base directory.
-
-        Args:
-            file_name: A string or Path object representing the file name or relative path.
-
-        Returns:
-            Path: The full path to the requested file.
+    def get_project_root_base_dir(self) -> Path:
         """
-        if isinstance(file_name, str):
-            file_name = Path(file_name)
-        base_dir = self.get_base_dir()
-        full_path = base_dir / file_name
-        self._ensure_path_exists(full_path, base_dir.name)
-        return full_path
-
-    def get_file_from_project_root(self, file_name: Union[str, Path], search_path: Union[str, Path] = '') -> Path:
-        """Returns the full path to a file within the project root directory, optionally under a specified subdirectory.
-
-        Args:
-            file_name: A string or Path object representing the file name or relative path.
-            search_path: An optional string or Path object for a subdirectory (default is empty, meaning project root).
-
-        Returns:
-            Path: The full path to the requested file.
+        Resolves the base_structure directory under the *project root*.
 
         Raises:
-            FileNotFoundError: If the resulting file does not exist.
+            FileNotFoundError if the directory does not exist.
         """
+        base = self.get_project_root() / self.base_structure
+        self._ensure_path_exists(base, 'project root base')
+        return base
+
+    def get_user_base_dir(self) -> Path:
+        """
+        Returns the user's base structure directory path.
+        """
+        return self.get_user_specific_path()
+
+    def get_file_from_project_root_base(self, file_name: Union[str, Path]) -> Path:
+        """
+        Resolves a file path inside the project-root-based base directory.
+
+        Raises:
+            FileNotFoundError if the file does not exist.
+        """
+        return self._resolve_file_in_dir(self.get_project_root_base_dir(), file_name)
+
+    def get_file_from_user_base(self, file_name: Union[str, Path]) -> Path:
+        """
+        Resolves a file path inside the user's base structure directory.
+        This ignores the project root entirely.
+
+        Raises:
+            FileNotFoundError if the file does not exist.
+        """
+        return self._resolve_file_in_dir(self.get_user_base_dir(), file_name)
+
+    def _resolve_file_in_dir(self, base: Path, file_name: Union[str, Path]) -> Path:
         if isinstance(file_name, str):
             file_name = Path(file_name)
-        if isinstance(search_path, str):
-            search_path = Path(search_path)
-        full_path = self.get_project_root() / search_path / file_name
-        self._ensure_path_exists(full_path, f"project root{'/' + str(search_path) if search_path else ''}")
+        full_path = base / file_name
+        self._ensure_path_exists(full_path, base.name)
         return full_path
 
-    def get_default_base(self) -> Path:
-        """Fallback to USERPROFILE + base structure."""
-        return Path(os.environ.get('USERPROFILE', '')) / self.base_structure
-
     def get_user_specific_path(self) -> Path:
-        """Returns a path adjusted for the current user's Dropbox directory."""
+        """
+        Returns the full path for the user's base_structure location.
+        """
         try:
             username = os.getlogin()
         except OSError:
             username = os.environ.get('USERNAME', 'default')
         return Path(f"C:/Users/{username}") / self.base_structure
-
-    class SetupValidation(TypedDict):
-        project_root_found: bool
-        base_dir_accessible: bool
-        using_override: bool
-
-    def validate_setup(self) -> SetupValidation:
-        """
-        Check whether project root and base dir exist.
-
-        Returns:
-            dict with keys:
-                - project_root_found (bool)
-                - base_dir_accessible (bool)
-                - using_override (bool)
-"""
-
-        return {
-            'project_root_found': self.get_project_root().exists(),
-            'base_dir_accessible': self.get_base_dir().exists(),
-            'using_override': self._project_root_override is not None
-        }
 
     @staticmethod
     def _ensure_valid_marker_args(markers, priority_marker):
@@ -285,6 +253,5 @@ class FileUtil:
     def _ensure_path_exists(full_path: Path, dir_name: str):
         if not full_path.exists():
             root = full_path.parents[-3] if len(full_path.parents) > 2 else 'N/A'
-            msg = (f"The file {full_path.resolve()} does not exist in the {dir_name} directory. "
-                   f"Searched from project root: {root}")
+            msg = f"The file {full_path} does not exist in the {dir_name} directory. Searched from project root: {root}"
             raise FileNotFoundError(msg)

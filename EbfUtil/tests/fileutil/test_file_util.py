@@ -83,12 +83,12 @@ class TestGetProjectRoot:
 
 
 @pytest.mark.integration
-class TestGetBaseDir:
+class TestUserBaseStructure:
     @pytest.fixture
     def sut(self) -> FileUtil:
         return FileUtil()
 
-    def test_base_dir_is_investing(self):
+    def test_default_base_dir_is_investing(self):
         dir_name = str(BASE_DIR_STRUCTURE)
         assert dir_name.endswith('Investing')
 
