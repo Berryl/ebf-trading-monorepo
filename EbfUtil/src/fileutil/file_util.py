@@ -35,13 +35,13 @@ class FileUtil:
         Initialize FileUtil.
 
         Args:
+            base_structure:  Optional Path to the substructure under the project root (default is Investing)
             markers: Optional list of file/directory names indicating a project root.
                      If None, uses the default common_project_markers list.
             priority_marker: Optional single marker to check first at each level.
             project_root_override: Optional explicit Path to use as project root,
                                    bypassing marker search entirely.
-            base_structure: path to home base directory
-        """
+         """
         self.base_structure = base_structure or BASE_DIR_STRUCTURE
         self._cached_base_dir = None
         self._cached_project_root = None
@@ -189,7 +189,7 @@ class FileUtil:
         return fallback
 
     def get_base_dir(self) -> Path:
-        """Returns the base directory, prioritizing project context or user Dropbox."""
+        """Returns the base directory, prioritizing project context (or user default)."""
         if self._cached_base_dir is None:
             project_base = self.get_project_root() / self.base_structure
             self._cached_base_dir = project_base if project_base.exists() else self.get_default_base()
@@ -233,7 +233,7 @@ class FileUtil:
         return full_path
 
     def get_default_base(self) -> Path:
-        """Fallback to USERPROFILE Dropbox directory."""
+        """Fallback to USERPROFILE + base structure."""
         return Path(os.environ.get('USERPROFILE', '')) / self.base_structure
 
     def get_user_specific_path(self) -> Path:
@@ -250,7 +250,16 @@ class FileUtil:
         using_override: bool
 
     def validate_setup(self) -> SetupValidation:
-        """Allow calling setup code to validate that the FileUtil setup is working correctly."""
+        """
+        Check whether project root and base dir exist.
+
+        Returns:
+            dict with keys:
+                - project_root_found (bool)
+                - base_dir_accessible (bool)
+                - using_override (bool)
+"""
+
         return {
             'project_root_found': self.get_project_root().exists(),
             'base_dir_accessible': self.get_base_dir().exists(),
@@ -268,5 +277,6 @@ class FileUtil:
     def _ensure_path_exists(full_path: Path, dir_name: str):
         if not full_path.exists():
             root = full_path.parents[-3] if len(full_path.parents) > 2 else 'N/A'
-            msg = f"The file {full_path} does not exist in the {dir_name} directory. Searched from project root: {root}"
+            msg = (f"The file {full_path.resolve()} does not exist in the {dir_name} directory. "
+                   f"Searched from project root: {root}")
             raise FileNotFoundError(msg)
