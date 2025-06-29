@@ -70,7 +70,7 @@ class TestGetProjectRoot:
         assert sut._cached_project_root == found, f"{found} was not cached"
         assert (found / '.idea').exists()
 
-    def test_get_file_from_project_root_base(self, sut):
+    def test_get_file_from_project_root_with_search_path(self, sut):
         file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path='tests/fileutil')
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
