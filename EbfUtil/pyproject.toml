@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Utilities for locating investing-related files"
 authors = [{ name = "EBF" }]
 requires-python = ">=3.9"
+dependencies = ["typeguard"]
 
 [build-system]
 requires = ["setuptools"]
