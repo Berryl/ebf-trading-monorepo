@@ -254,9 +254,16 @@ class FileUtil:
             raise ValueError("Priority marker must be a non-empty string")
 
     @staticmethod
-    def _ensure_path_exists(full_path: Path, file_qualifier: str, folder: Union[str, Path]):
+    def _ensure_path_exists(full_path: Path, context: str, folder: Union[str, Path]):
+        """
+        Consistently format & provide useful debug info
+        :param full_path: full path to validate
+        :param context: 'project root' :keyword 'user'
+        :param folder: specific folder the file should be in
+        :return:
+        """
         if not full_path.exists():
-            folder_desc = folder.name if isinstance(folder, Path) else file_qualifier
-            msg = (f"The '{file_qualifier}' file '{full_path.name}' does not "
+            folder_desc = folder.name if isinstance(folder, Path) else context
+            msg = (f"The '{context}' file '{full_path.name}' does not "
                    f"exist in the '{folder_desc}' folder. [{(str(full_path.resolve()))}]")
             raise FileNotFoundError(msg)
