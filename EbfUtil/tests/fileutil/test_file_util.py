@@ -7,6 +7,36 @@ from fileutil.file_util import FileUtil, BASE_DIR_STRUCTURE
 
 
 @pytest.mark.integration
+class TestProjectRootOverride:
+    """
+    Tests for FileUtil project_root_override behavior.
+
+    Ensures FileUtil can work both in its own repo
+    (by marker search) and with an explicit override
+    provided by consuming projects.
+
+    tmp_path is a pytest fixture that provides a unique, empty temp directory.
+    This simulates an external consuming project defining its root explicitly.
+    """
+    def test_can_find_file_inside_ebf_util_without_override(self):
+        sut = FileUtil()
+        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=r'tests/fileutil')
+        assert sut._project_root_override is None
+        assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
+
+    def test_can_find_file_inside_external_project_with_override_in_init(self, tmp_path):
+        sut = FileUtil(project_root_override=tmp_path)
+        result = sut.get_project_root()
+        assert result == tmp_path
+
+    def test_can_find_file_inside_external_project_with_override_in_setter(self, tmp_path):
+        sut = FileUtil()
+        sut.set_project_root_override(tmp_path)
+        result = sut.get_project_root()
+        assert result == tmp_path
+
+
+@pytest.mark.integration
 class TestGetProjectRoot:
     @pytest.fixture
     def sut(self) -> FileUtil:
@@ -60,7 +90,7 @@ class TestGetBaseDir:
 
     def test_base_dir_is_investing(self):
         dir_name = str(BASE_DIR_STRUCTURE)
-        assert dir_name.endswith('Investing'), f"Base folder name {dir_name} is not Investing"
+        assert dir_name.endswith('Investing')
 
     def test_get_base_dir_exists(self, sut):
         path = sut.get_base_dir()
@@ -68,15 +98,16 @@ class TestGetBaseDir:
 
     @pytest.mark.parametrize("filename", ['snapshot.xlsm', 'cagr.xlsm'])  # noqa
     def test_get_file_from_investing(self, sut, filename):
-        path = sut.get_file_from_investing(filename)
+        path = sut.get_file_from_base(filename)
         assert path.exists(), f"path {str(path)} does not exist"
 
     def test_get_file_from_investing_when_bad_filename_raises_error(self, sut):
         bad_filename = 'blah'
-        bad_path = re.escape(str(sut.get_base_dir() / bad_filename))
-        err_msg = fr"The file {bad_path} does not exist in the Investing directory."
+        base_dir = sut.get_base_dir()
+        bad_path = re.escape(str(base_dir / bad_filename))
+        err_msg = fr"The file {bad_path} does not exist in the {base_dir.name} directory."
         with pytest.raises(FileNotFoundError, match=err_msg):
-            sut.get_file_from_investing(bad_filename)
+            sut.get_file_from_base(bad_filename)
 
     @pytest.mark.parametrize("username", ['smith', 'jones'])
     def test_get_user_specific_path_adjust_for_any_user(self, sut, username):
@@ -84,5 +115,5 @@ class TestGetBaseDir:
             assert username in str(sut.get_user_specific_path())
 
     def test_get_testing_book_from_project_root(self, sut):
-        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=r'tests\fileutil')
+        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=r'tests/fileutil')
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
