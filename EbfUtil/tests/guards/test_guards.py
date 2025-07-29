@@ -68,15 +68,15 @@ class TestEnsureNotNone:
         g.ensure_not_none(42, "valid_number")
         pass  # No exception should be raised
 
-    def test_when_parameter_description_provided(self):
-        msg = re.escape("Arg 'valid_number' cannot be None")
+    @pytest.mark.parametrize(
+        "desc_param, msg",
+        [
+            ("valid_number", re.escape("Arg 'valid_number' cannot be None")),  # provided
+            ("", re.escape("Value cannot be None")),  # not provided
+        ])
+    def test_description_parameter(self, desc_param, msg):
         with pytest.raises(AssertionError, match=msg):
-            g.ensure_not_none(None, "valid_number")
-
-    def test_when_parameter_description_not_provided(self):
-        msg = re.escape("Value cannot be None")
-        with pytest.raises(AssertionError, match=msg):
-            g.ensure_not_none(None)
+            g.ensure_not_none(None, desc_param)
 
 
 class TestEnsureAttribute:
