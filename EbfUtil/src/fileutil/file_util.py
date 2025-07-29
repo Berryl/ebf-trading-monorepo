@@ -1,9 +1,10 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Self
 
 BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'  # intentionally domain specific but overridable
+UNLIMITED_DEPTH = 100
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class FileUtil:
         self._priority_marker = priority_marker
         self._project_root_override = project_root_override
 
-    def set_project_root_override(self, root_override_path: Path):
+    def set_project_root_override(self, root_override_path: Path) -> Self:
         """
         Explicitly set the project root for this instance, overriding a marker search.
 
@@ -71,6 +72,7 @@ class FileUtil:
             root_override_path: The path to treat as the project root.
         """
         self._project_root_override = root_override_path
+        return self
 
     @property
     def common_project_markers(self) -> list[str]:
@@ -156,7 +158,7 @@ class FileUtil:
         logger.debug(f"Searching for project root starting from: {current_path}")
 
         result = None
-        search_range = range(100) if max_search_depth == -1 else range(max_search_depth)
+        search_range = range(UNLIMITED_DEPTH) if max_search_depth == -1 else range(max_search_depth)
         for _ in search_range:
             if priority_marker and (current_path / priority_marker).exists():
                 logger.debug(f"Found priority marker '{priority_marker}' at: {current_path}")
@@ -265,5 +267,5 @@ class FileUtil:
         if not full_path.exists():
             folder_desc = folder.name if isinstance(folder, Path) else context
             msg = (f"The '{context}' file '{full_path.name}' does not "
-                   f"exist in the '{folder_desc}' folder. [{(str(full_path.resolve()))}]")
+                   f"exist in the '{folder_desc}' folder. [{(full_path.resolve())}]")
             raise FileNotFoundError(msg)

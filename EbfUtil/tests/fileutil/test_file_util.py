@@ -111,7 +111,7 @@ class TestUserBaseStructure:
         path = str(sut.get_file_from_user_base_dir(filename))
         assert path.endswith(filename)
 
-    def test_test_get_file_from_user_base_with_search_path(self, sut):
+    def test_get_file_from_user_base_with_search_path(self, sut):
         path = sut.get_file_from_user_base_dir('constants.xlsm', search_path='dev')
         assert path.exists()
 
