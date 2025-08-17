@@ -1,17 +1,27 @@
-[project]
-name = "ebfutil"
-version = "0.1.0"
-description = "Utilities for locating investing-related files"
-authors = [{ name = "EBF" }]
-requires-python = ">=3.9"
-dependencies = ["typeguard"]
-
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "ebfutil"          # distribution name
+version = "0.1.0"
+description = "EBF utilities package (fileutil, guards, and more)"
+authors = [{ name = "EBF" }]
+requires-python = ">=3.9"
+dependencies = [
+  "typeguard>=4.0.0",
+]
+
 [tool.setuptools]
-package-dir = { "" = "src" }
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+]

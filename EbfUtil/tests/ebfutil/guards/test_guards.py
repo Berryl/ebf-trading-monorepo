@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-import guards.guards as g
+from ebfutil.guards import guards as g
 
 
 class TestEnsureType:
