@@ -1,10 +1,11 @@
 pyproject.toml
+src/ebfutil/__init__.py
 src/ebfutil.egg-info/PKG-INFO
 src/ebfutil.egg-info/SOURCES.txt
 src/ebfutil.egg-info/dependency_links.txt
 src/ebfutil.egg-info/requires.txt
 src/ebfutil.egg-info/top_level.txt
-src/fileutil/__init__.py
-src/fileutil/file_util.py
-src/guards/__init__.py
-src/guards/guards.py
+src/ebfutil/fileutil/__init__.py
+src/ebfutil/fileutil/file_util.py
+src/ebfutil/guards/__init__.py
+src/ebfutil/guards/guards.py
