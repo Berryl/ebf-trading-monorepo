@@ -1,0 +1,6 @@
+app = "myapp"
+theme = "light"
+
+[paths]
+data = "/var/app/data"
+log  = "/var/app/log"

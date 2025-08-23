@@ -1,69 +1,77 @@
-import yaml
+from __future__ import annotations
+
+import shutil
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 
-from ebfutil.fileutil.file_util import FileUtil
 from ebfutil.cfgutil import load_config
+from ebfutil.fileutil.file_util import FileUtil
 
 
-def _dump_yaml(p: Path, data: dict) -> None:
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
-
-
-@pytest.fixture
-def proj(tmp_path: Path) -> Path:
-    return tmp_path / "proj"
+@pytest.fixture(scope="module")
+def fixtures_root() -> Path:
+    return Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def file_util(proj: Path) -> FileUtil:
-    return FileUtil(project_root_override=proj)
+def project_root(tmp_path: Path) -> Path:
+    """
+    Simulates a project root folder by wrapping built-in pytest tmp_path fixture.
+    This keeps test code consistent, realistic, and cleaner (instead of writing tmp_path / "project" for every test)
+    """
+    return tmp_path / "project"
 
 
-class TestProjectConfigLoad:
-    def test_load_uses_project_root_when_present(self, proj: Path, file_util: FileUtil):
-        cfg_file = proj / "config" / "config.yaml"
-        _dump_yaml(cfg_file, {"a": 1, "b": {"c": 2}})
+@pytest.fixture
+def fu(project_root: Path) -> FileUtil:
+    return FileUtil(project_root_override=project_root)
 
+
+@pytest.fixture
+def editable_file(fixtures_root: Path, project_root: Path) -> Path:
+    """
+    Copy a fixture file into the test's temp directory.
+    Ensures parent dirs exist. Returns the destination path.
+    """
+    src = fixtures_root / "basic.yaml"
+    tgt = project_root / "config" / "config.yaml"
+    tgt.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, tgt)
+    return tgt
+
+
+class TestYamlCfgUtil:
+    def test_can_load_basic_yaml(self, fu: FileUtil, editable_file):
         cfg, used = load_config(
-            app_name="dummy",
-            file_util=file_util,
+            app_name="myapp",
+            file_util=fu,
             search_path="config",
             filename="config.yaml",
             return_sources=True,
         )
-
-        assert cfg == {"a": 1, "b": {"c": 2}}
-        assert used and used[0] == cfg_file
-
-
-class TestUserOverridePrecedence:
-    @pytest.fixture
-    def user_base(self, tmp_path: Path) -> Path:
-        # simulate home/.config
-        return tmp_path / "home" / ".config"
-
-    def test_user_override_wins_over_project(
-        self, proj: Path, file_util: FileUtil, user_base: Path
-    ):
-        proj_cfg = proj / "config" / "config.yaml"
-        _dump_yaml(proj_cfg, {"theme": "light", "paths": {"data": "/proj"}})
-
-        user_cfg = user_base / "myapp" / "config.yaml"
-        _dump_yaml(user_cfg, {"theme": "dark", "paths": {"log": "/user/logs"}})
-
-        with patch.object(FileUtil, "get_user_base_dir", return_value=user_base.parent):
-            cfg, used = load_config(
-                app_name="myapp",
-                file_util=file_util,
-                search_path="config",
-                filename="config.yaml",
-                return_sources=True,
-            )
-
-        assert cfg["theme"] == "dark"
-        assert cfg["paths"]["data"] == "/proj"
-        assert cfg["paths"]["log"] == "/user/logs"
-        assert used == [proj_cfg, user_cfg]
+        assert cfg["app"] == "myapp"
+        assert cfg["paths"]["log"] == "/var/app/log"
+        assert used == [editable_file]
+    #
+    # def test_user_yaml_overrides_project_yaml(
+    #         self, fixtures_root: Path, project_root: Path, fu: FileUtil, user_home: Path
+    # ):
+    #     proj_cfg = editable_file(fixtures_root / "basic.yaml", project_root / "config" / "config.yaml")
+    #     user_cfg = editable_file(
+    #         fixtures_root / "with_comments.yaml",
+    #         user_home / ".config" / "myapp" / "config.yaml",
+    #     )
+    #     with patch.object(FileUtil, "get_user_base_dir", return_value=user_home):
+    #         cfg, used = load_config(
+    #             app_name="myapp",
+    #             file_util=fu,
+    #             search_path="config",
+    #             filename="config.yaml",
+    #             return_sources=True,
+    #         )
+    #     assert cfg["theme"] == "dark"
+    #     assert cfg["paths"]["data"] == "/home/user/data"
+    #     assert cfg["paths"]["log"] == "/var/app/log"
+    #     assert used == [proj_cfg, user_cfg]

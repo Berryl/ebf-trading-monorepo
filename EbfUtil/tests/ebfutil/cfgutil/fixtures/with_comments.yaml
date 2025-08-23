@@ -1,0 +1,16 @@
+# comments should be ignored by PyYAML
+app: myapp
+theme: dark   # user override target in tests
+paths:
+  # nested keys
+  data: "/home/user/data"
+multiline: |
+  First line
+  Second line
+anchors:
+  base: &base
+    retries: 5
+    timeout_sec: 20
+  derived:
+    <<: *base
+    timeout_sec: 15
