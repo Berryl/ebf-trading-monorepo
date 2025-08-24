@@ -88,14 +88,16 @@ class ConfigService:
         sources: list[Path] = []
         cfg: dict = {}
 
-        proj_path = fu.get_file_from_project_root(project_filename, search_path or "")
-        cfg = self._load_any(proj_path)
-        sources.append(proj_path)
+        proj_path = fu.try_get_file_from_project_root(project_filename, search_path or "")
+        if proj_path:
+            cfg = self._load_any(proj_path)
+            sources.append(proj_path)
 
-        user_path = fu.get_file_from_user_base_dir(user_filename, Path("config") / app_name)
-        user_cfg = self._load_any(user_path)
-        cfg = self._deep_merge(cfg or {}, user_cfg)
-        sources.append(user_path)
+        user_path = fu.try_get_file_from_user_base_dir(user_filename, Path(".config") / app_name)
+        if user_path:
+            user_cfg = self._load_any(user_path)
+            cfg = self._deep_merge(cfg or {}, user_cfg)
+            sources.append(user_path)
 
         return (cfg, sources) if return_sources else cfg
 

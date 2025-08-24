@@ -15,11 +15,6 @@ class ConfigServiceFixture:
         return ConfigService()
 
     @pytest.fixture
-    def fu(self, project_root: Path):
-        from ebfutil.fileutil.file_util import FileUtil
-        return FileUtil(project_root_override=project_root)
-
-    @pytest.fixture
     def project_root(self, tmp_path: Path) -> Path:
         return tmp_path / "project"
 
@@ -28,11 +23,16 @@ class ConfigServiceFixture:
         return tmp_path / "home"
 
     @pytest.fixture
+    def fu(self, project_root: Path):
+        from ebfutil.fileutil.file_util import FileUtil
+        return FileUtil(project_root_override=project_root)
+
+    @pytest.fixture
     def data(self) -> dict:
         return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
 
     @pytest.fixture
-    def fake_file(self, project_root: Path, data: dict) -> Path:
+    def fake_project_file(self, project_root: Path, data: dict) -> Path:
         tgt = project_root / "config" / "config.yaml"
         tgt.parent.mkdir(parents=True, exist_ok=True)
         tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
@@ -48,15 +48,60 @@ class TestCreation(ConfigServiceFixture):
 
 
 class TestLoad(ConfigServiceFixture):
-    class TestLoad(ConfigServiceFixture):
-        def test_can_load_yaml_files(self, sut: ConfigService, data, fu, fake_file):
+    def test_project_only(self, sut: ConfigService, fu, fake_project_file: Path, data: dict):
+        cfg, sources = sut.load(
+            app_name="myapp",
+            file_util=fu,
+            search_path="config",
+            project_filename="config.yaml",
+            return_sources=True,
+        )
+        assert cfg == data
+        assert sources == [fake_project_file]
+
+    def test_user_only(self, sut: ConfigService, fu, user_home: Path, data: dict):
+        # no project file; only user file exists
+        u = user_home / ".config" / "myapp" / "config.yaml"
+        u.parent.mkdir(parents=True, exist_ok=True)
+        u.write_text(yaml.safe_dump({"a": 9, "list": [2], "nest": {"x": 5}}), encoding="utf-8")
+
+        with patch.object(fu, "get_user_base_dir", return_value=user_home):
+            cfg, sources = sut.load(
+                app_name="myapp",
+                file_util=fu,
+                user_filename="config.yaml",
+                return_sources=True,
+            )
+
+        assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
+        assert sources == [u]
+
+    def test_both_precedence_and_merge(self, sut: ConfigService, fu, fake_project_file: Path, user_home: Path):
+        # project has base; user overrides: list replace, dict deep-merge
+        u = user_home / ".config" / "myapp" / "config.yaml"
+        u.parent.mkdir(parents=True, exist_ok=True)
+        u.write_text(yaml.safe_dump({"b": 2, "list": [2], "nest": {"y": 9}}), encoding="utf-8")
+
+        with patch.object(fu, "get_user_base_dir", return_value=user_home):
             cfg, sources = sut.load(
                 app_name="myapp",
                 file_util=fu,
                 search_path="config",
                 project_filename="config.yaml",
+                user_filename="config.yaml",
                 return_sources=True,
             )
-            assert cfg == data
-            assert sources == [fake_file]
 
+        assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+        assert sources == [fake_project_file, u]
+
+    def test_none_found(self, sut: ConfigService, fu):
+        cfg, sources = sut.load(
+            app_name="myapp",
+            file_util=fu,
+            project_filename="missing.yaml",
+            user_filename="missing.yaml",
+            return_sources=True,
+        )
+        assert cfg == {}
+        assert sources == []
