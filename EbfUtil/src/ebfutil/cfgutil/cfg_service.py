@@ -1,8 +1,6 @@
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Any, Mapping
 
-from .loaders import JsonLoader
-from .loaders import TomlLoader
 from .loaders import YamlLoader
 from ..fileutil import FileUtil
 
@@ -19,6 +17,27 @@ class ConfigFormatLoader(Protocol):
         ...
 
 
+class ConfigMerger:
+    """Centralizes deep-merge so behavior stays consistent across callers.
+
+    Why: keep merge logic reusable/testable; src overrides dst.
+    Dicts deep-merge; lists/scalars replace.
+    """
+
+    @staticmethod
+    def deep(dst: dict[str, Any] | None, src: Mapping[str, Any] | None) -> dict[str, Any]:
+        if not dst:
+            return dict(src or {})
+        if not src:
+            return dst
+        for k, v in src.items():
+            if isinstance(v, Mapping) and isinstance(dst.get(k), Mapping):
+                dst[k] = ConfigMerger.deep(dict(dst[k]), v)  # type: ignore[arg-type]
+            else:
+                dst[k] = v
+        return dst
+
+
 class ConfigService:
     """
     Orchestrates config loading:
@@ -33,12 +52,7 @@ class ConfigService:
 
     @staticmethod
     def _deep_merge(dst: dict, src: dict) -> dict:
-        for k, v in src.items():
-            if isinstance(v, dict) and isinstance(dst.get(k), dict):
-                ConfigService._deep_merge(dst[k], v)
-            else:
-                dst[k] = v
-        return dst
+        return ConfigMerger.deep(dst, src)
 
     def _load_any(self, path: Path) -> dict:
         for ldr in self._loaders:
@@ -47,13 +61,13 @@ class ConfigService:
         return {}  # unknown suffix → ignore for now
 
     def load(
-        self,
-        app_name: str,
-        *,
-        file_util: Optional[FileUtil] = None,
-        search_path: Optional[str] = None,
-        filename: str = "config.yaml",
-        return_sources: bool = False,
+            self,
+            app_name: str,
+            *,
+            file_util: Optional[FileUtil] = None,
+            search_path: Optional[str] = None,
+            filename: str = "config.yaml",
+            return_sources: bool = False,
     ) -> dict | tuple[dict, list[Path]]:
         fu = file_util or FileUtil()
         sources: list[Path] = []
