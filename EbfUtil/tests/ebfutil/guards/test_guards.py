@@ -142,6 +142,6 @@ class TestEnsureAttribute:
         pass  # No exception should be raised (presence is checked, not value)
 
     def test_when_candidate_is_none(self):
-        msg = re.escape("Value cannot be None")
+        msg = re.escape("Arg 'example_value' cannot be None")
         with pytest.raises(AssertionError, match=msg):
             g.ensure_attribute(None, "missing_attr", "example_value")

@@ -27,8 +27,9 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
     Ensures that the candidate is not None or an empty string, raising an AssertionError if it is.
     """
     ensure_not_none(candidate, description)
+    ensure_type(candidate, str, description)
 
-    if candidate is None or (isinstance(candidate, str) and candidate == ""):
+    if not candidate.strip():
         prefix = f"Arg '{description}'" if description else "Value"
 
         object_info = {
@@ -37,7 +38,7 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
         }
 
         raise AssertionError(create_clean_error_context(
-            description=f"{prefix} cannot be None or empty",
+            description=f"{prefix} cannot be an empty string",
             object_info=object_info
         ))
 
