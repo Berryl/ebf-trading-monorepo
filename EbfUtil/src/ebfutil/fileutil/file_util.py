@@ -261,7 +261,10 @@ class FileUtil:
     def try_get_file_from_user_base_dir(
             self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path | None:
         """
-        See get_file_from_user_base_dir. Same but returning None instead of raising FileNotFoundError.
+        Resolves a file path inside the user's base structure directory, returning a
+        path to the found file if found, or None if not.
+
+        see get_file_from_user_base_dir.
         """
         try:
             return self.get_file_from_user_base_dir(file_name, search_path)

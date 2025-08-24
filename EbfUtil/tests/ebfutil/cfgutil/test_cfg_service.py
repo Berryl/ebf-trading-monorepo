@@ -51,7 +51,7 @@ class TestLoad(ConfigServiceFixture):
         cfg, sources = sut.load(
             app_name="myapp",
             file_util=fu,
-            search_path="config",
+            project_search_path="config",
             project_filename="config.yaml",
             return_sources=True,
         )
@@ -85,7 +85,7 @@ class TestLoad(ConfigServiceFixture):
             cfg, sources = sut.load(
                 app_name="myapp",
                 file_util=fu,
-                search_path="config",
+                project_search_path="config",
                 project_filename="config.yaml",
                 user_filename="config.yaml",
                 return_sources=True,
@@ -109,7 +109,7 @@ class TestLoad(ConfigServiceFixture):
         cfg = sut.load(
             app_name="myapp",
             file_util=fu,
-            search_path="config",
+            project_search_path="config",
             return_sources=False,
         )
         assert cfg == data
@@ -124,7 +124,7 @@ class TestLoad(ConfigServiceFixture):
         cfg = sut.load(
             app_name="myapp",
             file_util=fu,
-            search_path="config",
+            project_search_path="config",
             project_filename="with_comments.yaml",
         )
         assert cfg == {"base": 1, "nest": {"k": "v"}}
@@ -137,7 +137,7 @@ class TestLoad(ConfigServiceFixture):
         cfg, sources = sut.load(
             app_name="myapp",
             file_util=fu,
-            search_path="config",
+            project_search_path="config",
             project_filename="config.unknown",
             return_sources=True,
         )

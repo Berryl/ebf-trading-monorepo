@@ -18,7 +18,7 @@ def load_config(
         project_filename=project_filename,
         user_filename=user_filename,
         file_util=file_util,
-        search_path=search_path,
+        project_search_path=search_path,
         return_sources=return_sources,
     )
 

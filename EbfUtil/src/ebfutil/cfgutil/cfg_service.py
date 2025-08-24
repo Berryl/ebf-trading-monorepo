@@ -57,7 +57,7 @@ class ConfigService:
             project_filename: str = DEFAULT_FILENAME,
             user_filename: str = DEFAULT_FILENAME,
             file_util: Optional[FileUtil] = None,
-            search_path: Optional[str] = None,
+            project_search_path: Optional[str] = None,
             return_sources: bool = False,
     ) -> dict | tuple[dict, list[Path]]:
         """
@@ -76,7 +76,7 @@ class ConfigService:
         :param project_filename: Optional project file name instead of DEFAULT_FILENAME.
         :param user_filename: Optional user file name instead of DEFAULT_FILENAME.
         :param file_util: Optional FileUtil override to avoid creating one here for project/user path lookups.
-        :param search_path: Optional relative folder inside project root (default: none, use FileUtil to find it).
+        :param project_search_path: Optional relative folder inside project root (if None, use FileUtil to find it).
         :param return_sources: If True, also return the list of source files loaded in order.
         :return:
         """
@@ -88,7 +88,7 @@ class ConfigService:
         sources: list[Path] = []
         cfg: dict = {}
 
-        proj_path = fu.try_get_file_from_project_root(project_filename, search_path or "")
+        proj_path = fu.try_get_file_from_project_root(project_filename, project_search_path or "")
         if proj_path:
             cfg = self._load_any(proj_path)
             sources.append(proj_path)
