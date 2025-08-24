@@ -4,6 +4,8 @@ import pytest
 
 from ebfutil.fileutil.file_util import FileUtil
 
+VALID_SEARCH_PATH = r'tests/ebfutil/fileutil'  # noqa
+
 
 @pytest.mark.integration
 class TestProjectRootOverride:
@@ -20,7 +22,7 @@ class TestProjectRootOverride:
 
     def test_can_find_file_inside_ebf_util_without_override(self):
         sut = FileUtil()
-        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=r'tests/ebfutil/fileutil')  # noqa
+        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
         assert sut._project_root_override is None
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
@@ -70,7 +72,7 @@ class TestGetProjectRoot:
         assert (found / '.idea').exists()
 
     def test_get_file_from_project_root_with_search_path(self, sut):
-        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path='tests/ebfutil/fileutil')  # noqa
+        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
     def test_get_file_from_project_root_when_bad_filename_raises_error(self, sut):
@@ -90,6 +92,14 @@ class TestGetProjectRoot:
 
         with pytest.raises(ValueError, match=msg):
             sut.get_project_root(priority_marker="             ")
+
+    def test_try_get_project_file_with_search_path_found(self, sut):
+        p = sut.try_get_file_from_project_root("some_txt_file.txt",search_path=VALID_SEARCH_PATH,)
+        assert p is not None and p.exists()
+
+    def test_try_get_project_file_missing_returns_none(self, sut):
+        p = sut.try_get_file_from_project_root("does_not_exist.txt")
+        assert p is None
 
 
 @pytest.mark.integration
@@ -124,3 +134,11 @@ class TestUserBaseStructure:
     def test_get_user_base_dir_adjusts_for_any_user(self, sut, username):
         with patch('os.getlogin', return_value=username):  # noqa
             assert username in str(sut.get_user_base_dir())
+
+    def test_try_get_file_from_user_base_dir_with_search_path_found(self, sut):
+        p = sut.try_get_file_from_user_base_dir('constants.xlsm', search_path='dev')
+        assert p is not None and p.exists()
+
+    def test_try_get_file_from_user_base_dir_not_found_returns_none(self, sut):
+        p = sut.try_get_file_from_user_base_dir("does_not_exist.txt")
+        assert p is None

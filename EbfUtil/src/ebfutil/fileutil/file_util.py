@@ -220,6 +220,16 @@ class FileUtil:
         self._ensure_path_exists(full_path, "project root", search_path)
         return full_path
 
+    def try_get_file_from_project_root(
+            self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path | None:
+        """
+        See get_file_from_project_root, but returning None instead of raising FileNotFoundError.
+        """
+        try:
+            return self.get_file_from_project_root(file_name, search_path)
+        except FileNotFoundError:
+            return None
+
     def get_user_base_dir(self) -> Path:
         """
         Returns the user's base structure directory path.
@@ -247,6 +257,16 @@ class FileUtil:
         full_path = base / search_path / file_name
         self._ensure_path_exists(full_path, 'user', base)
         return full_path
+
+    def try_get_file_from_user_base_dir(
+            self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path | None:
+        """
+        See get_file_from_user_base_dir. Same but returning None instead of raising FileNotFoundError.
+        """
+        try:
+            return self.get_file_from_user_base_dir(file_name, search_path)
+        except FileNotFoundError:
+            return None
 
     @staticmethod
     def _ensure_valid_marker_args(markers, priority_marker):

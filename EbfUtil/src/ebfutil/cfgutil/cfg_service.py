@@ -105,8 +105,9 @@ class ConfigService:
 
     def _load_any(self, path: Path) -> dict:
         """
-        Call the on the loader that supports the path to load and return its results
-        Returns an empty dict if no loader supports the path.
+        Use the first loader that supports the file path.
+        Only one loader is applied; loaders are not combined.
+        Returns {} if no loader supports the path.
         """
         ldr: ConfigFormatLoader = self._get_loader_for(path)
         if ldr is None:
@@ -115,7 +116,7 @@ class ConfigService:
             return ldr.load(path)
 
     def _get_loader_for(self, path: Path) -> ConfigFormatLoader | None:
-        """return the first loader that supports the file path."""
+        """return the first loader that supports the file path, else done."""
         for ldr in self._loaders:
             if ldr.supports(path):
                 return ldr
