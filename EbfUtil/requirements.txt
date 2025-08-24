@@ -1,6 +1,6 @@
  
 colorama==0.4.6
--e git+https://github.com/Berryl/EbfUtil.git@50b6d287f6a89d9b2334a5be433a294d742433c8#egg=ebfutil
+-e git+https://github.com/Berryl/EbfUtil.git@c78a5ee27adb14fed5179ebe679725d4e95cce55#egg=ebfutil
 et_xmlfile==2.0.0
 iniconfig==2.1.0
 openpyxl==3.1.5

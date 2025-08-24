@@ -7,10 +7,10 @@ except Exception:  # pragma: no cover
 
 
 class TomlLoader:
-    suffixes = (".toml",)
+    file_types = (".toml",)
 
     def supports(self, path: Path) -> bool:
-        return path.suffix.lower() in self.suffixes
+        return path.suffix.lower() in self.file_types
 
     def load(self, path: Path) -> dict:
         if not path.exists(): return {}

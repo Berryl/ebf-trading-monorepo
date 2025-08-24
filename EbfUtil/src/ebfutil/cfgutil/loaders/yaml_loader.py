@@ -4,9 +4,9 @@ import yaml
 
 
 class YamlLoader:
-    suffixes = (".yaml", ".yml")
+    file_types = (".yaml", ".yml")
 
-    def supports(self, path: Path) -> bool: return path.suffix.lower() in self.suffixes
+    def supports(self, path: Path) -> bool: return path.suffix.lower() in self.file_types
 
     def load(self, path: Path) -> dict:
         if not path.exists(): return {}

@@ -3,9 +3,9 @@ from pathlib import Path
 
 
 class JsonLoader:
-    suffixes = (".json",)
+    file_types = (".json",)
 
-    def supports(self, path: Path) -> bool: return path.suffix.lower() in self.suffixes
+    def supports(self, path: Path) -> bool: return path.suffix.lower() in self.file_types
 
     def load(self, path: Path) -> dict:
         if not path.exists(): return {}

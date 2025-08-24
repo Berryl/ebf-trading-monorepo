@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 
 class ConfigMerger:
-    """Centralizes deep-merge so behavior stays consistent across callers.
+    """Centralizes deep-merge behavior.
 
     Why: keep merge logic reusable/testable; src overrides tgt.
     Dicts deep-merge; lists/scalars replace.
