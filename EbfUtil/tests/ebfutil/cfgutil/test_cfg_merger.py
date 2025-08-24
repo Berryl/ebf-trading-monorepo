@@ -1,6 +1,8 @@
+import copy
 from typing import Mapping
 
 import pytest
+
 from ebfutil.cfgutil.cfg_merger import ConfigMerger
 
 
@@ -49,3 +51,14 @@ class TestConfigMerger:
         result = sut.deep(tgt, src)
         assert result == {"a": 2, "b": 3}
         assert result is not tgt
+
+    def test_sut_immutability(self, sut):
+        tgt = {"a": 1, "b": {"x": 1}}
+        src = {"b": {"y": 2}}
+        original_tgt = copy.deepcopy(tgt)  # deep copy
+        original_src = copy.deepcopy(src)  # deep copy
+        result = sut.deep(tgt, src)
+        assert tgt == original_tgt
+        assert src == original_src
+        # optional but useful aliasing check:
+        assert result["b"] is not tgt["b"]
