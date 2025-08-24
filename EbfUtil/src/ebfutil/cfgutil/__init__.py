@@ -1,19 +1,24 @@
+from typing import Optional
+
 from .cfg_service import ConfigService
+from ..fileutil import FileUtil
 
 
 def load_config(
         app_name: str,
         *,
-        file_util=None,
-        search_path=None,
-        filename: str = "config.yaml",
-        return_sources: bool = False,
+        project_filename: str,
+        user_filename: str,
+        file_util: Optional[FileUtil],
+        search_path: Optional[str],
+        return_sources: bool,
 ):
     return ConfigService().load(
         app_name,
+        project_filename=project_filename,
+        user_filename=user_filename,
         file_util=file_util,
         search_path=search_path,
-        project_filename=filename,
         return_sources=return_sources,
     )
 

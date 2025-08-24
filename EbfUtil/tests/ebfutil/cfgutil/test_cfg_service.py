@@ -1,4 +1,3 @@
-import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
@@ -95,7 +94,7 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
 
-    def test_none_found(self, sut: ConfigService, fu):
+    def test_no_files_found(self, sut: ConfigService, fu):
         cfg, sources = sut.load(
             app_name="myapp",
             file_util=fu,
@@ -105,3 +104,55 @@ class TestLoad(ConfigServiceFixture):
         )
         assert cfg == {}
         assert sources == []
+
+    def test_project_only_no_sources(self, sut: ConfigService, fu, fake_project_file: Path, data: dict):
+        cfg = sut.load(
+            app_name="myapp",
+            file_util=fu,
+            search_path="config",
+            return_sources=False,
+        )
+        assert cfg == data
+
+    def test_yaml_with_comments(self, sut: ConfigService, fu, project_root: Path):
+        p = project_root / "config" / "with_comments.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "# top comment\nbase: 1\nnest:\n  k: v  # inline\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(
+            app_name="myapp",
+            file_util=fu,
+            search_path="config",
+            project_filename="with_comments.yaml",
+        )
+        assert cfg == {"base": 1, "nest": {"k": "v"}}
+
+    def test_unknown_suffix_yields_empty_dict(self, sut: ConfigService, fu, project_root: Path):
+        p = project_root / "config" / "config.unknown"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("key=value\n", encoding="utf-8")
+
+        cfg, sources = sut.load(
+            app_name="myapp",
+            file_util=fu,
+            search_path="config",
+            project_filename="config.unknown",
+            return_sources=True,
+        )
+        assert cfg == {}
+        assert sources == [p]
+
+    def test_public_api_load_config(self, fu, fake_project_file: Path, data: dict):
+        from ebfutil.cfgutil import load_config
+        cfg, sources = load_config(
+            app_name="myapp",
+            project_filename="config.yaml",
+            user_filename="config.yaml",
+            file_util=fu,
+            search_path="config",
+            return_sources=True,
+        )
+        assert cfg == data
+        assert sources == [fake_project_file]
