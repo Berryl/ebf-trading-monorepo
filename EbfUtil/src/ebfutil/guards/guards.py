@@ -22,10 +22,12 @@ def ensure_not_none(candidate: Any, description: str | None = None) -> None:
         ))
 
 
-def ensure_not_empty(candidate: Any, description: str | None = None) -> None:
+def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
     """
     Ensures that the candidate is not None or an empty string, raising an AssertionError if it is.
     """
+    ensure_not_none(candidate, description)
+
     if candidate is None or (isinstance(candidate, str) and candidate == ""):
         prefix = f"Arg '{description}'" if description else "Value"
 
@@ -74,7 +76,7 @@ def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = N
     """
     Ensures that the candidate has the specified attribute.
     """
-    ensure_not_none(candidate)
+    ensure_not_none(candidate, description)
 
     if not hasattr(candidate, attr_spec):
         description = description or f"{type(candidate).__name__} has no attribute '{attr_spec}'"

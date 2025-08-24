@@ -8,10 +8,12 @@ except Exception:  # pragma: no cover
 
 class TomlLoader:
     file_types = (".toml",)
+    default_file_extension = "toml"
 
     def supports(self, path: Path) -> bool:
         return path.suffix.lower() in self.file_types
 
+    # noinspection PyMethodMayBeStatic
     def load(self, path: Path) -> dict:
         if not path.exists(): return {}
         if tomllib is None:

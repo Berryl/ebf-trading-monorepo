@@ -79,6 +79,24 @@ class TestEnsureNotNone:
             g.ensure_not_none(None, desc_param)
 
 
+class TestEnsureNotEmptyStr:
+
+    def test_when_valid(self):
+        g.ensure_not_empty_str('42', "filename")
+        pass  # No exception should be raised
+
+    @pytest.mark.parametrize(
+        "value, desc_param, msg",
+        [
+            (None, "filename", re.escape("Arg 'filename' cannot be None")),  # provided
+            ("      ", "filename", re.escape("Arg 'filename' cannot be an empty string")),  # provided
+            ("", "", re.escape("Value cannot be an empty string")),  # not provided
+        ])
+    def test_description_parameter(self, value, desc_param, msg):
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_not_empty_str(value, desc_param)
+
+
 class TestEnsureAttribute:
 
     def test_when_attribute_exists(self):
