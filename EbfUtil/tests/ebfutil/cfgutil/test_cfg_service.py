@@ -54,7 +54,7 @@ class TestLoad(ConfigServiceFixture):
                 app_name="myapp",
                 file_util=fu,
                 search_path="config",
-                filename="config.yaml",
+                project_filename="config.yaml",
                 return_sources=True,
             )
             assert cfg == data
@@ -90,7 +90,7 @@ class TestLoad(ConfigServiceFixture):
                 app_name="myapp",
                 file_util=fu,
                 search_path="config",
-                filename="config.yaml",
+                project_filename="config.yaml",
                 return_sources=True,
             )
 

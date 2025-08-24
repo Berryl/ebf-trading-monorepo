@@ -13,7 +13,7 @@ def load_config(
         app_name,
         file_util=file_util,
         search_path=search_path,
-        filename=filename,
+        project_filename=filename,
         return_sources=return_sources,
     )
 

@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 class YamlLoader:
     file_types = (".yaml", ".yml")
-    default_file_extension = "yaml"
 
     def supports(self, path: Path) -> bool: return path.suffix.lower() in self.file_types
 

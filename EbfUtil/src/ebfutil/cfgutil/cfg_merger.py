@@ -1,24 +1,30 @@
-from __future__ import annotations
-
-from typing import Any, Mapping
+from typing import Mapping, Any
 
 
 class ConfigMerger:
-    """Centralizes deep-merge behavior.
+    """Centralizes deep-merge for configs.
 
-    Why: keep merge logic reusable/testable; src overrides tgt.
-    Dicts deep-merge; lists/scalars replace.
+    src overrides tgt:
+      • Dicts deep-merge
+      • Lists/scalars replace
+
+    Notes:
+      - If tgt is None, returns dict(src) or {}.
+      - If src is None, returns dict(tgt).
+      - Does not mutate inputs.
     """
 
     @staticmethod
-    def deep(tgt: dict[str, Any] | None, src: Mapping[str, Any] | None) -> dict[str, Any]:
-        if not tgt:
+    def deep(tgt: Mapping[str, Any] | None, src: Mapping[str, Any] | None) -> dict[str, Any]:
+        if tgt is None:
             return dict(src or {})
-        if not src:
-            return tgt
+        if src is None:
+            return dict(tgt)
+
+        result: dict[str, Any] = dict(tgt)  # copy; do not mutate tgt
         for k, v in src.items():
-            if isinstance(v, Mapping) and isinstance(tgt.get(k), Mapping):
-                tgt[k] = ConfigMerger.deep(dict(tgt[k]), v)  # type: ignore[arg-type]
+            if isinstance(v, Mapping) and isinstance(result.get(k), Mapping):
+                result[k] = ConfigMerger.deep(result[k], v)  # type: ignore[arg-type]
             else:
-                tgt[k] = v
-        return tgt
+                result[k] = v
+        return result

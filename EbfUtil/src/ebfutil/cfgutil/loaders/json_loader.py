@@ -4,7 +4,6 @@ from pathlib import Path
 
 class JsonLoader:
     file_types = (".json",)
-    default_file_extension = "json"
 
     def supports(self, path: Path) -> bool: return path.suffix.lower() in self.file_types
 
