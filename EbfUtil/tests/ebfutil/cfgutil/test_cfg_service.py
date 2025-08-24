@@ -1,9 +1,9 @@
-import shutil
 import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 
 from ebfutil.cfgutil import ConfigService
 from ebfutil.cfgutil.loaders import YamlLoader
@@ -32,17 +32,10 @@ class ConfigServiceFixture:
         return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
 
     @pytest.fixture
-    def fake_file(self, project_root: Path) -> Path:
-        """
-        Copy a fixture file into the test's temp directory.
-        Ensures parent dirs exist. Returns the destination path.
-        """
+    def fake_file(self, project_root: Path, data: dict) -> Path:
         tgt = project_root / "config" / "config.yaml"
         tgt.parent.mkdir(parents=True, exist_ok=True)
-        tgt.write_text(
-            "a: 1\nlist: [1]\nnest:\n  x: 1\n  y: 1\n",
-            encoding="utf-8",
-        )
+        tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
         return tgt
 
 
