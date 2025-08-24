@@ -1,3 +1,4 @@
+import shutil
 import textwrap
 from pathlib import Path
 from unittest.mock import patch
@@ -14,17 +15,35 @@ class ConfigServiceFixture:
         return ConfigService()
 
     @pytest.fixture
-    def project_root(self, tmp_path: Path) -> Path:
-        return tmp_path / "project"
-
-    @pytest.fixture
     def fu(self, project_root: Path):
         from ebfutil.fileutil.file_util import FileUtil
         return FileUtil(project_root_override=project_root)
 
     @pytest.fixture
+    def project_root(self, tmp_path: Path) -> Path:
+        return tmp_path / "project"
+
+    @pytest.fixture
     def user_home(self, tmp_path: Path) -> Path:
         return tmp_path / "home"
+
+    @pytest.fixture
+    def data(self) -> dict:
+        return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
+
+    @pytest.fixture
+    def fake_file(self, project_root: Path) -> Path:
+        """
+        Copy a fixture file into the test's temp directory.
+        Ensures parent dirs exist. Returns the destination path.
+        """
+        tgt = project_root / "config" / "config.yaml"
+        tgt.parent.mkdir(parents=True, exist_ok=True)
+        tgt.write_text(
+            "a: 1\nlist: [1]\nnest:\n  x: 1\n  y: 1\n",
+            encoding="utf-8",
+        )
+        return tgt
 
 
 class TestCreation(ConfigServiceFixture):
@@ -32,32 +51,24 @@ class TestCreation(ConfigServiceFixture):
         assert isinstance(sut, ConfigService)
 
     def test_default_includes_yaml_loader(self, sut: ConfigService):
-        # KISS: introspect by type name; no reliance on privates besides _loaders
         assert any(type(ldr) is YamlLoader for ldr in sut._loaders)
 
 
-class TestLoad:
-    def test_loads_project_yaml_only(self, sut: ConfigService, fu, project_root: Path):
-        (project_root / "config").mkdir(parents=True)
-        (project_root / "config" / "config.yaml").write_text(textwrap.dedent("""
-            a: 1
-            list: [1]
-            nest: { x: 1, y: 1 }
-        """).strip() + "\n")
-
-        cfg, sources = sut.load(
-            app_name="myapp",
-            file_util=fu,
-            search_path="config",
-            filename="config.yaml",
-            return_sources=True,
-        )
-
-        assert cfg == {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
-        assert sources == [project_root / "config" / "config.yaml"]
+class TestLoad(ConfigServiceFixture):
+    class TestLoad(ConfigServiceFixture):
+        def test_can_load_yaml_files(self, sut: ConfigService, data, fu, fake_file):
+            cfg, sources = sut.load(
+                app_name="myapp",
+                file_util=fu,
+                search_path="config",
+                filename="config.yaml",
+                return_sources=True,
+            )
+            assert cfg == data
+            assert sources == [fake_file]
 
     def test_user_overrides_project_with_deep_merge_and_sources_order(
-        self, sut: ConfigService, fu, project_root: Path, user_home: Path
+            self, sut: ConfigService, fu, project_root: Path, user_home: Path
     ):
         (project_root / "config").mkdir(parents=True)
         (user_home / ".config" / "myapp").mkdir(parents=True)
@@ -93,8 +104,8 @@ class TestLoad:
         assert cfg == {
             "a": 1,
             "b": 2,
-            "list": [2],                 # list replaced
-            "nest": {"x": 1, "y": 9},    # dict deep-merged
+            "list": [2],  # list replaced
+            "nest": {"x": 1, "y": 9},  # dict deep-merged
             "base": 1,
         }
         assert sources == [

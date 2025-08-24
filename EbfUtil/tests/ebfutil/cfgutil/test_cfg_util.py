@@ -28,32 +28,20 @@
 # def fu(project_root: Path) -> FileUtil:
 #     return FileUtil(project_root_override=project_root)
 #
-#
-# @pytest.fixture
-# def editable_file(fixtures_root: Path, project_root: Path) -> Path:
-#     """
-#     Copy a fixture file into the test's temp directory.
-#     Ensures parent dirs exist. Returns the destination path.
-#     """
-#     src = fixtures_root / "basic.yaml"
-#     tgt = project_root / "config" / "config.yaml"
-#     tgt.parent.mkdir(parents=True, exist_ok=True)
-#     shutil.copyfile(src, tgt)
-#     return tgt
-#
+##
 #
 # class TestYamlCfgUtil:
-#     def test_can_load_basic_yaml(self, fu: FileUtil, editable_file):
-#         cfg, used = load_config(
-#             app_name="myapp",
-#             file_util=fu,
-#             search_path="config",
-#             filename="config.yaml",
-#             return_sources=True,
-#         )
-#         assert cfg["app"] == "myapp"
-#         assert cfg["paths"]["log"] == "/var/app/log"
-#         assert used == [editable_file]
+    def test_can_load_basic_yaml(self, fu: FileUtil, editable_file):
+        cfg, used = load_config(
+            app_name="myapp",
+            file_util=fu,
+            search_path="config",
+            filename="config.yaml",
+            return_sources=True,
+        )
+        assert cfg["app"] == "myapp"
+        assert cfg["paths"]["log"] == "/var/app/log"
+        assert used == [editable_file]
 #     #
 #     # def test_user_yaml_overrides_project_yaml(
 #     #         self, fixtures_root: Path, project_root: Path, fu: FileUtil, user_home: Path
