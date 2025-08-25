@@ -125,7 +125,7 @@ class TestPublicApi(ConfigServiceFixture):
         from ebfutil.cfgutil import load_config
         cfg, sources = load_config(
             app_name="myapp",
-            project_filename="config.yaml",
+            filename="config.yaml",
             user_filename="config.yaml",
             file_util=project_file_util,
             project_search_path="config",
