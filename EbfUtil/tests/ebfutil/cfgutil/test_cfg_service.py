@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -68,12 +68,13 @@ class TestLoad(ConfigServiceFixture):
         mock_fu.try_get_file_from_user_base_dir.return_value = u
         mock_fu.get_user_base_dir.return_value = user_home
 
-        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True,)
+        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True, )
 
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
 
-    def test_user_cfg_has_precedence_over_project_cfg(self, sut: ConfigService, fake_project_file: Path, user_home: Path):
+    def test_user_cfg_has_precedence_over_project_cfg(self, sut: ConfigService, fake_project_file: Path,
+                                                      user_home: Path):
         # user overrides: list replaced, dict deep-merged
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
@@ -93,40 +94,15 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
 
-    def test_no_files_found(self, sut: ConfigService, project_file_util):
-        cfg, sources = sut.load(
-            app_name="myapp",
-            file_util=project_file_util,
-            project_filename="missing.yaml",
-            user_filename="missing.yaml",
-            return_sources=True,
-        )
+    def test_when_no_files_found_at_all(self, sut: ConfigService):
+        mock_fu = MagicMock()
+        mock_fu.try_get_file_from_project_root.return_value = None
+        mock_fu.try_get_file_from_user_base_dir.return_value = None
+
+        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True, )
+
         assert cfg == {}
         assert sources == []
-
-    def test_project_only_no_sources(self, sut: ConfigService, project_file_util, fake_project_file: Path, data: dict):
-        cfg = sut.load(
-            app_name="myapp",
-            file_util=project_file_util,
-            project_search_path="config",
-            return_sources=False,
-        )
-        assert cfg == data
-
-    def test_yaml_with_comments(self, sut: ConfigService, project_file_util, project_root: Path):
-        p = project_root / "config" / "with_comments.yaml"
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(
-            "# top comment\nbase: 1\nnest:\n  k: v  # inline\n",
-            encoding="utf-8",
-        )
-        cfg = sut.load(
-            app_name="myapp",
-            file_util=project_file_util,
-            project_search_path="config",
-            project_filename="with_comments.yaml",
-        )
-        assert cfg == {"base": 1, "nest": {"k": "v"}}
 
     def test_unknown_suffix_yields_empty_dict(self, sut: ConfigService, project_file_util, project_root: Path):
         p = project_root / "config" / "config.unknown"
@@ -143,14 +119,34 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {}
         assert sources == [p]
 
-    def test_public_api_load_config(self, project_file_util, fake_project_file: Path, data: dict):
+
+class TestYamlSpecific(ConfigServiceFixture):
+    def test_comments_are_ignored(self, sut: ConfigService, project_file_util, project_root: Path):
+        p = project_root / "config" / "with_comments.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "# top comment\nbase: 1\nnest:\n  k: v  # inline\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(
+            app_name="myapp",
+            file_util=project_file_util,
+            project_search_path="config",
+            project_filename="with_comments.yaml",
+        )
+        assert cfg == {"base": 1, "nest": {"k": "v"}}
+
+
+class TestPublicApi(ConfigServiceFixture):
+
+    def test_load_config(self, project_file_util, fake_project_file: Path, data: dict):
         from ebfutil.cfgutil import load_config
         cfg, sources = load_config(
             app_name="myapp",
             project_filename="config.yaml",
             user_filename="config.yaml",
             file_util=project_file_util,
-            search_path="config",
+            project_search_path="config",
             return_sources=True,
         )
         assert cfg == data
