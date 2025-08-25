@@ -54,8 +54,9 @@ class ConfigService:
              project_search_path: Optional[str] = "config",
              project_filename: str = DEFAULT_FILENAME,
              user_filename: str = DEFAULT_FILENAME,
-             file_util: FileUtil | None = None,
-             return_sources: bool = False) -> dict | tuple[dict, list[Path]]:
+             return_sources: bool = False,
+             file_util: FileUtil | None = None
+        ) -> dict | tuple[dict, list[Path]]:
         """
         Load configuration for the given application.
 
@@ -69,16 +70,16 @@ class ConfigService:
 
         Args:
             app_name: Application name; used for user config path resolution.
+            project_search_path: Optional relative folder inside project root
+                (default: "config").
             project_filename: Project file name (default: "config.yaml").
             user_filename: User file name (default: "config.yaml").
+            return_sources: If True, also return the list of source files loaded
+                in the order they were applied.
             file_util: Optional FileUtil instance. In production this is usually
                 omitted (a new one will be created). In tests, you can supply a
                 preconfigured FileUtil bound to a temporary project root or
                 user base directory.
-            project_search_path: Optional relative folder inside project root
-                (default: none).
-            return_sources: If True, also return the list of source files loaded
-                in the order they were applied.
 
         Returns:
             dict: The merged configuration.

@@ -48,8 +48,8 @@ class TestCreation(ConfigServiceFixture):
 
 class TestLoad(ConfigServiceFixture):
     def test_can_load_project_config(self, sut: ConfigService, project_file_util, fake_project_file: Path, data: dict):
-        cfg, sources = sut.load(app_name="myapp", project_search_path="config", file_util=project_file_util,
-                                return_sources=True)
+        cfg, sources = sut.load(app_name="myapp", project_search_path="config", return_sources=True,
+                                file_util=project_file_util)
         assert cfg == data
         assert sources == [fake_project_file]
         assert sources[0].name == "config.yaml"
@@ -64,7 +64,7 @@ class TestLoad(ConfigServiceFixture):
         mock_fu.try_get_file_from_user_base_dir.return_value = u
         mock_fu.get_user_base_dir.return_value = user_home
 
-        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True)
+        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
 
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
@@ -80,7 +80,7 @@ class TestLoad(ConfigServiceFixture):
         mock_fu.try_get_file_from_project_root.return_value = fake_project_file
         mock_fu.try_get_file_from_user_base_dir.return_value = u
 
-        cfg, sources = sut.load(app_name="myapp", project_search_path="config", file_util=mock_fu, return_sources=True)
+        cfg, sources = sut.load(app_name="myapp", project_search_path="config", return_sources=True, file_util=mock_fu)
 
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
@@ -90,7 +90,7 @@ class TestLoad(ConfigServiceFixture):
         mock_fu.try_get_file_from_project_root.return_value = None
         mock_fu.try_get_file_from_user_base_dir.return_value = None
 
-        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True)
+        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
 
         assert cfg == {}
         assert sources == []
@@ -101,7 +101,7 @@ class TestLoad(ConfigServiceFixture):
         p.write_text("key=value\n", encoding="utf-8")
 
         cfg, sources = sut.load(app_name="myapp", project_search_path="config", project_filename="config.unknown",
-                                file_util=project_file_util, return_sources=True)
+                                return_sources=True, file_util=project_file_util)
         assert cfg == {}
         assert sources == [p]
 

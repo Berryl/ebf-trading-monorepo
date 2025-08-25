@@ -14,7 +14,7 @@ def load_config(
         return_sources: bool,
 ):
     return ConfigService().load(app_name, project_search_path=project_search_path, project_filename=project_filename,
-                                user_filename=user_filename, file_util=file_util, return_sources=return_sources)
+                                user_filename=user_filename, return_sources=return_sources, file_util=file_util)
 
 
 __all__ = ["load_config"]
