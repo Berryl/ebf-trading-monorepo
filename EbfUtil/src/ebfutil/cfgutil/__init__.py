@@ -13,7 +13,7 @@ def load_config(
         project_search_path: Optional[str],
         return_sources: bool,
 ):
-    return ConfigService().load(app_name, project_search_path=project_search_path, project_filename=project_filename,
+    return ConfigService().load(app_name, project_search_path=project_search_path, filename=project_filename,
                                 user_filename=user_filename, return_sources=return_sources, file_util=file_util)
 
 

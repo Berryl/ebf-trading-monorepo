@@ -100,7 +100,7 @@ class TestLoad(ConfigServiceFixture):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("key=value\n", encoding="utf-8")
 
-        cfg, sources = sut.load(app_name="myapp", project_search_path="config", project_filename="config.unknown",
+        cfg, sources = sut.load(app_name="myapp", project_search_path="config", filename="config.unknown",
                                 return_sources=True, file_util=project_file_util)
         assert cfg == {}
         assert sources == [p]
@@ -114,7 +114,7 @@ class TestYamlSpecific(ConfigServiceFixture):
             "# top comment\nbase: 1\nnest:\n  k: v  # inline\n",
             encoding="utf-8",
         )
-        cfg = sut.load(app_name="myapp", project_search_path="config", project_filename="with_comments.yaml",
+        cfg = sut.load(app_name="myapp", project_search_path="config", filename="with_comments.yaml",
                        file_util=project_file_util)
         assert cfg == {"base": 1, "nest": {"k": "v"}}
 

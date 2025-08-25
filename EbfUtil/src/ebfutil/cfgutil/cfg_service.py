@@ -51,12 +51,12 @@ class ConfigService:
         self._loaders: list[ConfigFormatLoader] = loaders or [YamlLoader(), JsonLoader(), TomlLoader()]
 
     def load(self, app_name: str, *,
-             project_search_path: Optional[str] = "config",
-             project_filename: str = DEFAULT_FILENAME,
-             user_filename: str = DEFAULT_FILENAME,
+             project_search_path: str | Path | None = "config",
+             filename: str | Path | None = DEFAULT_FILENAME,
+             user_filename: str | Path | None = None,
              return_sources: bool = False,
              file_util: FileUtil | None = None
-        ) -> dict | tuple[dict, list[Path]]:
+             ) -> dict | tuple[dict, list[Path]]:
         """
         Load configuration for the given application.
 
@@ -72,8 +72,9 @@ class ConfigService:
             app_name: Application name; used for user config path resolution.
             project_search_path: Optional relative folder inside project root
                 (default: "config").
-            project_filename: Project file name (default: "config.yaml").
-            user_filename: User file name (default: "config.yaml").
+            filename: file name assumes the same for both project & user file names.
+                (default: "config.yaml").
+            user_filename: Optional override, ie "SallyConfig.yaml"
             return_sources: If True, also return the list of source files loaded
                 in the order they were applied.
             file_util: Optional FileUtil instance. In production this is usually
@@ -87,14 +88,15 @@ class ConfigService:
                 used in order.
         """
         g.ensure_not_empty_str(app_name, "app_name")
-        g.ensure_not_empty_str(project_filename, "project_filename")
-        g.ensure_not_empty_str(user_filename, "user_filename")
+        g.ensure_not_empty_str(filename, "project_filename")
+        if user_filename is None:
+            user_filename = filename
 
         fu = file_util or FileUtil()
         sources: list[Path] = []
         cfg: dict = {}
 
-        proj_path = fu.try_get_file_from_project_root(project_filename, project_search_path or "")
+        proj_path = fu.try_get_file_from_project_root(filename, project_search_path or "")
         if proj_path:
             cfg = self._load_any(proj_path)
             sources.append(proj_path)
