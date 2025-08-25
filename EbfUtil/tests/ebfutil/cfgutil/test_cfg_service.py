@@ -73,21 +73,22 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
 
-    def test_both_precedence_and_merge(self, sut: ConfigService, project_file_util, fake_project_file: Path, user_home: Path):
-        # project has base; user overrides: list replace, dict deep-merge
+    def test_user_cfg_has_precedence_over_project_cfg(self, sut: ConfigService, fake_project_file: Path, user_home: Path):
+        # user overrides: list replaced, dict deep-merged
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"b": 2, "list": [2], "nest": {"y": 9}}), encoding="utf-8")
 
-        with patch.object(project_file_util, "get_user_base_dir", return_value=user_home):
-            cfg, sources = sut.load(
-                app_name="myapp",
-                file_util=project_file_util,
-                project_search_path="config",
-                project_filename="config.yaml",
-                user_filename="config.yaml",
-                return_sources=True,
-            )
+        mock_fu = MagicMock()
+        mock_fu.try_get_file_from_project_root.return_value = fake_project_file
+        mock_fu.try_get_file_from_user_base_dir.return_value = u
+
+        cfg, sources = sut.load(
+            app_name="myapp",
+            file_util=mock_fu,
+            project_search_path="config",
+            return_sources=True,
+        )
 
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
