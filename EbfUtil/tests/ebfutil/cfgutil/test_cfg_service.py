@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 import yaml
@@ -58,19 +58,17 @@ class TestLoad(ConfigServiceFixture):
         assert sources == [fake_project_file]
         assert sources[0].name == "config.yaml"
 
-    def test_user_only(self, sut: ConfigService, project_file_util, user_home: Path, data: dict):
-        # no project file; only user file exists
+    def test_can_load_user_config_when_no_project_config(self, sut: ConfigService, user_home: Path):
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"a": 9, "list": [2], "nest": {"x": 5}}), encoding="utf-8")
 
-        with patch.object(project_file_util, "get_user_base_dir", return_value=user_home):
-            cfg, sources = sut.load(
-                app_name="myapp",
-                file_util=project_file_util,
-                user_filename="config.yaml",
-                return_sources=True,
-            )
+        mock_fu = MagicMock()
+        mock_fu.try_get_file_from_project_root.return_value = None
+        mock_fu.try_get_file_from_user_base_dir.return_value = u
+        mock_fu.get_user_base_dir.return_value = user_home
+
+        cfg, sources = sut.load(app_name="myapp", file_util=mock_fu, return_sources=True,)
 
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
