@@ -50,35 +50,40 @@ class ConfigService:
     def __init__(self, loaders: Optional[list[ConfigFormatLoader]] = None) -> None:
         self._loaders: list[ConfigFormatLoader] = loaders or [YamlLoader(), JsonLoader(), TomlLoader()]
 
-    def load(
-            self,
-            app_name: str,
-            *,
-            project_filename: str = DEFAULT_FILENAME,
-            user_filename: str = DEFAULT_FILENAME,
-            file_util: Optional[FileUtil] = None,
-            project_search_path: Optional[str] = None,
-            return_sources: bool = False,
-    ) -> dict | tuple[dict, list[Path]]:
+    def load(self, app_name: str, *,
+             project_search_path: Optional[str] = "config",
+             project_filename: str = DEFAULT_FILENAME,
+             user_filename: str = DEFAULT_FILENAME,
+             file_util: FileUtil | None = None,
+             return_sources: bool = False) -> dict | tuple[dict, list[Path]]:
         """
         Load configuration for the given application.
 
         Search order:
-          1. Project config file: <project_root>/<search_path>/<project_filename>
+          1. Project config file: <project_root>/<project_search_path>/<project_filename>
           2. User config file: <user_base>/.config/<app_name>/<user_filename>
 
         If both exist, the user config is merged over the project config
-        (dicts merged deeply, lists/scalars replaced).
+        (dicts merged deeply, lists/scalars replaced). Missing files are
+        skipped without error.
 
-        FileUtil will raise an error for any path or file not found.
+        Args:
+            app_name: Application name; used for user config path resolution.
+            project_filename: Project file name (default: "config.yaml").
+            user_filename: User file name (default: "config.yaml").
+            file_util: Optional FileUtil instance. In production this is usually
+                omitted (a new one will be created). In tests, you can supply a
+                preconfigured FileUtil bound to a temporary project root or
+                user base directory.
+            project_search_path: Optional relative folder inside project root
+                (default: none).
+            return_sources: If True, also return the list of source files loaded
+                in the order they were applied.
 
-        :param app_name: Application name; used for user config path resolution
-        :param project_filename: Optional project file name instead of DEFAULT_FILENAME.
-        :param user_filename: Optional user file name instead of DEFAULT_FILENAME.
-        :param file_util: Optional FileUtil override to avoid creating one here for project/user path lookups.
-        :param project_search_path: Optional relative folder inside project root (if None, use FileUtil to find it).
-        :param return_sources: If True, also return the list of source files loaded in order.
-        :return:
+        Returns:
+            dict: The merged configuration.
+            (dict, list[Path]): If return_sources=True, also return the sources
+                used in order.
         """
         g.ensure_not_empty_str(app_name, "app_name")
         g.ensure_not_empty_str(project_filename, "project_filename")

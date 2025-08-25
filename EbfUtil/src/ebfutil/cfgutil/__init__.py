@@ -13,14 +13,8 @@ def load_config(
         project_search_path: Optional[str],
         return_sources: bool,
 ):
-    return ConfigService().load(
-        app_name,
-        project_filename=project_filename,
-        user_filename=user_filename,
-        file_util=file_util,
-        project_search_path=project_search_path,
-        return_sources=return_sources,
-    )
+    return ConfigService().load(app_name, project_search_path=project_search_path, project_filename=project_filename,
+                                user_filename=user_filename, file_util=file_util, return_sources=return_sources)
 
 
 __all__ = ["load_config"]
