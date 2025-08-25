@@ -6,6 +6,7 @@ import yaml
 
 from ebfutil.cfgutil import ConfigService
 from ebfutil.cfgutil.loaders import YamlLoader
+from ebfutil.fileutil.file_util import FileUtil
 
 
 class ConfigServiceFixture:
@@ -52,17 +53,16 @@ class TestLoad(ConfigServiceFixture):
 
         assert cfg == data
         assert sources == [fake_project_file]
-        assert sources[0].name == "config.yaml"
+        assert sources[0].name == "config.yaml"  # redundant but clear what the actual file source is
 
-    def test_can_load_user_config_when_no_project_config(self, sut: ConfigService, user_home: Path):
+    def test_can_load_user_config_when_project_config_absent(self, sut: ConfigService, user_home: Path):
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"a": 9, "list": [2], "nest": {"x": 5}}), encoding="utf-8")
 
-        mock_fu = MagicMock()
+        mock_fu = MagicMock(spec=FileUtil)
         mock_fu.try_get_file_from_project_root.return_value = None
         mock_fu.try_get_file_from_user_base_dir.return_value = u
-        mock_fu.get_user_base_dir.return_value = user_home
 
         cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
 
@@ -76,7 +76,7 @@ class TestLoad(ConfigServiceFixture):
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"b": 2, "list": [2], "nest": {"y": 9}}), encoding="utf-8")
 
-        mock_fu = MagicMock()
+        mock_fu = MagicMock(spec=FileUtil)
         mock_fu.try_get_file_from_project_root.return_value = fake_project_file
         mock_fu.try_get_file_from_user_base_dir.return_value = u
 
@@ -86,7 +86,7 @@ class TestLoad(ConfigServiceFixture):
         assert sources == [fake_project_file, u]
 
     def test_when_no_files_found_at_all(self, sut: ConfigService):
-        mock_fu = MagicMock()
+        mock_fu = MagicMock(spec=FileUtil)
         mock_fu.try_get_file_from_project_root.return_value = None
         mock_fu.try_get_file_from_user_base_dir.return_value = None
 
