@@ -61,8 +61,8 @@ class ConfigService:
         Load configuration for the given application.
 
         Search order:
-          1. Project config file: <project_root>/<project_search_path>/<project_filename>
-          2. User config file: <user_base>/.config/<app_name>/<user_filename>
+          1. Project: <project_root>/<project_search_path>/<filename>
+          2. User: <user_base>/.config/<app_name>/<user_filename>
 
         If both exist, the user config is merged over the project config
         (dicts merged deeply, lists/scalars replaced). Missing files are
@@ -88,7 +88,7 @@ class ConfigService:
                 used in order.
         """
         g.ensure_not_empty_str(app_name, "app_name")
-        g.ensure_not_empty_str(filename, "project_filename")
+        assert filename, "filename must be either a Path or non-empty string"
         if user_filename is None:
             user_filename = filename
 
@@ -120,10 +120,7 @@ class ConfigService:
         Returns {} if no loader supports the path.
         """
         ldr: ConfigFormatLoader = self._get_loader_for(path)
-        if ldr is None:
-            return {}
-        else:
-            return ldr.load(path)
+        return ldr.load(path) if ldr is not None else {}
 
     def _get_loader_for(self, path: Path) -> ConfigFormatLoader | None:
         """return the first loader that supports the file path, else done."""
