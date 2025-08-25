@@ -22,7 +22,7 @@ class ConfigServiceFixture:
         return tmp_path / "home"
 
     @pytest.fixture
-    def fu(self, project_root: Path):
+    def project_file_util(self, project_root: Path):
         from ebfutil.fileutil.file_util import FileUtil
         return FileUtil(project_root_override=project_root)
 
@@ -47,27 +47,27 @@ class TestCreation(ConfigServiceFixture):
 
 
 class TestLoad(ConfigServiceFixture):
-    def test_project_only(self, sut: ConfigService, fu, fake_project_file: Path, data: dict):
+    def test_can_load_project_config(self, sut: ConfigService, project_file_util, fake_project_file: Path, data: dict):
         cfg, sources = sut.load(
             app_name="myapp",
-            file_util=fu,
+            file_util=project_file_util,
             project_search_path="config",
-            project_filename="config.yaml",
             return_sources=True,
         )
         assert cfg == data
         assert sources == [fake_project_file]
+        assert sources[0].name == "config.yaml"
 
-    def test_user_only(self, sut: ConfigService, fu, user_home: Path, data: dict):
+    def test_user_only(self, sut: ConfigService, project_file_util, user_home: Path, data: dict):
         # no project file; only user file exists
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"a": 9, "list": [2], "nest": {"x": 5}}), encoding="utf-8")
 
-        with patch.object(fu, "get_user_base_dir", return_value=user_home):
+        with patch.object(project_file_util, "get_user_base_dir", return_value=user_home):
             cfg, sources = sut.load(
                 app_name="myapp",
-                file_util=fu,
+                file_util=project_file_util,
                 user_filename="config.yaml",
                 return_sources=True,
             )
@@ -75,16 +75,16 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
 
-    def test_both_precedence_and_merge(self, sut: ConfigService, fu, fake_project_file: Path, user_home: Path):
+    def test_both_precedence_and_merge(self, sut: ConfigService, project_file_util, fake_project_file: Path, user_home: Path):
         # project has base; user overrides: list replace, dict deep-merge
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"b": 2, "list": [2], "nest": {"y": 9}}), encoding="utf-8")
 
-        with patch.object(fu, "get_user_base_dir", return_value=user_home):
+        with patch.object(project_file_util, "get_user_base_dir", return_value=user_home):
             cfg, sources = sut.load(
                 app_name="myapp",
-                file_util=fu,
+                file_util=project_file_util,
                 project_search_path="config",
                 project_filename="config.yaml",
                 user_filename="config.yaml",
@@ -94,10 +94,10 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
 
-    def test_no_files_found(self, sut: ConfigService, fu):
+    def test_no_files_found(self, sut: ConfigService, project_file_util):
         cfg, sources = sut.load(
             app_name="myapp",
-            file_util=fu,
+            file_util=project_file_util,
             project_filename="missing.yaml",
             user_filename="missing.yaml",
             return_sources=True,
@@ -105,16 +105,16 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {}
         assert sources == []
 
-    def test_project_only_no_sources(self, sut: ConfigService, fu, fake_project_file: Path, data: dict):
+    def test_project_only_no_sources(self, sut: ConfigService, project_file_util, fake_project_file: Path, data: dict):
         cfg = sut.load(
             app_name="myapp",
-            file_util=fu,
+            file_util=project_file_util,
             project_search_path="config",
             return_sources=False,
         )
         assert cfg == data
 
-    def test_yaml_with_comments(self, sut: ConfigService, fu, project_root: Path):
+    def test_yaml_with_comments(self, sut: ConfigService, project_file_util, project_root: Path):
         p = project_root / "config" / "with_comments.yaml"
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(
@@ -123,20 +123,20 @@ class TestLoad(ConfigServiceFixture):
         )
         cfg = sut.load(
             app_name="myapp",
-            file_util=fu,
+            file_util=project_file_util,
             project_search_path="config",
             project_filename="with_comments.yaml",
         )
         assert cfg == {"base": 1, "nest": {"k": "v"}}
 
-    def test_unknown_suffix_yields_empty_dict(self, sut: ConfigService, fu, project_root: Path):
+    def test_unknown_suffix_yields_empty_dict(self, sut: ConfigService, project_file_util, project_root: Path):
         p = project_root / "config" / "config.unknown"
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("key=value\n", encoding="utf-8")
 
         cfg, sources = sut.load(
             app_name="myapp",
-            file_util=fu,
+            file_util=project_file_util,
             project_search_path="config",
             project_filename="config.unknown",
             return_sources=True,
@@ -144,13 +144,13 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {}
         assert sources == [p]
 
-    def test_public_api_load_config(self, fu, fake_project_file: Path, data: dict):
+    def test_public_api_load_config(self, project_file_util, fake_project_file: Path, data: dict):
         from ebfutil.cfgutil import load_config
         cfg, sources = load_config(
             app_name="myapp",
             project_filename="config.yaml",
             user_filename="config.yaml",
-            file_util=fu,
+            file_util=project_file_util,
             search_path="config",
             return_sources=True,
         )
