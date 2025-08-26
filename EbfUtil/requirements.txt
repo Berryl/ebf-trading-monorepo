@@ -1,6 +1,6 @@
  
 colorama==0.4.6
--e git+https://github.com/Berryl/EbfUtil.git@0345cf0c4c52aaef07e2931c2e8d90401a2152d2#egg=ebfutil
+-e git+https://github.com/Berryl/EbfUtil.git@f3e4bad4743adebcec1a1491da5901c9db942dc4#egg=ebfutil
 et_xmlfile==2.0.0
 iniconfig==2.1.0
 openpyxl==3.1.5
@@ -11,4 +11,4 @@ Pygments==2.19.2
 pytest==8.4.1
 PyYAML==6.0.2
 typeguard==4.4.4
-typing_extensions==4.14.1
+typing_extensions==4.15.0
