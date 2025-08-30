@@ -1,42 +1,12 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 import yaml
 
 from ebfutil.cfgutil import ConfigService
 from ebfutil.cfgutil.loaders import YamlLoader
 from ebfutil.fileutil.file_util import FileUtil
-
-
-class ConfigServiceFixture:
-    @pytest.fixture
-    def sut(self) -> ConfigService:
-        return ConfigService()
-
-    @pytest.fixture
-    def project_root(self, tmp_path: Path) -> Path:
-        return tmp_path / "project"
-
-    @pytest.fixture
-    def user_home(self, tmp_path: Path) -> Path:
-        return tmp_path / "home"
-
-    @pytest.fixture
-    def project_file_util(self, project_root: Path):
-        from ebfutil.fileutil.file_util import FileUtil
-        return FileUtil(project_root_override=project_root)
-
-    @pytest.fixture
-    def data(self) -> dict:
-        return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
-
-    @pytest.fixture
-    def fake_project_file(self, project_root: Path, data: dict) -> Path:
-        tgt = project_root / "config" / "config.yaml"
-        tgt.parent.mkdir(parents=True, exist_ok=True)
-        tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
-        return tgt
+from tests.ebfutil.cfgutil.fixtures.cgf_svc_fixture import ConfigServiceFixture
 
 
 class TestCreation(ConfigServiceFixture):
@@ -122,6 +92,6 @@ class TestPublicApi(ConfigServiceFixture):
 
     def test_load_config(self, project_file_util, fake_project_file: Path, data: dict):
         from ebfutil.cfgutil import load_config
-        cfg, sources = load_config(app_name="myapp", file_util=project_file_util, return_sources=True,)
+        cfg, sources = load_config(app_name="myapp", file_util=project_file_util, return_sources=True, )
         assert cfg == data
         assert sources == [fake_project_file]

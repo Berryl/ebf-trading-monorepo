@@ -1,4 +1,4 @@
-# comments should be ignored by PyYAML
+# PyYAML should ignore comments
 app: myapp
 theme: dark   # user override target in tests
 paths:
