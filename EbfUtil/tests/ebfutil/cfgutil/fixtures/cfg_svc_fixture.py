@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,7 +11,7 @@ from ebfutil.fileutil.file_util import FileUtil
 
 class ConfigServiceFixture:
 
-    # region class-scoped)
+    # region class-scoped
     @pytest.fixture(scope="class")
     def app_name(self) -> str:
         return "myapp"
@@ -42,7 +43,6 @@ class ConfigServiceFixture:
 
     @pytest.fixture
     def project_file_util(self, project_root: Path):
-        from ebfutil.fileutil.file_util import FileUtil
         return FileUtil(project_root_override=project_root)
 
     @pytest.fixture
@@ -57,7 +57,7 @@ class ConfigServiceFixture:
         return MagicMock(spec=FileUtil)
 
     @pytest.fixture
-    def user_config_factory(self, user_home: Path, app_name: str, filename: str):
+    def user_config_factory(self, user_home: Path, app_name: str, filename: str) -> Callable[[dict], Path]:
         """
         Returns a callable to create a user config file under:
           <user_home>/.config/<app_name>/<filename or custom>

@@ -6,7 +6,7 @@ import yaml
 from ebfutil.cfgutil import ConfigService
 from ebfutil.cfgutil.loaders import YamlLoader
 from ebfutil.fileutil.file_util import FileUtil
-from tests.ebfutil.cfgutil.fixtures.cgf_svc_fixture import ConfigServiceFixture
+from tests.ebfutil.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 
 class TestCreation(ConfigServiceFixture):
@@ -39,18 +39,17 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
 
-    def test_user_cfg_has_precedence_over_project_cfg(self, sut: ConfigService, fake_project_file: Path,
-                                                      user_home: Path):
+    def test_user_cfg_has_precedence_over_project_cfg(
+            self, sut: ConfigService, fake_project_file: Path, user_home: Path, mock_file_util: FileUtil):
         # user overrides: list replaced, dict deep-merged
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"b": 2, "list": [2], "nest": {"y": 9}}), encoding="utf-8")
 
-        mock_fu = MagicMock(spec=FileUtil)
-        mock_fu.try_get_file_from_project_root.return_value = fake_project_file
-        mock_fu.try_get_file_from_user_base_dir.return_value = u
+        mock_file_util.try_get_file_from_project_root.return_value = fake_project_file
+        mock_file_util.try_get_file_from_user_base_dir.return_value = u
 
-        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
+        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_file_util)
 
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
