@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import yaml
 
@@ -25,16 +24,16 @@ class TestLoad(ConfigServiceFixture):
         assert sources == [fake_project_file]
         assert sources[0].name == "config.yaml"  # redundant but clear what the actual file source is
 
-    def test_can_load_user_config_when_project_config_absent(self, sut: ConfigService, user_home: Path):
+    def test_can_load_user_config_when_project_config_absent(
+            self, sut: ConfigService, user_home: Path, mock_file_util: FileUtil):
         u = user_home / ".config" / "myapp" / "config.yaml"
         u.parent.mkdir(parents=True, exist_ok=True)
         u.write_text(yaml.safe_dump({"a": 9, "list": [2], "nest": {"x": 5}}), encoding="utf-8")
 
-        mock_fu = MagicMock(spec=FileUtil)
-        mock_fu.try_get_file_from_project_root.return_value = None
-        mock_fu.try_get_file_from_user_base_dir.return_value = u
+        mock_file_util.try_get_file_from_project_root.return_value = None
+        mock_file_util.try_get_file_from_user_base_dir.return_value = u
 
-        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
+        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_file_util)
 
         assert cfg == {"a": 9, "list": [2], "nest": {"x": 5}}
         assert sources == [u]
@@ -54,12 +53,11 @@ class TestLoad(ConfigServiceFixture):
         assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
         assert sources == [fake_project_file, u]
 
-    def test_when_no_files_found_at_all(self, sut: ConfigService):
-        mock_fu = MagicMock(spec=FileUtil)
-        mock_fu.try_get_file_from_project_root.return_value = None
-        mock_fu.try_get_file_from_user_base_dir.return_value = None
+    def test_when_no_files_found_at_all(self, sut: ConfigService, mock_file_util: FileUtil):
+        mock_file_util.try_get_file_from_project_root.return_value = None
+        mock_file_util.try_get_file_from_user_base_dir.return_value = None
 
-        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_fu)
+        cfg, sources = sut.load(app_name="myapp", return_sources=True, file_util=mock_file_util)
 
         assert cfg == {}
         assert sources == []
