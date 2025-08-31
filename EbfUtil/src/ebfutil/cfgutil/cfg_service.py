@@ -21,7 +21,7 @@ class ConfigFormatLoader(Protocol):
 
     Methods:
         supports(self, path: Path) -> bool:
-            True if this loader can handle given path's suffix file type.
+            True if this loader can handle a given path's suffix file type.
         load(self, path: Path) -> dict:
             Load and parse the file into a dict. The dict will be empty if an
             error is encountered or the file has no data.
@@ -70,11 +70,11 @@ class ConfigService:
 
         Args:
             app_name: Application name; used for user config path resolution.
-            project_search_path: Optional relative folder inside project root
+            project_search_path: Optional relative folder inside the project root
                 (default: "config").
-            filename: file name assumes the same for both project & user file names.
+            filename: file name assumes the same for both project and user file names.
                 (default: "config.yaml").
-            user_filename: Optional override, ie "SallyConfig.yaml"
+            user_filename: Optional override, i.e., "SallyConfig.yaml"
             return_sources: If True, also return the list of source files loaded
                 in the order they were applied.
             file_util: Optional FileUtil instance. In production this is usually
