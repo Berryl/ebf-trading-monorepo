@@ -148,6 +148,49 @@ class ConfigService:
         handler.store(out_path, cfg)
         return out_path
 
+    def update(
+            self,
+            patch: Mapping[str, Any],
+            app_name: str,
+            *,
+            project_search_path: str | Path = "config",
+            filename: str | Path = "config.yaml",
+            user_filename: str | Path | None = None,
+            target: Literal["project", "user"] = "user",
+            file_util: FileUtil | None = None,
+    ) -> Path:
+        """
+        Merge the given patch into the target config file and persist it.
+
+        Behavior:
+          - Resolves the destination similarly to store().
+          - Loads existing config from the destination file only (does not combine sources).
+          - Deep-merges existing config with the patch (patch wins).
+          - Writes the merged result back to the same destination.
+        """
+        g.ensure_not_empty_str(app_name, "app_name")
+        assert filename, "filename must be either a Path or non-empty string"
+
+        fu = file_util or FileUtil()
+        if target == "project":
+            base = fu.get_project_root()
+            out_path = base / Path(project_search_path or "") / Path(filename)
+        else:
+            f_name = Path(user_filename or filename)
+            base = fu.get_user_base_dir()
+            out_path = base / Path(".config") / app_name / f_name
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        handler = self._get_handler_for(out_path)
+        if handler is None:
+            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
+
+        current_cfg: dict = handler.load(out_path) if out_path.exists() else {}
+        merged = ConfigMerger.deep(current_cfg or {}, dict(patch))
+        handler.store(out_path, merged)
+        return out_path
+
     def _load_any(self, path: Path) -> dict:
         """
         Use the first loader that supports the file path.

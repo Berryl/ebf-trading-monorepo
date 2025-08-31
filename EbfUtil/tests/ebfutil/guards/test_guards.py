@@ -145,3 +145,29 @@ class TestEnsureAttribute:
         msg = re.escape("Arg 'example_value' cannot be None")
         with pytest.raises(AssertionError, match=msg):
             g.ensure_attribute(None, "missing_attr", "example_value")
+
+class TestEnsureIn:
+
+    def test_valid_with_list(self):
+        g.ensure_in("yaml", ["yaml", "json", "toml"], "format")
+
+    def test_valid_with_tuple(self):
+        g.ensure_in(2, (1, 2, 3), "level")
+
+    def test_valid_with_set(self):
+        g.ensure_in("blue", {"red", "green", "blue"}, "color")
+
+    def test_not_in_with_description(self):
+        msg = re.escape("Arg 'mode' must be one of the allowed choices")
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_in("dark", ["system", "light"], "mode")
+
+    def test_not_in_without_description(self):
+        msg = re.escape("Value must be one of the allowed choices")
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_in("pdf", ["yaml", "json", "toml"])
+
+    def test_choices_none_raises(self):
+        msg = re.escape("Arg 'choices' cannot be None")
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_in("yaml", None)  # type: ignore[arg-type]

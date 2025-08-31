@@ -1,4 +1,5 @@
 import traceback
+from collections.abc import Iterable
 from typing import Any, TypeVar, Type, Optional
 
 from typeguard import check_type, ForwardRefPolicy, CollectionCheckStrategy, TypeCheckError
@@ -34,7 +35,7 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
 
         object_info = {
             "Description": description or "Unnamed",
-            "Received": "None" if candidate is None else "Empty String"
+            "Received": "Empty String"
         }
 
         raise AssertionError(create_clean_error_context(
@@ -95,6 +96,49 @@ def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = N
 
         raise AttributeError(create_clean_error_context(description, object_info))
 
+    return candidate
+
+def ensure_in(candidate: Any, choices: Iterable, description: str | None = None) -> None:
+    """
+    Ensures that the candidate is a member of the provided choices.
+    """
+    ensure_not_none(choices, "choices")
+
+    try:
+        if candidate in choices:
+            return
+    except TypeError:
+        try:
+            for item in choices:
+                if candidate == item:
+                    return
+        except TypeError:
+            pass  # Non-iterable 'choices' — will fall through to error
+
+    shown_items: list[Any] = []
+    try:
+        it = iter(choices)
+        for _ in range(10):
+            shown_items.append(next(it))
+    except Exception:   # noqa PyBroadException
+        pass
+
+    shown = ", ".join(repr(x) for x in shown_items)
+    try:
+        if len(choices) > len(shown_items):  # type: ignore[arg-type]
+            shown = (shown + ", ...") if shown else "..."
+    except Exception:  # noqa PyBroadException
+        pass
+
+    prefix = f"Arg '{description}'" if description else "Value"
+    raise AssertionError(create_clean_error_context(
+        description=f"{prefix} must be one of the allowed choices",
+        object_info={
+            "Description": description or "Unnamed",
+            "Received": repr(candidate),
+            "Allowed (sample)": shown if shown else "(unavailable)"
+        }
+    ))
 
 def create_clean_error_context(
         description: str,
