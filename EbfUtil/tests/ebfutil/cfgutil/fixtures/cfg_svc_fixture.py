@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable
+from typing import Protocol
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,6 +27,7 @@ class ConfigServiceFixture:
     @pytest.fixture(scope="class")
     def data(self) -> dict:
         return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
+
     # endregion
 
     @pytest.fixture
@@ -56,18 +57,39 @@ class ConfigServiceFixture:
     def mock_file_util(self):
         return MagicMock(spec=FileUtil)
 
+    # region User Config Factory
+    class UserConfigWriter(Protocol):
+        def __call__(
+                self,
+                payload: dict,
+                *,
+                file_name: str | None = None,
+                app: str | None = None,
+        ) -> Path: ...
+
     @pytest.fixture
-    def user_config_factory(self, user_home: Path, app_name: str, filename: str) -> Callable[[dict], Path]:
+    def user_config_factory(
+            self,
+            user_home: Path,
+            app_name: str,
+            filename: str
+    ) -> UserConfigWriter:
         """
         Returns a callable to create a user config file under:
           <user_home>/.config/<app_name>/<filename or custom>
+
         Usage:
             path = user_config_factory({"k": "v"})
             path = user_config_factory({"k": "v"}, file_name="alt.yaml")
             path = user_config_factory({"k": "v"}, app="other-app")
         """
 
-        def _create_user_cfg(payload: dict, *, file_name: str | None = None, app: str | None = None) -> Path:
+        def _create_user_cfg(
+                payload: dict,
+                *,
+                file_name: str | None = None,
+                app: str | None = None
+        ) -> Path:
             tgt_app = app or app_name
             f = file_name or filename
 
@@ -77,3 +99,4 @@ class ConfigServiceFixture:
             return p
 
         return _create_user_cfg
+    # endregion
