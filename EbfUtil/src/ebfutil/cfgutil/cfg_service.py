@@ -19,8 +19,8 @@ class ConfigService:
     """
     DEFAULT_FILENAME = "config.yaml"
 
-    def __init__(self, loaders: Optional[list[ConfigFormatHandler]] = None) -> None:
-        self._loaders: list[ConfigFormatHandler] = loaders or [YamlLoader(), JsonLoader(), TomlLoader()]
+    def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
+        self._handers: list[ConfigFormatHandler] = handlers or [YamlLoader(), JsonLoader(), TomlLoader()]
 
     def load(self, app_name: str, *,
              project_search_path: str | Path | None = "config",
@@ -141,11 +141,11 @@ class ConfigService:
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
-        ldr = self._get_loader_for(out_path)
-        if ldr is None:
+        handler = self._get_handler_for(out_path)
+        if handler is None:
             raise RuntimeError(f"No loader available to store files with suffix '{out_path.suffix}'")
 
-        ldr.store(out_path, cfg)
+        handler.store(out_path, cfg)
         return out_path
 
     @staticmethod
@@ -158,12 +158,12 @@ class ConfigService:
         Only one loader is applied; loaders are not combined.
         Returns {} if no loader supports the path.
         """
-        ldr: ConfigFormatHandler = self._get_loader_for(path)
-        return ldr.load(path) if ldr is not None else {}
+        handler: ConfigFormatHandler = self._get_handler_for(path)
+        return handler.load(path) if handler is not None else {}
 
-    def _get_loader_for(self, path: Path) -> ConfigFormatHandler | None:
+    def _get_handler_for(self, path: Path) -> ConfigFormatHandler | None:
         """return the first loader that supports the file path, else done."""
-        for ldr in self._loaders:
-            if ldr.supports(path):
-                return ldr
+        for h in self._handers:
+            if h.supports(path):
+                return h
         return None

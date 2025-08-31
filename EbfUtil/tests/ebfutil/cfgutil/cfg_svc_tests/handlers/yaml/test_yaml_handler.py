@@ -1,7 +1,7 @@
-import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from ebfutil.cfgutil import ConfigService
 from ebfutil.fileutil import FileUtil
@@ -15,13 +15,13 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
 
     @pytest.fixture(scope="class")
     def yaml_cfg_file(self, make_filename) -> str:
-        return make_filename() # "config.yaml"
+        return make_filename()  # "config.yaml"
 
     @pytest.fixture
     def project_file(self, yaml_cfg_file: str, project_root: Path, project_search_path: str, data: dict) -> Path:
         tgt = project_root / project_search_path / yaml_cfg_file
         tgt.parent.mkdir(parents=True, exist_ok=True)
-        tgt.write_text(json.dumps(data), encoding="utf-8")
+        tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
         return tgt
 
 
@@ -38,7 +38,6 @@ class TestLoad(YamlConfigServiceFixture):
 
     def test_can_load_user_config_when_project_config_absent(
             self, sut: ConfigService, mock_file_util: FileUtil, user_config_factory, app_name: str):
-
         user_data = {"a": 9, "list": [2], "nest": {"x": 5}}
         user_cfg: Path = user_config_factory(user_data)
 
@@ -81,3 +80,51 @@ class TestLoad(YamlConfigServiceFixture):
                                 return_sources=True, file_util=project_file_util)
         assert cfg == {}
         assert sources == [p]
+
+
+class TestStore(YamlConfigServiceFixture):
+
+    def test_can_store_user_data(
+            self, sut: ConfigService, app_name: str, user_home: Path, yaml_cfg_file: str, data: dict
+    ):
+        fu = FileUtil()
+        # resolves user base to our tmp area
+        fu.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
+
+        out_path = sut.store(data, app_name, user_filename=yaml_cfg_file, target="user", file_util=fu)
+
+        assert out_path == user_home / ".config" / app_name / yaml_cfg_file
+        assert out_path.exists()
+        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
+        assert persisted == data
+
+    def test_store_project_creates_dir_and_writes_yaml(
+            self, sut: ConfigService, app_name: str, project_root: Path, yaml_cfg_file: str, data: dict
+    ):
+        fu = FileUtil(project_root_override=project_root)  # resolves project root to our tmp area
+
+        out_path = sut.store(data, app_name, filename=yaml_cfg_file, target="project", file_util=fu)
+
+        assert out_path == project_root / "config" / yaml_cfg_file
+        assert out_path.exists()
+        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
+        assert persisted == data
+
+    def test_existing_file_is_overwritten_with_new_content(
+            self, sut: ConfigService, app_name: str, user_home: Path, yaml_cfg_file: str
+    ):
+        fu = FileUtil()
+        fu.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
+
+        p = user_home / ".config" / app_name / yaml_cfg_file
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(yaml.safe_dump({"old": 1}), encoding="utf-8")
+
+        # Act: overwrite with new content
+        new_data = {"new": 2, "nest": {"k": "v"}}
+        out_path = sut.store(new_data, app_name, user_filename=yaml_cfg_file, target="user", file_util=fu)
+
+        # Assert overwrite
+        assert out_path == p
+        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
+        assert persisted == new_data
