@@ -10,3 +10,7 @@ class TestPublicApi(ConfigServiceFixture):
         cfg, sources = load_config(app_name=app_name, file_util=project_file_util, return_sources=True, )
         assert cfg == data
         assert sources == [fake_project_file]
+
+    def test_store_config(self):
+        from ebfutil.cfgutil import store_config
+        assert callable(store_config)

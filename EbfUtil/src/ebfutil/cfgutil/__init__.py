@@ -17,4 +17,7 @@ def load_config(*, app_name, project_search_path="config",
     )
 
 
+def store_config():
+    return None
+
 __all__ = ["load_config"]

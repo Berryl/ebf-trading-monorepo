@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Mapping
 
 import yaml
 
@@ -26,3 +27,11 @@ class YamlLoader:
         except Exception as e:
             logger.error(f"Unexpected error loading file {path}: {e}")
             return {}
+
+    # noinspection PyMethodMayBeStatic
+    def store(self, path: Path, cfg: Mapping[str, Any]) -> None:
+        """
+        Serialize cfg as YAML and write to path. Overwrites existing files.
+        """
+        text = yaml.safe_dump(dict(cfg), sort_keys=False)
+        path.write_text(text, encoding="utf-8")

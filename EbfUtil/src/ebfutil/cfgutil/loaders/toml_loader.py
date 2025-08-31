@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, Mapping
 
 try:
     import tomllib  # py3.11+
@@ -18,3 +19,10 @@ class TomlLoader:
         if tomllib is None:
             raise RuntimeError("TOML support requires Python 3.11+ (tomllib).")
         return tomllib.loads(path.read_text(encoding="utf-8")) or {}
+
+    # noinspection PyMethodMayBeStatic
+    def store(self, path: Path, cfg: Mapping[str, Any]) -> None:
+        """
+        Writing is not available with toml.
+        """
+        raise RuntimeError("Writing TOML is not supported by this service.")

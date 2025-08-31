@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Any, Mapping, Literal
 
 from ebfutil.guards import guards as g
 from .cfg_merger import ConfigMerger
@@ -15,26 +15,36 @@ class ConfigFormatLoader(Protocol):
 
     Each loader handles a specific file type (YAML, JSON, TOML, etc.)
     and advertises which filename suffixes it supports.
-
-    Attributes:
-        file_types (tuple[str, ...]): The filename suffixes this loader supports.
-
-    Methods:
-        supports(self, path: Path) -> bool:
-            True if this loader can handle a given path's suffix file type.
-        load(self, path: Path) -> dict:
-            Load and parse the file into a dict. The dict will be empty if an
-            error is encountered or the file has no data.
-            Note: This method assumes the file exists. Caller is responsible
-            for ensuring the file exists before calling this method.
     """
 
-    file_types: tuple[str, ...]
+    file_types: tuple[str, ...]  # The filename suffixes this loader supports.
 
     def supports(self, path: Path) -> bool:
+        """
+        Check if this loader can handle a given path's suffix file type.
+
+        Returns:
+            True if this loader can handle the file type, False otherwise.
+        """
         ...
 
     def load(self, path: Path) -> dict:
+        """
+        Load and parse the file into a dict.
+
+        The dict will be empty if an error is encountered or the file has no data.
+        Note: This method assumes the file exists. Caller is responsible for
+        ensuring the file exists before calling this method.
+        """
+        ...
+
+    def store(self, path: Path, cfg: Mapping[str, Any]) -> None:
+        """
+        Serialize and write cfg to the given path using this loader's format.
+
+        Implementations should overwrite existing files and create parent
+        directories if needed (or expect the caller to do so as agreed).
+        """
         ...
 
 
@@ -108,6 +118,73 @@ class ConfigService:
             sources.append(user_path)
 
         return (cfg, sources) if return_sources else cfg
+
+    def store(
+            self,
+            cfg: Mapping[str, Any],
+            app_name: str,
+            *,
+            project_search_path: str | Path = "config",
+            filename: str | Path = "config.yaml",
+            user_filename: str | Path | None = None,
+            target: Literal["project", "user"] = "user",
+            file_util: FileUtil | None = None,
+    ) -> Path:
+        """
+        Store configuration for the given application by delegating to a format loader.
+
+        Destination selection:
+          - target="project": <project_root>/<project_search_path>/<filename>
+          - target="user":    <user_base>/.config/<app_name>/<user_filename or filename>
+
+        Loader delegation:
+          - The loader is selected based on the destination file's suffix.
+          - The selected loader performs the actual serialization and write.
+
+        Behavior:
+          - Ensures the destination directory exists (created if necessary).
+          - Overwrites existing files.
+          - If no loader supports the destination suffix, a RuntimeError is raised.
+
+        Args:
+            cfg: Mapping of configuration values to persist.
+            app_name: Application name; used for user config path resolution.
+            project_search_path: Relative folder inside the project root for project-side configs
+                (default: "config").
+            filename: File name for the project-side config (default: "config.yaml").
+            user_filename: Optional override for the user-side file name. If None, uses filename.
+            target: Which destination to write: "project" or "user" (default: "user").
+            file_util: Optional FileUtil instance. In production this is usually omitted
+                (a new one will be created). In tests, you can supply a preconfigured
+                FileUtil bound to a temporary project root or user base directory.
+
+        Returns:
+            Path: The full path to the file that was written.
+
+        Raises:
+            AssertionError: If app_name is empty or filename is not provided.
+            RuntimeError: If no loader supports the destination suffix.
+        """
+        g.ensure_not_empty_str(app_name, "app_name")
+        assert filename, "filename must be either a Path or non-empty string"
+
+        fu = file_util or FileUtil()
+        if target == "project":
+            base = fu.get_project_root()
+            out_path = base / Path(project_search_path or "") / Path(filename)
+        else:
+            f_name = Path(user_filename or filename)
+            base = fu.get_user_base_dir()
+            out_path = base / Path(".config") / app_name / f_name
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        ldr = self._get_loader_for(out_path)
+        if ldr is None:
+            raise RuntimeError(f"No loader available to store files with suffix '{out_path.suffix}'")
+
+        ldr.store(out_path, cfg)
+        return out_path
 
     @staticmethod
     def _deep_merge(dst: dict, src: dict) -> dict:
