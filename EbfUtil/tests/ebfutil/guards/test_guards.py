@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pytest
 
@@ -171,3 +172,23 @@ class TestEnsureIn:
         msg = re.escape("Arg 'choices' cannot be None")
         with pytest.raises(AssertionError, match=msg):
             g.ensure_in("yaml", None)  # type: ignore[arg-type]
+
+class TestEnsureUsablePath:
+
+    def test_accepts_non_empty_string(self):
+        p = g.ensure_usable_path("config.yaml", "filename")
+        assert isinstance(p, Path)
+        assert str(p).endswith("config.yaml")
+
+    def test_accepts_path(self):
+        p = g.ensure_usable_path(Path("config.yaml"), "filename")
+        assert p == Path("config.yaml")
+
+    @pytest.mark.parametrize("bad", [None, "", "   "])
+    def test_rejects_empty_or_none(self, bad):
+        with pytest.raises(AssertionError):
+            g.ensure_usable_path(bad, "filename")
+
+    def test_rejects_other_type(self):
+        with pytest.raises(AssertionError):
+            g.ensure_usable_path(42, "filename")

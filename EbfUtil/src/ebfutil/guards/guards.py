@@ -164,3 +164,32 @@ def create_clean_error_context(
     error_parts.append(clean_traceback)
 
     return "\n".join(error_parts)
+from pathlib import Path
+
+def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
+    """
+    Ensures candidate is either a non-empty string or a pathlib.Path.
+    Returns a Path object.
+    """
+    ensure_not_none(candidate, description)
+
+    if isinstance(candidate, Path):
+        if not str(candidate):
+            prefix = f"Arg '{description}'" if description else "Value"
+            raise AssertionError(create_clean_error_context(
+                description=f"{prefix} cannot be an empty path",
+                object_info={"Description": description or "Unnamed",
+                             "Received": "Empty Path"}
+            ))
+        return candidate
+
+    if isinstance(candidate, str):
+        ensure_not_empty_str(candidate, description)
+        return Path(candidate)
+
+    prefix = f"Arg '{description}'" if description else "Value"
+    raise AssertionError(create_clean_error_context(
+        description=f"{prefix} must be a Path or non-empty string",
+        object_info={"Description": description or "Unnamed",
+                     "Received Type": type(candidate).__name__}
+    ))
