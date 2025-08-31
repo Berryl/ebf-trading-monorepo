@@ -143,7 +143,7 @@ class ConfigService:
 
         handler = self._get_handler_for(out_path)
         if handler is None:
-            raise RuntimeError(f"No loader available to store files with suffix '{out_path.suffix}'")
+            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
 
         handler.store(out_path, cfg)
         return out_path

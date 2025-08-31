@@ -1,4 +1,6 @@
+import re
 from pathlib import Path
+from unittest import expectedFailure
 
 import pytest
 import yaml
@@ -84,17 +86,27 @@ class TestLoad(YamlConfigServiceFixture):
 
 class TestStore(YamlConfigServiceFixture):
 
+    @pytest.fixture
+    def temp_user_home(self, mock_file_util, user_home: Path) -> FileUtil:
+        mock_file_util.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
+        return mock_file_util
+
+    @staticmethod
+    def _assert_stored_output_path_is(stored: Path, expected: Path):
+        assert stored == expected
+        assert stored.exists()
+
     def test_can_store_user_data(
-            self, sut: ConfigService, app_name: str, user_home: Path, yaml_cfg_file: str, data: dict
+            self, sut: ConfigService, app_name: str,
+            mock_file_util: FileUtil, user_home: Path, yaml_cfg_file: str, data: dict
     ):
-        fu = FileUtil()
-        # resolves user base to our tmp area
-        fu.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
+        mock_file_util.get_user_base_dir.return_value = user_home
 
-        out_path = sut.store(data, app_name, user_filename=yaml_cfg_file, target="user", file_util=fu)
+        out_path = sut.store(data, app_name, user_filename=yaml_cfg_file, target="user", file_util=mock_file_util)
 
-        assert out_path == user_home / ".config" / app_name / yaml_cfg_file
-        assert out_path.exists()
+        expected_path = user_home / ".config" / app_name / yaml_cfg_file
+        self._assert_stored_output_path_is(out_path, expected_path)
+
         persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
         assert persisted == data
 
@@ -105,16 +117,16 @@ class TestStore(YamlConfigServiceFixture):
 
         out_path = sut.store(data, app_name, filename=yaml_cfg_file, target="project", file_util=fu)
 
-        assert out_path == project_root / "config" / yaml_cfg_file
-        assert out_path.exists()
+        expected_path = project_root / "config" / yaml_cfg_file
+        self._assert_stored_output_path_is(out_path, expected_path)
+
         persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
         assert persisted == data
 
     def test_existing_file_is_overwritten_with_new_content(
-            self, sut: ConfigService, app_name: str, user_home: Path, yaml_cfg_file: str
+            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, yaml_cfg_file: str
     ):
-        fu = FileUtil()
-        fu.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
+        mock_file_util.get_user_base_dir.return_value = user_home
 
         p = user_home / ".config" / app_name / yaml_cfg_file
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -122,9 +134,23 @@ class TestStore(YamlConfigServiceFixture):
 
         # Act: overwrite with new content
         new_data = {"new": 2, "nest": {"k": "v"}}
-        out_path = sut.store(new_data, app_name, user_filename=yaml_cfg_file, target="user", file_util=fu)
+        out_path = sut.store(new_data, app_name, user_filename=yaml_cfg_file, target="user", file_util=mock_file_util)
 
-        # Assert overwrite
-        assert out_path == p
+        self._assert_stored_output_path_is(out_path, p)
         persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
         assert persisted == new_data
+
+    def test_store_unsupported_suffix_raises(
+            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path
+    ):
+        mock_file_util.get_user_base_dir.return_value = user_home
+
+        msg = re.escape("No handler available to store files with suffix '.docx'")
+        with pytest.raises(RuntimeError, match=msg):
+            sut.store(
+                cfg={"k": "v"},
+                app_name=app_name,
+                user_filename="config.docx",
+                target="user",
+                file_util=mock_file_util,
+            )
