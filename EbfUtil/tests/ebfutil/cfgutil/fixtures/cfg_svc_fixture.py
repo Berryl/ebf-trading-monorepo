@@ -21,12 +21,33 @@ class ConfigServiceFixture:
         return "config"
 
     @pytest.fixture(scope="class")
-    def filename(self) -> str:
-        return "config.yaml"
+    def filename_base(self) -> str:
+        """Base filename without extension."""
+        return "config"
+
+    @pytest.fixture(scope="class")
+    def default_ext(self) -> str:
+        """Default extension used when tests do not specify one."""
+        return ".yaml"
 
     @pytest.fixture(scope="class")
     def data(self) -> dict:
         return {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
+
+    @pytest.fixture(scope="class")
+    def make_filename(self, filename_base: str, default_ext: str):
+        """Helper to build a filename with a given extension (defaults to default_ext)."""
+        def _make(ext: str | None = None) -> str:
+            e = ext or default_ext
+            if not e.startswith("."):
+                e = f".{e}"
+            return f"{filename_base}{e}"
+        return _make
+
+    @pytest.fixture(scope="class")
+    def filename(self, make_filename):
+        """Keeps backward compatibility for tests expecting 'filename'."""
+        return make_filename()
 
     # endregion
 
@@ -72,7 +93,7 @@ class ConfigServiceFixture:
             self,
             user_home: Path,
             app_name: str,
-            filename: str
+            make_filename
     ) -> UserConfigWriter:
         """
         Returns a callable to create a user config file under:
@@ -91,7 +112,7 @@ class ConfigServiceFixture:
                 app: str | None = None
         ) -> Path:
             tgt_app = app or app_name
-            f = file_name or filename
+            f = file_name or make_filename()
 
             p = user_home / ".config" / tgt_app / f
             p.parent.mkdir(parents=True, exist_ok=True)
