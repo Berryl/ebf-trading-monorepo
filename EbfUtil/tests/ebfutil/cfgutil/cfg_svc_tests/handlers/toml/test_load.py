@@ -28,7 +28,7 @@ class TomlConfigServiceFixture(ConfigServiceFixture):
         assert toml_cfg_file == "config.toml"
 
 
-class TestJsonLoad(TomlConfigServiceFixture):
+class TestLoad(TomlConfigServiceFixture):
 
     def test_can_load_project_config(self, sut: ConfigService, app_name, json_cfg_file,
                                      project_file_util, project_file: Path, data: dict
