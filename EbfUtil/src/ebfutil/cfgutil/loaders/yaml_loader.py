@@ -1,18 +1,20 @@
 import logging
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Any
 
 import yaml
+
+from ebfutil.cfgutil.loaders.cfg_format_handler import ConfigFormatHandler
 
 logger = logging.getLogger(__name__)
 
 
-class YamlLoader:
+class YamlLoader(ConfigFormatHandler):
+    """
+    A handler for YAML configuration files.
+    """
     file_types = (".yaml", ".yml")
 
-    def supports(self, path: Path) -> bool: return path.suffix.lower() in self.file_types
-
-    # noinspection PyMethodMayBeStatic
     def load(self, path: Path) -> dict:
         try:
             with open(path, 'r', encoding='utf-8') as file:
@@ -28,10 +30,10 @@ class YamlLoader:
             logger.error(f"Unexpected error loading file {path}: {e}")
             return {}
 
-    # noinspection PyMethodMayBeStatic
     def store(self, path: Path, cfg: Mapping[str, Any]) -> None:
         """
-        Serialize cfg as YAML and write to path. Overwrites existing files.
+        Serialize cfg as YAML and write to the path.
+        Overwrites existing files.
         """
         text = yaml.safe_dump(dict(cfg), sort_keys=False)
         path.write_text(text, encoding="utf-8")

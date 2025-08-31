@@ -1,64 +1,26 @@
 from pathlib import Path
-from typing import Optional, Protocol, Any, Mapping, Literal
+from typing import Optional, Any, Mapping, Literal
 
 from ebfutil.guards import guards as g
 from .cfg_merger import ConfigMerger
 from .loaders import JsonLoader
 from .loaders import TomlLoader
 from .loaders import YamlLoader
+from .loaders.cfg_format_handler import ConfigFormatHandler
 from ..fileutil import FileUtil
-
-
-class ConfigFormatLoader(Protocol):
-    """
-    Protocol that all config format loaders must follow.
-
-    Each loader handles a specific file type (YAML, JSON, TOML, etc.)
-    and advertises which filename suffixes it supports.
-    """
-
-    file_types: tuple[str, ...]  # The filename suffixes this loader supports.
-
-    def supports(self, path: Path) -> bool:
-        """
-        Check if this loader can handle a given path's suffix file type.
-
-        Returns:
-            True if this loader can handle the file type, False otherwise.
-        """
-        ...
-
-    def load(self, path: Path) -> dict:
-        """
-        Load and parse the file into a dict.
-
-        The dict will be empty if an error is encountered or the file has no data.
-        Note: This method assumes the file exists. Caller is responsible for
-        ensuring the file exists before calling this method.
-        """
-        ...
-
-    def store(self, path: Path, cfg: Mapping[str, Any]) -> None:
-        """
-        Serialize and write cfg to the given path using this loader's format.
-
-        Implementations should overwrite existing files and create parent
-        directories if needed (or expect the caller to do so as agreed).
-        """
-        ...
 
 
 class ConfigService:
     """
     Orchestrates config loading:
       • Finds candidate files (project root, user base).
-      • Delegates parsing to format loaders.
+      • Delegates parsing to format handlers.
       • Merges configs with user overrides taking precedence.
     """
     DEFAULT_FILENAME = "config.yaml"
 
-    def __init__(self, loaders: Optional[list[ConfigFormatLoader]] = None) -> None:
-        self._loaders: list[ConfigFormatLoader] = loaders or [YamlLoader(), JsonLoader(), TomlLoader()]
+    def __init__(self, loaders: Optional[list[ConfigFormatHandler]] = None) -> None:
+        self._loaders: list[ConfigFormatHandler] = loaders or [YamlLoader(), JsonLoader(), TomlLoader()]
 
     def load(self, app_name: str, *,
              project_search_path: str | Path | None = "config",
@@ -131,20 +93,20 @@ class ConfigService:
             file_util: FileUtil | None = None,
     ) -> Path:
         """
-        Store configuration for the given application by delegating to a format loader.
+        Store configuration for the given application by delegating to a format handler.
 
         Destination selection:
           - target="project": <project_root>/<project_search_path>/<filename>
           - target="user":    <user_base>/.config/<app_name>/<user_filename or filename>
 
-        Loader delegation:
-          - The loader is selected based on the destination file's suffix.
-          - The selected loader performs the actual serialization and write.
+        Handler delegation:
+          - The handler is selected based on the destination file's suffix.
+          - The selected handler performs the actual serialization and writes.
 
         Behavior:
           - Ensures the destination directory exists (created if necessary).
           - Overwrites existing files.
-          - If no loader supports the destination suffix, a RuntimeError is raised.
+          - If no handler supports the destination suffix, a RuntimeError is raised.
 
         Args:
             cfg: Mapping of configuration values to persist.
@@ -163,7 +125,7 @@ class ConfigService:
 
         Raises:
             AssertionError: If app_name is empty or filename is not provided.
-            RuntimeError: If no loader supports the destination suffix.
+            RuntimeError: If no handler supports the destination suffix.
         """
         g.ensure_not_empty_str(app_name, "app_name")
         assert filename, "filename must be either a Path or non-empty string"
@@ -196,10 +158,10 @@ class ConfigService:
         Only one loader is applied; loaders are not combined.
         Returns {} if no loader supports the path.
         """
-        ldr: ConfigFormatLoader = self._get_loader_for(path)
+        ldr: ConfigFormatHandler = self._get_loader_for(path)
         return ldr.load(path) if ldr is not None else {}
 
-    def _get_loader_for(self, path: Path) -> ConfigFormatLoader | None:
+    def _get_loader_for(self, path: Path) -> ConfigFormatHandler | None:
         """return the first loader that supports the file path, else done."""
         for ldr in self._loaders:
             if ldr.supports(path):
