@@ -25,6 +25,14 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
         tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
         return tgt
 
+    @pytest.fixture
+    def project_cfg(self, project_root: Path, make_filename) -> Path:
+        return project_root / "config" / make_filename()
+
+    @pytest.fixture
+    def user_cfg(self, user_home: Path, app_name: str, make_filename) -> Path:
+        return user_home / ".config" / app_name / make_filename()
+
 
 class TestLoad(YamlConfigServiceFixture):
 
@@ -146,10 +154,6 @@ class TestStore(YamlConfigServiceFixture):
 
 
 class TestUpdate(YamlConfigServiceFixture):
-
-    @pytest.fixture
-    def user_cfg(self, user_home: Path, app_name: str, make_filename) -> Path:
-        return user_home / ".config" / app_name / make_filename()
 
     def test_update_merges_deep(
             self, sut: ConfigService, app_name: str,
