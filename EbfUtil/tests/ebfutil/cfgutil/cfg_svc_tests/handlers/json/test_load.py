@@ -38,3 +38,4 @@ class TestLoad(JsonConfigServiceFixture):
         assert cfg == data
         assert sources == [project_file]
         assert sources[0].name == json_cfg_file
+
