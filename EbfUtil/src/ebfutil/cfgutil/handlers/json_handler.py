@@ -5,7 +5,7 @@ from typing import Mapping, Any
 from ebfutil.cfgutil.handlers.cfg_format_handler import ConfigFormatHandler
 
 
-class JsonLoader(ConfigFormatHandler):
+class JsonHandler(ConfigFormatHandler):
     """
     A handler for JSON configuration files.
     """

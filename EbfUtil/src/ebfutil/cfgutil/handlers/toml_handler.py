@@ -9,7 +9,7 @@ except ImportError:  # pragma: no cover
     tomllib = None
 
 
-class TomlLoader(ConfigFormatHandler):
+class TomlHandler(ConfigFormatHandler):
     """
     A loader for TOML configuration files.
 

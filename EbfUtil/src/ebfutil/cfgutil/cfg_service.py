@@ -3,9 +3,9 @@ from typing import Optional, Any, Mapping, Literal
 
 from ebfutil.guards import guards as g
 from .cfg_merger import ConfigMerger
-from .handlers import JsonLoader
-from .handlers import TomlLoader
-from .handlers import YamlLoader
+from .handlers import JsonHandler
+from .handlers import TomlHandler
+from .handlers import YamlHandler
 from .handlers.cfg_format_handler import ConfigFormatHandler
 from ..fileutil import FileUtil
 
@@ -20,7 +20,7 @@ class ConfigService:
     DEFAULT_FILENAME = "config.yaml"
 
     def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
-        self._handlers: list[ConfigFormatHandler] = handlers or [YamlLoader(), JsonLoader(), TomlLoader()]
+        self._handlers: list[ConfigFormatHandler] = handlers or [YamlHandler(), JsonHandler(), TomlHandler()]
 
     def load(self, app_name: str, *,
              project_search_path: str | Path | None = "config",

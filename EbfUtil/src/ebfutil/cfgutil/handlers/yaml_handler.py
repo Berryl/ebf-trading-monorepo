@@ -9,7 +9,7 @@ from ebfutil.cfgutil.handlers.cfg_format_handler import ConfigFormatHandler
 logger = logging.getLogger(__name__)
 
 
-class YamlLoader(ConfigFormatHandler):
+class YamlHandler(ConfigFormatHandler):
     """
     A handler for YAML configuration files.
     """
