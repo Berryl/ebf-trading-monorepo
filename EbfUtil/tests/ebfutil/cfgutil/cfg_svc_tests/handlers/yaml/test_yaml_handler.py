@@ -145,7 +145,89 @@ class TestStore(YamlConfigServiceFixture):
             )
 
 
-
 class TestUpdate(YamlConfigServiceFixture):
-    # THIS IS EVENTUALLY OUR GOAL
-    pass
+
+    def test_update_user_merges_deep(
+            self, sut: ConfigService, app_name: str,
+            mock_file_util: FileUtil, user_home: Path, yaml_cfg_file: str, data: dict,
+    ):
+        mock_file_util.get_user_base_dir.return_value = user_home
+
+        p = user_home / ".config" / app_name / yaml_cfg_file
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+        patch = {"b": 2, "list": [2], "nest": {"y": 9}}
+        out_path = sut.update(patch, app_name, user_filename=yaml_cfg_file, target="user", file_util=mock_file_util)
+
+        self._assert_stored_output_path_is(out_path, p)
+
+        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
+        assert persisted == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+
+    def test_update_user_creates_when_absent(
+            self,
+            sut: ConfigService,
+            app_name: str,
+            mock_file_util: FileUtil,
+            user_home: Path,
+            yaml_cfg_file: str,
+    ):
+        mock_file_util.get_user_base_dir.return_value = user_home
+        patch = {"k": 1, "nest": {"x": 2}}
+
+        out_path = sut.update(
+            patch,
+            app_name,
+            user_filename=yaml_cfg_file,
+            target="user",
+            file_util=mock_file_util,
+        )
+
+        expected = user_home / ".config" / app_name / yaml_cfg_file
+        assert out_path == expected and expected.exists()
+        persisted = yaml.safe_load(expected.read_text(encoding="utf-8")) or {}
+        assert persisted == patch
+
+    def test_update_project_merges_deep(
+            self,
+            sut: ConfigService,
+            app_name: str,
+            project_root: Path,
+            project_file_util: FileUtil,
+            yaml_cfg_file: str,
+            data: dict,
+    ):
+        p = project_root / "config" / yaml_cfg_file
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+        patch = {"b": 2, "list": [2], "nest": {"y": 9}}
+        out_path = sut.update(
+            patch,
+            app_name,
+            filename=yaml_cfg_file,
+            target="project",
+            file_util=project_file_util,
+        )
+
+        assert out_path == p
+        persisted = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        assert persisted == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+
+    def test_update_unsupported_suffix_raises(
+            self,
+            sut: ConfigService,
+            app_name: str,
+            mock_file_util: FileUtil,
+            user_home: Path,
+    ):
+        mock_file_util.get_user_base_dir.return_value = user_home
+        with pytest.raises(RuntimeError, match=re.escape("No handler available to store files with suffix '.docx'")):
+            sut.update(
+                {"k": "v"},
+                app_name,
+                user_filename="config.docx",
+                target="user",
+                file_util=mock_file_util,
+            )
