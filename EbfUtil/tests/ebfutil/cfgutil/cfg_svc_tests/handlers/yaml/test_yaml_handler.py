@@ -143,3 +143,9 @@ class TestStore(YamlConfigServiceFixture):
                 target="user",
                 file_util=mock_file_util,
             )
+
+
+
+class TestUpdate(YamlConfigServiceFixture):
+    # THIS IS EVENTUALLY OUR GOAL
+    pass

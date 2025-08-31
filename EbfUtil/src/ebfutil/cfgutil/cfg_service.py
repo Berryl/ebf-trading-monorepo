@@ -20,7 +20,7 @@ class ConfigService:
     DEFAULT_FILENAME = "config.yaml"
 
     def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
-        self._handers: list[ConfigFormatHandler] = handlers or [YamlLoader(), JsonLoader(), TomlLoader()]
+        self._handlers: list[ConfigFormatHandler] = handlers or [YamlLoader(), JsonLoader(), TomlLoader()]
 
     def load(self, app_name: str, *,
              project_search_path: str | Path | None = "config",
@@ -183,7 +183,7 @@ class ConfigService:
 
     def _get_handler_for(self, path: Path) -> ConfigFormatHandler | None:
         """return the first loader that supports the file path, else done."""
-        for h in self._handers:
+        for h in self._handlers:
             if h.supports(path):
                 return h
         return None
