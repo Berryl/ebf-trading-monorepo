@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Mapping
 
-from ebfutil.cfgutil.loaders.cfg_format_handler import ConfigFormatHandler
+from ebfutil.cfgutil.handlers.cfg_format_handler import ConfigFormatHandler
 
 try:
     import tomllib  # py3.11+

@@ -68,8 +68,8 @@ class ConfigServiceFixture:
         return FileUtil(project_root_override=project_root)
 
     @pytest.fixture
-    def fake_project_file(self, project_root: Path, data: dict) -> Path:
-        tgt = project_root / "config" / "config.yaml"
+    def fake_project_file(self, project_root: Path, data: dict, make_filename) -> Path:
+        tgt = project_root / "config" / make_filename()
         tgt.parent.mkdir(parents=True, exist_ok=True)
         tgt.write_text(yaml.safe_dump(data), encoding="utf-8")
         return tgt

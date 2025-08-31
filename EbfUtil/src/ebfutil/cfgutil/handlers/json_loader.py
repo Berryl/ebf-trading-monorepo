@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Mapping, Any
 
-from ebfutil.cfgutil.loaders.cfg_format_handler import ConfigFormatHandler
+from ebfutil.cfgutil.handlers.cfg_format_handler import ConfigFormatHandler
 
 
 class JsonLoader(ConfigFormatHandler):

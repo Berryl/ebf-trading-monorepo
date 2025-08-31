@@ -3,10 +3,10 @@ from typing import Optional, Any, Mapping, Literal
 
 from ebfutil.guards import guards as g
 from .cfg_merger import ConfigMerger
-from .loaders import JsonLoader
-from .loaders import TomlLoader
-from .loaders import YamlLoader
-from .loaders.cfg_format_handler import ConfigFormatHandler
+from .handlers import JsonLoader
+from .handlers import TomlLoader
+from .handlers import YamlLoader
+from .handlers.cfg_format_handler import ConfigFormatHandler
 from ..fileutil import FileUtil
 
 

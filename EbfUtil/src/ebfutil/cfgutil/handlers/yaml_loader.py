@@ -4,7 +4,7 @@ from typing import Mapping, Any
 
 import yaml
 
-from ebfutil.cfgutil.loaders.cfg_format_handler import ConfigFormatHandler
+from ebfutil.cfgutil.handlers.cfg_format_handler import ConfigFormatHandler
 
 logger = logging.getLogger(__name__)
 

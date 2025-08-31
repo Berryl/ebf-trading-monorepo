@@ -15,7 +15,7 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
 
     @pytest.fixture(scope="class")
     def yaml_cfg_file(self, make_filename) -> str:
-        return make_filename()
+        return make_filename() # "config.yaml"
 
     @pytest.fixture
     def project_file(self, yaml_cfg_file: str, project_root: Path, project_search_path: str, data: dict) -> Path:
@@ -23,10 +23,6 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
         tgt.parent.mkdir(parents=True, exist_ok=True)
         tgt.write_text(json.dumps(data), encoding="utf-8")
         return tgt
-
-    @staticmethod
-    def test_fixture_overrides(yaml_cfg_file):
-        assert yaml_cfg_file == "config.yaml"
 
 
 class TestLoad(YamlConfigServiceFixture):
@@ -73,7 +69,7 @@ class TestLoad(YamlConfigServiceFixture):
         assert sources == [fake_project_file, user_cfg]
 
     @pytest.mark.parametrize("suffix", ["docx", "blah"])
-    def test_non_yaml_suffix_yields_empty_dict(
+    def test_unsupported_suffix_yields_empty_dict(
             self, sut: ConfigService, project_file_util, project_root: Path, app_name: str, suffix
     ):
         file_name = f"config.{suffix}"
