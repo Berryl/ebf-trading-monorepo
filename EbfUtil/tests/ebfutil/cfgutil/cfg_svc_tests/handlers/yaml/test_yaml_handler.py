@@ -53,3 +53,35 @@ class TestLoad(YamlConfigServiceFixture):
 
         assert cfg == user_data
         assert sources == [user_cfg]
+
+    def test_user_cfg_has_precedence_over_project_cfg(
+            self, sut: ConfigService,
+            user_config_factory, mock_file_util: FileUtil,
+            fake_project_file: Path, app_name: str
+    ):
+        # project_cfg: {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
+        # user overrides: list replaced, dict deep-merged
+        user_data = {"b": 2, "list": [2], "nest": {"y": 9}}
+        user_cfg = user_config_factory(user_data)
+
+        mock_file_util.try_get_file_from_project_root.return_value = fake_project_file
+        mock_file_util.try_get_file_from_user_base_dir.return_value = user_cfg
+
+        cfg, sources = sut.load(app_name=app_name, return_sources=True, file_util=mock_file_util)
+
+        assert cfg == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+        assert sources == [fake_project_file, user_cfg]
+
+    @pytest.mark.parametrize("suffix", ["docx", "blah"])
+    def test_non_yaml_suffix_yields_empty_dict(
+            self, sut: ConfigService, project_file_util, project_root: Path, app_name: str, suffix
+    ):
+        file_name = f"config.{suffix}"
+        p = project_root / "config" / file_name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("key=value\n", encoding="utf-8")
+
+        cfg, sources = sut.load(app_name=app_name, filename=file_name,
+                                return_sources=True, file_util=project_file_util)
+        assert cfg == {}
+        assert sources == [p]

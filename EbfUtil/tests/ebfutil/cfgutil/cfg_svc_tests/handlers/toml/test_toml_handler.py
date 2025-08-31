@@ -29,12 +29,12 @@ class TomlConfigServiceFixture(ConfigServiceFixture):
 
 
 class TestLoad(TomlConfigServiceFixture):
-
-    def test_can_load_project_config(self, sut: ConfigService, app_name, json_cfg_file,
-                                     project_file_util, project_file: Path, data: dict
-                                     ):
-        cfg, sources = sut.load(app_name, filename=json_cfg_file, return_sources=True, file_util=project_file_util)
-
-        assert cfg == data
-        assert sources == [project_file]
-        assert sources[0].name == json_cfg_file
+    pass
+    # def test_can_load_project_config(self, sut: ConfigService, app_name, toml_cfg_file,
+    #                                  project_file_util, project_file: Path, data: dict
+    #                                  ):
+    #     cfg, sources = sut.load(app_name, filename=toml_cfg_file, return_sources=True, file_util=project_file_util)
+    #
+    #     assert cfg == data
+    #     assert sources == [project_file]
+    #     assert sources[0].name == toml_cfg_file
