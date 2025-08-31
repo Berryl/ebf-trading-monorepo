@@ -61,7 +61,6 @@ class ConfigService:
         """
         g.ensure_not_empty_str(app_name, "app_name")
         g.ensure_usable_path(filename, "filename")
-        assert filename, "filename must be either a Path or non-empty string"
         if user_filename is None:
             user_filename = filename
 
@@ -128,24 +127,14 @@ class ConfigService:
             AssertionError: If app_name is empty or filename is not provided.
             RuntimeError: If no handler supports the destination suffix.
         """
-        g.ensure_not_empty_str(app_name, "app_name")
-        assert filename, "filename must be either a Path or non-empty string"
-
-        fu = file_util or FileUtil()
-        if target == "project":
-            base = fu.get_project_root()
-            out_path = base / Path(project_search_path or "") / Path(filename)
-        else:
-            f_name = Path(user_filename or filename)
-            base = fu.get_user_base_dir()
-            out_path = base / Path(".config") / app_name / f_name
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        handler = self._get_handler_for(out_path)
-        if handler is None:
-            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
-
+        out_path, handler = self._resolve_output_and_handler(
+            app_name=app_name,
+            project_search_path=project_search_path,
+            filename=filename,
+            user_filename=user_filename,
+            target=target,
+            file_util=file_util,
+        )
         handler.store(out_path, cfg)
         return out_path
 
@@ -166,26 +155,17 @@ class ConfigService:
         Behavior:
           - Resolves the destination similarly to store().
           - Loads existing config from the destination file only (does not combine sources).
-          - Deep-merges existing config with the patch (patch wins).
+          - Deep-merges existing config with the patch (the patch wins).
           - Writes the merged result back to the same destination.
         """
-        g.ensure_not_empty_str(app_name, "app_name")
-        assert filename, "filename must be either a Path or non-empty string"
-
-        fu = file_util or FileUtil()
-        if target == "project":
-            base = fu.get_project_root()
-            out_path = base / Path(project_search_path or "") / Path(filename)
-        else:
-            f_name = Path(user_filename or filename)
-            base = fu.get_user_base_dir()
-            out_path = base / Path(".config") / app_name / f_name
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        handler = self._get_handler_for(out_path)
-        if handler is None:
-            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
+        out_path, handler = self._resolve_output_and_handler(
+            app_name=app_name,
+            project_search_path=project_search_path,
+            filename=filename,
+            user_filename=user_filename,
+            target=target,
+            file_util=file_util,
+        )
 
         current_cfg: dict = handler.load(out_path) if out_path.exists() else {}
         merged = ConfigMerger.deep(current_cfg or {}, dict(patch))
@@ -207,3 +187,40 @@ class ConfigService:
             if h.supports(path):
                 return h
         return None
+
+    def _resolve_output_and_handler(
+            self,
+            *,
+            app_name: str,
+            project_search_path: str | Path,
+            filename: str | Path,
+            user_filename: str | Path | None,
+            target: Literal["project", "user"],
+            file_util: FileUtil | None,
+    ) -> tuple[Path, ConfigFormatHandler]:
+        """
+        Common resolution for store() and update():
+        - validates inputs
+        - computes out_path based on target
+        - ensures that the parent directory exists
+        - selects and returns the handler
+        """
+        g.ensure_not_empty_str(app_name, "app_name")
+        g.ensure_usable_path(filename, "filename")
+
+        fu = file_util or FileUtil()
+        if target == "project":
+            base = fu.get_project_root()
+            out_path = base / Path(project_search_path or "") / Path(filename)
+        else:
+            f_name = Path(user_filename or filename)
+            base = fu.get_user_base_dir()
+            out_path = base / Path(".config") / app_name / f_name
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        handler = self._get_handler_for(out_path)
+        if handler is None:
+            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
+
+        return out_path, handler
