@@ -121,3 +121,7 @@ class ConfigServiceFixture:
 
         return _create_user_cfg
     # endregion
+    @staticmethod
+    def _assert_stored_output_path_is(stored: Path, expected: Path):
+        assert stored == expected
+        assert stored.exists()

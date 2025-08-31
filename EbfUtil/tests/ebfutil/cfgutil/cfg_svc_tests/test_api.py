@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 from tests.ebfutil.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 
@@ -11,6 +13,20 @@ class TestPublicApi(ConfigServiceFixture):
         assert cfg == data
         assert sources == [fake_project_file]
 
-    def test_store_config(self):
+    def test_store_config(self, app_name: str, user_home: Path, mock_file_util, data: dict):
         from ebfutil.cfgutil import store_config
-        assert callable(store_config)
+
+        mock_file_util.get_user_base_dir.return_value = user_home
+
+        out_path = store_config(
+            cfg=data,
+            app_name=app_name,
+            user_filename="config.yaml",
+            target="user",
+            file_util=mock_file_util,
+        )
+        expected_path = user_home / ".config" / app_name / "config.yaml"
+        self._assert_stored_output_path_is(out_path, expected_path)
+
+        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
+        assert persisted == data

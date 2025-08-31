@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from unittest import expectedFailure
 
 import pytest
 import yaml
@@ -85,16 +84,6 @@ class TestLoad(YamlConfigServiceFixture):
 
 
 class TestStore(YamlConfigServiceFixture):
-
-    @pytest.fixture
-    def temp_user_home(self, mock_file_util, user_home: Path) -> FileUtil:
-        mock_file_util.get_user_base_dir = lambda: user_home  # type: ignore[assignment]
-        return mock_file_util
-
-    @staticmethod
-    def _assert_stored_output_path_is(stored: Path, expected: Path):
-        assert stored == expected
-        assert stored.exists()
 
     def test_can_store_user_data(
             self, sut: ConfigService, app_name: str,
