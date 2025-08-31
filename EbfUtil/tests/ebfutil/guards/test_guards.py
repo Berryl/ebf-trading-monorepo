@@ -184,11 +184,18 @@ class TestEnsureUsablePath:
         p = g.ensure_usable_path(Path("config.yaml"), "filename")
         assert p == Path("config.yaml")
 
-    @pytest.mark.parametrize("bad", [None, "", "   "])
-    def test_rejects_empty_or_none(self, bad):
-        with pytest.raises(AssertionError):
-            g.ensure_usable_path(bad, "filename")
+    @pytest.mark.parametrize("bad_arg", ["", "   "])
+    def test_rejects_empty_strings(self, bad_arg):
+        msg = re.escape("Arg 'filename' cannot be an empty string")
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_usable_path(bad_arg, "filename")
 
-    def test_rejects_other_type(self):
-        with pytest.raises(AssertionError):
+    def test_rejects_none(self):
+        msg = re.escape("Arg 'filename' cannot be None")
+        with pytest.raises(AssertionError, match=msg):
+            g.ensure_usable_path(None, "filename")
+
+    def test_rejects_wrong_type(self):
+        msg = re.escape("Arg 'filename' must be a Path or non-empty string\nDescription: filename\nReceived Type: int")
+        with pytest.raises(AssertionError, match=msg):
             g.ensure_usable_path(42, "filename")

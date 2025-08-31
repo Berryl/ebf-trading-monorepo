@@ -168,7 +168,7 @@ from pathlib import Path
 
 def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
     """
-    Ensures candidate is either a non-empty string or a pathlib.Path.
+    Ensures that the candidate is either a non-empty string or a pathlib.Path.
     Returns a Path object.
     """
     ensure_not_none(candidate, description)

@@ -60,6 +60,7 @@ class ConfigService:
                 used in order.
         """
         g.ensure_not_empty_str(app_name, "app_name")
+        g.ensure_usable_path(filename, "filename")
         assert filename, "filename must be either a Path or non-empty string"
         if user_filename is None:
             user_filename = filename
