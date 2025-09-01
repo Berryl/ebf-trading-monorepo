@@ -86,7 +86,8 @@ class ConfigServiceFixture:
             def user(app: str | None = None) -> Path:
                 return user_home / ".config" / (app or app_name)
 
-            def project(self, search: str = "config") -> Path:
+            @staticmethod
+            def project(search: str = "config") -> Path:
                 return project_root / search
 
         return _Home()
