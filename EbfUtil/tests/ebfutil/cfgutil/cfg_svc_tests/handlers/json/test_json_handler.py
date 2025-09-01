@@ -31,9 +31,9 @@ class JsonConfigServiceFixture(ConfigServiceFixture):
 class TestLoad(JsonConfigServiceFixture):
 
     def test_can_load_project_config(
-            self, sut: ConfigService, app_name, json_cfg_file,project_file_util, project_file: Path, data: dict
+            self, sut: ConfigService, app_name, json_cfg_file, project_fu, project_file: Path, data: dict
     ):
-        cfg, sources = sut.load(app_name, filename=json_cfg_file, return_sources=True, file_util=project_file_util)
+        cfg, sources = sut.load(app_name, filename=json_cfg_file, return_sources=True, file_util=project_fu)
 
         assert cfg == data
         assert sources == [project_file]

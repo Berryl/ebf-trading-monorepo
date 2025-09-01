@@ -64,7 +64,7 @@ class ConfigServiceFixture:
         return tmp_path / "home"
 
     @pytest.fixture
-    def project_file_util(self, project_root: Path):
+    def project_fu(self, project_root: Path):
         return FileUtil(project_root_override=project_root)
 
     @pytest.fixture

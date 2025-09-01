@@ -36,13 +36,15 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
 
 class TestLoad(YamlConfigServiceFixture):
 
-    def test_can_load_project_config(self, sut: ConfigService, app_name, yaml_cfg_file,
-                                     project_file_util, project_file: Path, data: dict
-                                     ):
-        cfg, sources = sut.load(app_name, filename=yaml_cfg_file, return_sources=True, file_util=project_file_util)
+    def test_can_load_project_config(
+            self, sut: ConfigService, app_name, yaml_cfg_file, project_fu: FileUtil, project_config_factory, data: dict
+    ):
+        project_cfg = project_config_factory(data)  # writes <project_root>/config/<yaml_cfg_file>
+
+        cfg, sources = sut.load(app_name, filename=project_cfg.name, return_sources=True, file_util=project_fu)
 
         assert cfg == data
-        assert sources == [project_file]
+        assert sources == [project_cfg]
         assert sources[0].name == yaml_cfg_file
 
     def test_can_load_user_config_when_project_config_absent(
@@ -79,17 +81,15 @@ class TestLoad(YamlConfigServiceFixture):
 
     @pytest.mark.parametrize("suffix", ["docx", "blah"])
     def test_unsupported_suffix_yields_empty_dict(
-            self, sut: ConfigService, project_file_util, project_root: Path, app_name: str, suffix
+            self, sut: ConfigService, project_fu: FileUtil, project_config_factory, app_name: str, suffix,
     ):
         file_name = f"config.{suffix}"
-        p = project_root / "config" / file_name
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text("key=value\n", encoding="utf-8")
+        # seed a project file with unsupported suffix
+        project_cfg = project_config_factory({"k": "v"}, file_name=file_name)
 
-        cfg, sources = sut.load(app_name=app_name, filename=file_name,
-                                return_sources=True, file_util=project_file_util)
+        cfg, sources = sut.load(app_name, filename=file_name, return_sources=True, file_util=project_fu)
         assert cfg == {}
-        assert sources == [p]
+        assert sources == [project_cfg]
 
 
 class TestStore(YamlConfigServiceFixture):
@@ -192,7 +192,7 @@ class TestUpdate(YamlConfigServiceFixture):
             sut: ConfigService,
             app_name: str,
             project_cfg: Path,
-            project_file_util: FileUtil,
+            project_fu: FileUtil,
             user_config_factory,
             data: dict,
     ):
@@ -209,7 +209,7 @@ class TestUpdate(YamlConfigServiceFixture):
             app_name,
             filename=project_cfg.name,
             target="project",
-            file_util=project_file_util,
+            file_util=project_fu,
         )
 
         self._assert_stored_output_path_is(out_path, project_cfg)
