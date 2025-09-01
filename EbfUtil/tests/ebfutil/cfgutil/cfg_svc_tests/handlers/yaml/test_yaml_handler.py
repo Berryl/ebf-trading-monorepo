@@ -46,7 +46,8 @@ class TestLoad(YamlConfigServiceFixture):
         assert sources[0].name == yaml_cfg_file
 
     def test_can_load_user_config_when_project_config_absent(
-            self, sut: ConfigService, mock_file_util: FileUtil, user_config_factory, app_name: str):
+            self, sut: ConfigService, mock_file_util: FileUtil, user_config_factory, app_name: str
+    ):
         user_data = {"a": 9, "list": [2], "nest": {"x": 5}}
         user_cfg: Path = user_config_factory(user_data)
 
@@ -157,12 +158,10 @@ class TestUpdate(YamlConfigServiceFixture):
 
     def test_update_merges_deep(
             self, sut: ConfigService, app_name: str,
-            mock_file_util: FileUtil, user_home: Path, user_cfg: Path, data: dict,
+            mock_file_util: FileUtil, user_home: Path, user_config_factory, data: dict,
     ):
+        user_cfg = user_config_factory(data)
         mock_file_util.get_user_base_dir.return_value = user_home
-
-        user_cfg.parent.mkdir(parents=True, exist_ok=True)
-        user_cfg.write_text(yaml.safe_dump(data), encoding="utf-8")
 
         patch = {"b": 2, "list": [2], "nest": {"y": 9}}
         out_path = sut.update(patch, app_name, user_filename=user_cfg.name, target="user", file_util=mock_file_util)
@@ -188,30 +187,34 @@ class TestUpdate(YamlConfigServiceFixture):
         contents = yaml.safe_load(user_cfg.read_text(encoding="utf-8")) or {}
         assert contents == patch
 
-    def test_update_project_merges_deep(
+    def test_update_project_ignores_user_cfg_when_merging(
             self,
             sut: ConfigService,
             app_name: str,
-            project_root: Path,
+            project_cfg: Path,
             project_file_util: FileUtil,
-            yaml_cfg_file: str,
+            user_config_factory,
             data: dict,
     ):
-        p = project_root / "config" / yaml_cfg_file
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(yaml.safe_dump(data), encoding="utf-8")
+        # project has baseline data
+        project_cfg.parent.mkdir(parents=True, exist_ok=True)
+        project_cfg.write_text(yaml.safe_dump(data), encoding="utf-8")  # {"a":1,"list":[1],"nest":{"x":1,"y":1}}
+
+        # user has conflicting values that MUST NOT be consulted by project-target update
+        user_config_factory({"a": 999, "nest": {"x": 999}})
 
         patch = {"b": 2, "list": [2], "nest": {"y": 9}}
         out_path = sut.update(
             patch,
             app_name,
-            filename=yaml_cfg_file,
+            filename=project_cfg.name,
             target="project",
             file_util=project_file_util,
         )
 
-        assert out_path == p
-        persisted = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        self._assert_stored_output_path_is(out_path, project_cfg)
+        persisted = yaml.safe_load(project_cfg.read_text(encoding="utf-8")) or {}
+        # proves we merged only project+patch; nothing from user cfg leaked in
         assert persisted == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
 
     def test_update_unsupported_suffix_raises(
