@@ -78,7 +78,19 @@ class ConfigServiceFixture:
     def mock_file_util(self):
         return MagicMock(spec=FileUtil)
 
-    # region User Config Factory
+    # region Config Factories
+    @pytest.fixture
+    def config_home(self, user_home: Path, project_root: Path, app_name: str):
+        class _Home:
+            @staticmethod
+            def user(app: str | None = None) -> Path:
+                return user_home / ".config" / (app or app_name)
+
+            def project(self, search: str = "config") -> Path:
+                return project_root / search
+
+        return _Home()
+
     class UserConfigWriter(Protocol):
         def __call__(
                 self,
@@ -120,6 +132,28 @@ class ConfigServiceFixture:
             return p
 
         return _create_user_cfg
+
+    # mirror of user_config_factory, but for project
+    class ProjectConfigWriter(Protocol):
+        def __call__(
+                self,
+                payload: dict,
+                *,
+                file_name: str | None = None,
+                search_path: str = "config",
+        ) -> Path: ...
+
+    @pytest.fixture
+    def project_config_factory(self, config_home, make_filename) -> ProjectConfigWriter:
+        def _create_project_cfg(payload: dict, *, file_name: str | None = None, search_path: str = "config") -> Path:
+            f = file_name or make_filename()
+            p = config_home.project(search_path) / f
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(yaml.safe_dump(payload), encoding="utf-8")
+            return p
+
+        return _create_project_cfg
+
     # endregion
     @staticmethod
     def _assert_stored_output_path_is(stored: Path, expected: Path):
