@@ -124,7 +124,7 @@ class TestStore(YamlConfigServiceFixture):
     def test_existing_file_is_overwritten_with_new_content(
             self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_config_factory
     ):
-        user_cfg = user_config_factory({"old": 1}) # seed initial user config
+        user_cfg = user_config_factory({"old": 1})  # seed initial user config
         mock_file_util.get_user_base_dir.return_value = user_home
 
         # overwrite with new content
@@ -200,7 +200,7 @@ class TestUpdate(YamlConfigServiceFixture):
         user_config_factory({"a": 999, "nest": {"x": 999}})
 
         patch = {"b": 2, "list": [2], "nest": {"y": 9}}
-        out_path = sut.update(patch, app_name, filename=project_cfg.name, target="project",file_util=project_fu)
+        out_path = sut.update(patch, app_name, filename=project_cfg.name, target="project", file_util=project_fu)
 
         self._assert_stored_output_path_is(out_path, project_cfg)
         contents = yaml.safe_load(project_cfg.read_text(encoding="utf-8")) or {}
@@ -224,3 +224,85 @@ class TestUpdate(YamlConfigServiceFixture):
                 target="user",
                 file_util=mock_file_util,
             )
+
+
+class TestYamlComments(YamlConfigServiceFixture):
+
+    def test_ignores_full_line_and_inline_comments(
+            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+    ):
+        p = project_root / "config" / "with_comments.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "# top comment\n"
+            "base: 1  # inline comment\n"
+            "nest:\n"
+            "  k: v   # another inline comment\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(app_name=app_name, filename=p.name, file_util=project_fu)
+        assert cfg == {"base": 1, "nest": {"k": "v"}}
+
+    def test_commented_out_keys_are_ignored(
+            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+    ):
+        p = project_root / "config" / "commented_keys.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "a: 1\n"
+            "#b: 2\n"
+            "nest:\n"
+            "  x: 3\n"
+            "  #y: 4\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(app_name=app_name, filename=p.name, file_util=project_fu)
+        assert cfg == {"a": 1, "nest": {"x": 3}}
+
+    def test_hash_in_quoted_strings_is_not_a_comment(
+            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+    ):
+        p = project_root / "config" / "quoted_hash.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            'msg: "value with #hash inside"\n'
+            "path: 'C:\\#folder\\file'\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(app_name=app_name, filename=p.name, file_util=project_fu)
+        assert cfg == {"msg": "value with #hash inside", "path": r"C:\#folder\file"}
+
+    def test_list_items_with_inline_comments(
+            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+    ):
+        p = project_root / "config" / "list_comments.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "nums:\n"
+            "  - 1  # one\n"
+            "  - 2  # two\n"
+            "  # - 3 (disabled)\n",
+            encoding="utf-8",
+        )
+        cfg = sut.load(app_name=app_name, filename=p.name, file_util=project_fu)
+        assert cfg == {"nums": [1, 2]}
+
+    def test_update_strips_comments_in_output(
+            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+    ):
+        # Start with commented YAML
+        p = project_root / "config" / "roundtrip_comments.yaml"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            "a: 1  # keep a\n"
+            "nest:\n"
+            "  x: 1  # keep x\n"
+            "#  y: 0  # disabled\n",
+            encoding="utf-8",
+        )
+        # Patch merges and then writes via handler.store (which won’t preserve comments)
+        sut.update({"nest": {"y": 9}}, app_name, filename=p.name, target="project", file_util=project_fu)
+
+        text = p.read_text(encoding="utf-8")
+        assert "# keep a" not in text and "# keep x" not in text  # comments are not preserved on writing
+        assert yaml.safe_load(text) == {"a": 1, "nest": {"x": 1, "y": 9}}

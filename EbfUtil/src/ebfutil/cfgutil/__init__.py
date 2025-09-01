@@ -31,4 +31,23 @@ def store_config(cfg: dict, *, app_name, project_search_path: str = "config",
                                  )
 
 
-__all__ = ["load_config"]
+def update_config(patch: dict, *, app_name,
+                  project_search_path: str = "config",
+                  filename: str = ConfigService.DEFAULT_FILENAME,
+                  user_filename: str | None = None,
+                  target: str = "user",
+                  file_util=None):
+    """
+    Merge the given patch into the target config file and persist it. Returns the written Path.
+    """
+    return ConfigService().update(
+        patch, app_name,
+        project_search_path=project_search_path,
+        filename=filename,
+        user_filename=user_filename,
+        target=target,
+        file_util=file_util,
+    )
+
+
+__all__ = ["load_config", "store_config", "update_config"]
