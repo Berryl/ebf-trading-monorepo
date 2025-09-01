@@ -38,7 +38,7 @@ class TestPublicApi(ConfigServiceFixture):
         user_cfg_path: Path = user_config_factory(data)
         mock_file_util.get_user_base_dir.return_value = user_home
 
-        # Apply patch via public API
+        # Apply a patch via public API
         patch = {"b": 2, "list": [2], "nest": {"y": 9}}
         out_path = update_config(
             patch=patch,
