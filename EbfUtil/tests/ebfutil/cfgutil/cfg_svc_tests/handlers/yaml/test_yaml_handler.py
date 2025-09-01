@@ -122,19 +122,16 @@ class TestStore(YamlConfigServiceFixture):
         assert persisted == data
 
     def test_existing_file_is_overwritten_with_new_content(
-            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, yaml_cfg_file: str
+            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_config_factory
     ):
+        user_cfg = user_config_factory({"old": 1}) # seed initial user config
         mock_file_util.get_user_base_dir.return_value = user_home
 
-        p = user_home / ".config" / app_name / yaml_cfg_file
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(yaml.safe_dump({"old": 1}), encoding="utf-8")
-
-        # Act: overwrite with new content
+        # overwrite with new content
         new_data = {"new": 2, "nest": {"k": "v"}}
-        out_path = sut.store(new_data, app_name, user_filename=yaml_cfg_file, target="user", file_util=mock_file_util)
+        out_path = sut.store(new_data, app_name, user_filename=user_cfg.name, target="user", file_util=mock_file_util)
 
-        self._assert_stored_output_path_is(out_path, p)
+        self._assert_stored_output_path_is(out_path, user_cfg)
         persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
         assert persisted == new_data
 
@@ -191,31 +188,24 @@ class TestUpdate(YamlConfigServiceFixture):
             self,
             sut: ConfigService,
             app_name: str,
-            project_cfg: Path,
             project_fu: FileUtil,
+            project_config_factory,
             user_config_factory,
             data: dict,
     ):
-        # project has baseline data
-        project_cfg.parent.mkdir(parents=True, exist_ok=True)
-        project_cfg.write_text(yaml.safe_dump(data), encoding="utf-8")  # {"a":1,"list":[1],"nest":{"x":1,"y":1}}
+        # seed project config
+        project_cfg = project_config_factory(data)
 
-        # user has conflicting values that MUST NOT be consulted by project-target update
+        # seed user config with conflicting values (must NOT be consulted)
         user_config_factory({"a": 999, "nest": {"x": 999}})
 
         patch = {"b": 2, "list": [2], "nest": {"y": 9}}
-        out_path = sut.update(
-            patch,
-            app_name,
-            filename=project_cfg.name,
-            target="project",
-            file_util=project_fu,
-        )
+        out_path = sut.update(patch, app_name, filename=project_cfg.name, target="project",file_util=project_fu)
 
         self._assert_stored_output_path_is(out_path, project_cfg)
-        persisted = yaml.safe_load(project_cfg.read_text(encoding="utf-8")) or {}
+        contents = yaml.safe_load(project_cfg.read_text(encoding="utf-8")) or {}
         # proves we merged only project+patch; nothing from user cfg leaked in
-        assert persisted == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+        assert contents == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
 
     def test_update_unsupported_suffix_raises(
             self,
@@ -225,7 +215,8 @@ class TestUpdate(YamlConfigServiceFixture):
             user_home: Path,
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
-        with pytest.raises(RuntimeError, match=re.escape("No handler available to store files with suffix '.docx'")):
+        msg = re.escape("No handler available to store files with suffix '.docx'")
+        with pytest.raises(RuntimeError, match=msg):
             sut.update(
                 {"k": "v"},
                 app_name,
