@@ -1,0 +1,226 @@
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any, Literal, Optional
+
+from ebf_core.guards import guards as g
+
+from ..fileutil import FileUtil
+from .cfg_merger import ConfigMerger
+from .handlers import JsonHandler, TomlHandler, YamlHandler
+from .handlers.cfg_format_handler import ConfigFormatHandler
+
+
+class ConfigService:
+    """
+    Orchestrates config loading:
+      • Finds candidate files (project root, user base).
+      • Delegates parsing to format handlers.
+      • Merges configs with user overrides taking precedence.
+    """
+    DEFAULT_FILENAME = "config.yaml"
+
+    def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
+        self._handlers: list[ConfigFormatHandler] = handlers or [YamlHandler(), JsonHandler(), TomlHandler()]
+
+    def load(self, app_name: str, *,
+             project_search_path: str | Path | None = "config",
+             filename: str | Path | None = DEFAULT_FILENAME,
+             user_filename: str | Path | None = None,
+             return_sources: bool = False,
+             file_util: FileUtil | None = None
+             ) -> dict | tuple[dict, list[Path]]:
+        """
+        Load configuration for the given application.
+
+        Search order:
+          1. Project: <project_root>/<project_search_path>/<filename>
+          2. User: <user_base>/.config/<app_name>/<user_filename>
+
+        If both exist, the user config is merged over the project config
+        (dicts merged deeply, lists/scalars replaced). Missing files are
+        skipped without error.
+
+        Args:
+            app_name: Application name; used for user config path resolution.
+            project_search_path: Optional relative folder inside the project root
+                (default: "config").
+            filename: file name assumes the same for both project and user file names.
+                (default: "config.yaml").
+            user_filename: Optional override, i.e., "SallyConfig.yaml"
+            return_sources: If True, also return the list of source files loaded
+                in the order they were applied.
+            file_util: Optional FileUtil instance. In production this is usually
+                omitted (a new one will be created). In tests, you can supply a
+                preconfigured FileUtil bound to a temporary project root or
+                user base directory.
+
+        Returns:
+            dict: The merged configuration.
+            (dict, list[Path]): If return_sources=True, also return the sources
+                used in order.
+        """
+        g.ensure_not_empty_str(app_name, "app_name")
+        g.ensure_usable_path(filename, "filename")
+        if user_filename is None:
+            user_filename = filename
+
+        fu = file_util or FileUtil()
+        sources: list[Path] = []
+        cfg: dict = {}
+
+        proj_path = fu.try_get_file_from_project_root(filename, project_search_path or "")
+        if proj_path:
+            cfg = self._load_any(proj_path)
+            sources.append(proj_path)
+
+        user_path = fu.try_get_file_from_user_base_dir(user_filename, Path(".config") / app_name)
+        if user_path:
+            user_cfg = self._load_any(user_path)
+            cfg = ConfigMerger.deep(cfg or {}, user_cfg)
+            sources.append(user_path)
+
+        return (cfg, sources) if return_sources else cfg
+
+    def store(
+            self,
+            cfg: Mapping[str, Any],
+            app_name: str,
+            *,
+            project_search_path: str | Path = "config",
+            filename: str | Path = "config.yaml",
+            user_filename: str | Path | None = None,
+            target: Literal["project", "user"] = "user",
+            file_util: FileUtil | None = None,
+    ) -> Path:
+        """
+        Store configuration for the given application by delegating to a format handler.
+
+        Destination selection:
+          - target="project": <project_root>/<project_search_path>/<filename>
+          - target="user":    <user_base>/.config/<app_name>/<user_filename or filename>
+
+        Handler delegation:
+          - The handler is selected based on the destination file's suffix.
+          - The selected handler performs the actual serialization and writes.
+
+        Behavior:
+          - Ensures the destination directory exists (created if necessary).
+          - Overwrites existing files.
+          - If no handler supports the destination suffix, a RuntimeError is raised.
+
+        Args:
+            cfg: Mapping of configuration values to persist.
+            app_name: Application name; used for user config path resolution.
+            project_search_path: Relative folder inside the project root for project-side configs
+                (default: "config").
+            filename: File name for the project-side config (default: "config.yaml").
+            user_filename: Optional override for the user-side file name. If None, uses filename.
+            target: Which destination to write: "project" or "user" (default: "user").
+            file_util: Optional FileUtil instance. In production this is usually omitted
+                (a new one will be created). In tests, you can supply a preconfigured
+                FileUtil bound to a temporary project root or user base directory.
+
+        Returns:
+            Path: The full path to the file that was written.
+
+        Raises:
+            AssertionError: If app_name is empty or filename is not provided.
+            RuntimeError: If no handler supports the destination suffix.
+        """
+        out_path, handler = self._resolve_output_and_handler(
+            app_name=app_name,
+            project_search_path=project_search_path,
+            filename=filename,
+            user_filename=user_filename,
+            target=target,
+            file_util=file_util,
+        )
+        handler.store(out_path, cfg)
+        return out_path
+
+    def update(
+            self,
+            patch: Mapping[str, Any],
+            app_name: str,
+            *,
+            project_search_path: str | Path = "config",
+            filename: str | Path = "config.yaml",
+            user_filename: str | Path | None = None,
+            target: Literal["project", "user"] = "user",
+            file_util: FileUtil | None = None,
+    ) -> Path:
+        """
+        Merge the given patch into the target config file and persist it.
+
+        Behavior:
+          - Resolves the destination similarly to store().
+          - Loads existing config from the destination file only (does not combine sources).
+          - Deep-merges existing config with the patch (the patch wins).
+          - Writes the merged result back to the same destination.
+        """
+        out_path, handler = self._resolve_output_and_handler(
+            app_name=app_name,
+            project_search_path=project_search_path,
+            filename=filename,
+            user_filename=user_filename,
+            target=target,
+            file_util=file_util,
+        )
+
+        current_cfg: dict = handler.load(out_path) if out_path.exists() else {}
+        merged = ConfigMerger.deep(current_cfg or {}, dict(patch))
+        handler.store(out_path, merged)
+        return out_path
+
+    def _load_any(self, path: Path) -> dict:
+        """
+        Use the first loader that supports the file path.
+        Only one loader is applied; loaders are not combined.
+        Returns {} if no loader supports the path.
+        """
+        handler: ConfigFormatHandler = self._get_handler_for(path)
+        return handler.load(path) if handler is not None else {}
+
+    def _get_handler_for(self, path: Path) -> ConfigFormatHandler | None:
+        """return the first loader that supports the file path, else done."""
+        for h in self._handlers:
+            if h.supports(path):
+                return h
+        return None
+
+    def _resolve_output_and_handler(
+            self,
+            *,
+            app_name: str,
+            project_search_path: str | Path,
+            filename: str | Path,
+            user_filename: str | Path | None,
+            target: Literal["project", "user"],
+            file_util: FileUtil | None,
+    ) -> tuple[Path, ConfigFormatHandler]:
+        """
+        Common resolution for store() and update():
+        - validates inputs
+        - computes out_path based on target
+        - ensures that the parent directory exists
+        - selects and returns the handler
+        """
+        g.ensure_not_empty_str(app_name, "app_name")
+        g.ensure_usable_path(filename, "filename")
+
+        fu = file_util or FileUtil()
+        if target == "project":
+            base = fu.get_project_root()
+            out_path = base / Path(project_search_path or "") / Path(filename)
+        else:
+            f_name = Path(user_filename or filename)
+            base = fu.get_user_base_dir()
+            out_path = base / Path(".config") / app_name / f_name
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        handler = self._get_handler_for(out_path)
+        if handler is None:
+            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
+
+        return out_path, handler
