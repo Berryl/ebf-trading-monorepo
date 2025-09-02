@@ -9,7 +9,7 @@ description = "EBF utilities package (fileutil, guards, and more)"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "EBF" }]
-license = { text = "MIT" }
+license = { text = "SPDX" }
 dependencies = [
   "typeguard>=4.0.0",
   "pyyaml>=6.0"
