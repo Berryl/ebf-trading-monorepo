@@ -199,3 +199,49 @@ class TestEnsureUsablePath:
         msg = re.escape("Arg 'filename' must be a Path or non-empty string\nDescription: filename\nReceived Type: int")
         with pytest.raises(AssertionError, match=msg):
             g.ensure_usable_path(42, "filename")
+
+class TestEnsureBooleanGuards:
+
+    # ensure_true
+
+    def test_ensure_true_passes_on_true(self):
+        g.ensure_true(True, "should pass")
+
+    def test_ensure_true_fails_on_false(self):
+        msg = re.escape("Condition must be True")
+        with pytest.raises(AssertionError) as exc:
+            g.ensure_true(False)
+        assert re.search(msg, str(exc.value))
+
+    @pytest.mark.parametrize("value", [1, [1], "yes", object()])
+    def test_ensure_true_strict_non_bool_truthy_fails(self, value):
+        with pytest.raises(AssertionError):
+            g.ensure_true(value)  # type: ignore[arg-type]
+
+    def test_ensure_true_includes_description(self):
+        msg = re.escape("Assertion failed: must be green")
+        with pytest.raises(AssertionError) as exc:
+            g.ensure_true(False, "must be green")
+        assert re.search(msg, str(exc.value))
+
+    # ensure_false
+
+    def test_ensure_false_passes_on_false(self):
+        g.ensure_false(False, "should pass")
+
+    def test_ensure_false_fails_on_true(self):
+        msg = re.escape("Condition must be False")
+        with pytest.raises(AssertionError) as exc:
+            g.ensure_false(True)
+        assert re.search(msg, str(exc.value))
+
+    @pytest.mark.parametrize("value", [0, "", [], {}, None])
+    def test_ensure_false_strict_non_bool_falsy_fails(self, value):
+        with pytest.raises(AssertionError):
+            g.ensure_false(value)  # type: ignore[arg-type]
+
+    def test_ensure_false_includes_description(self):
+        msg = re.escape("Assertion failed: must be red")
+        with pytest.raises(AssertionError) as exc:
+            g.ensure_false(True, "must be red")
+        assert re.search(msg, str(exc.value))

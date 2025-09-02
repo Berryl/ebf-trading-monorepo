@@ -201,3 +201,58 @@ def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
         object_info={"Description": description or "Unnamed",
                      "Received Type": type(candidate).__name__}
     ))
+
+
+def ensure_true(condition: bool, description: str = "") -> None:
+    """
+    Ensures that the provided condition is strictly True.
+
+    Behavior:
+    - Passes only when the condition is boolean True.
+    - Fails when the condition is False, None, 0, empty containers, or any other falsy value.
+    - Also fails when condition is a non-bool truthy value (e.g., 1, [1]) because it is not strictly True.
+
+    Args:
+        condition: The condition to verify. Must be boolean True.
+        description: Optional additional context for the assertion message.
+
+    Raises:
+        AssertionError: If the condition is not strictly True.
+    """
+    if not (isinstance(condition, bool) and condition):
+        message = f"Assertion failed: {description}" if description else "Condition must be True"
+        raise AssertionError(create_clean_error_context(
+            description=message,
+            object_info={
+                "Received": repr(condition),
+                "Received Type": type(condition).__name__
+            },
+            frames_to_show=3
+        ))
+
+def ensure_false(condition: bool, description: str = "") -> None:
+    """
+    Ensures that the provided condition is strictly False.
+
+    Behavior:
+    - Passes only when the condition is the boolean False.
+    - Fails when the condition is True, or any non-bool value (including falsy values like 0, '', [], None).
+
+    Args:
+        condition: The condition to verify. Must be the boolean False.
+        description: Optional additional context for the assertion message.
+
+    Raises:
+        AssertionError: If the condition is not strictly False.
+    """
+    if not (isinstance(condition, bool) and not condition):
+        message = f"Assertion failed: {description}" if description else "Condition must be False"
+        raise AssertionError(create_clean_error_context(
+            description=message,
+            object_info={
+                "Received": repr(condition),
+                "Received Type": type(condition).__name__
+            },
+            frames_to_show=3
+        ))
+
