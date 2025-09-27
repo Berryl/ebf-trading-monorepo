@@ -1,10 +1,46 @@
 from pathlib import Path
 import os
 import sys
+from typing import Callable
+
 import pytest
 from unittest.mock import patch
 
 from ebf_core.fileutil.executable_finder import ExecutableFinder
+
+@pytest.fixture
+def system_path_with_exes(tmp_path: Path)-> Callable[[str], list[str]]:
+    def _factory(*names: str):
+        """
+        Creates a temporary directory on PATH and populates it with fake executables.
+
+        Usage:
+            (foo, bar), env = path_with_exes("foo", "bar")
+            with patch.dict(os.environ, env, clear=False):
+                # call code under test
+
+        Args:
+            *names: one or more executable base names (without extension)
+
+        Returns:
+            list[str]: The names that were created and available on PATH.
+        """
+
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        for n in names:
+            exe_name = f"{n}.exe" if os.name == "nt" else n
+            p = bin_dir / exe_name
+            p.write_text("")
+            if os.name != "nt":  # make it executable on Unix
+                p.chmod(0o755)
+        env = {"PATH": str(bin_dir)}
+        if os.name == "nt":
+            env["PATHEXT"] = ".COM;.EXE;.BAT;.CMD"
+        with patch.dict(os.environ, env, clear=False):
+            yield list(names)
+
+    return _factory
 
 
 @pytest.fixture
@@ -12,19 +48,27 @@ def sut() -> ExecutableFinder:
     return ExecutableFinder()
 
 
-class TestFindOnPath:
-    def test_finds_executable_on_path(self, sut: ExecutableFinder, tmp_path: Path):
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        exe = bin_dir / ("foo.exe" if os.name == "nt" else "foo")
-        exe.write_text("")  # existence is enough
-        with patch.dict(os.environ, {"PATH": str(bin_dir), "PATHEXT": ".COM;.EXE;.BAT;.CMD"}, clear=False):
-            found = sut.find_on_path(["foo", "bar"])
-        assert found == exe.resolve()
+class TestFindOnSystemPath:
+    def test_can_find_executable_on_path(self, sut: ExecutableFinder, system_path_with_fake_exes):
+        exe_names = system_path_with_fake_exes("foo")
 
-    def test_returns_none_when_missing(self, sut: ExecutableFinder, tmp_path: Path):
-        with patch.dict(os.environ, {"PATH": str(tmp_path)}, clear=False):
-            assert sut.find_on_path(["does-not-exist"]) is None
+        found = sut.find_on_system_path(exe_names)
+        assert found.name.startswith(exe_names.name[0])
+
+    def test_missing_executable_names_are_ignored(self, sut: ExecutableFinder, system_path_with_fake_exes):
+        exe_names = system_path_with_fake_exes("foo")
+        search_names = list(["bar", "foo"])  # 'bar' isn't there
+
+        found = sut.find_on_system_path(search_names)
+        assert found.name.startswith(exe_names.name[0])
+
+    def test_returns_none_when_no_executable_names_are_present(self, sut: ExecutableFinder):
+         assert sut.find_on_system_path(["does-not-exist"]) is None
+
+    @pytest.mark.parametrize("targets", [[], None])
+    def test_returns_none_when_list_is_empty_or_none(self, sut: ExecutableFinder, targets):
+         assert sut.find_on_system_path(targets) is None
+
 
 
 class TestFindStartMenuShortcut:
@@ -124,10 +168,10 @@ class TestFindInCommonRoots:
 
 
 class TestBestOf:
-    def test_best_of_returns_first_existing(self, ef: ExecutableFinder, tmp_path: Path):
+    def test_best_of_returns_first_existing(self, sut: ExecutableFinder, tmp_path: Path):
         a = tmp_path / "a.exe"
         b = tmp_path / "b.exe"
         b.write_text("")
         c = tmp_path / "c.exe"
-        got = ef.best_of(a, None, b, c)
+        got = sut.best_of(a, None, b, c)
         assert got == b.resolve()
