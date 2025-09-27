@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ebf_core.fileutil.file_util import FileUtil
+from ebf_core.fileutil.project_file_locator import ProjectFileLocator
 
 VALID_SEARCH_PATH = r'tests/ebf_core/fileutil'  # noqa
 
@@ -16,23 +16,23 @@ class TestProjectRootOverride:
     (by marker search) and with an explicit override
     provided by consuming projects.
 
-    tmp_path is a pytest fixture that provides a unique, empty temp directory.
+    The pytest supplied fixture "tmp_path" provides a unique, empty temp directory.
     This simulates an external consuming project defining its root explicitly.
     """
 
     def test_can_find_file_inside_ebf_util_without_override(self):
-        sut = FileUtil()
+        sut = ProjectFileLocator()
         file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
         assert sut._project_root_override is None
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
     def test_can_find_file_inside_external_project_with_override_in_init(self, tmp_path):
-        sut = FileUtil(project_root_override=tmp_path)
+        sut = ProjectFileLocator(project_root_override=tmp_path)
         result = sut.get_project_root()
         assert result == tmp_path
 
     def test_can_find_file_inside_external_project_with_override_in_setter(self, tmp_path):
-        sut = FileUtil()
+        sut = ProjectFileLocator()
         sut.set_project_root_override(tmp_path)
         result = sut.get_project_root()
         assert result == tmp_path
@@ -41,8 +41,8 @@ class TestProjectRootOverride:
 @pytest.mark.integration
 class TestGetProjectRoot:
     @pytest.fixture
-    def sut(self) -> FileUtil:
-        return FileUtil()
+    def sut(self) -> ProjectFileLocator:
+        return ProjectFileLocator()
 
     def test_get_project_root_returns_path_with_at_least_one_common_marker_when_no_args(self, sut):
         found = sut.get_project_root()
@@ -105,8 +105,8 @@ class TestGetProjectRoot:
 @pytest.mark.integration
 class TestUserBaseStructure:
     @pytest.fixture
-    def sut(self) -> FileUtil:
-        return FileUtil()
+    def sut(self) -> ProjectFileLocator:
+        return ProjectFileLocator()
 
     def test_default_base_dir(self, sut):
         path = str(sut.base_structure)

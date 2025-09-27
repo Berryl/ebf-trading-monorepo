@@ -1,3 +1,3 @@
-from .file_util import FileUtil as FileUtil
+from .project_file_locator import ProjectFileLocator
 
-__all__ = ["FileUtil"]
+__all__ = ["ProjectFileLocator"]

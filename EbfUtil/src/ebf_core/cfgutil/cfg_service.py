@@ -4,7 +4,7 @@ from typing import Any, Literal, Optional
 
 from ebf_core.guards import guards as g
 
-from ..fileutil import FileUtil
+from ..fileutil import ProjectFileLocator
 from .cfg_merger import ConfigMerger
 from .handlers import JsonHandler, TomlHandler, YamlHandler
 from .handlers.cfg_format_handler import ConfigFormatHandler
@@ -27,7 +27,7 @@ class ConfigService:
              filename: str | Path | None = DEFAULT_FILENAME,
              user_filename: str | Path | None = None,
              return_sources: bool = False,
-             file_util: FileUtil | None = None
+             file_util: ProjectFileLocator | None = None
              ) -> dict | tuple[dict, list[Path]]:
         """
         Load configuration for the given application.
@@ -64,7 +64,7 @@ class ConfigService:
         if user_filename is None:
             user_filename = filename
 
-        fu = file_util or FileUtil()
+        fu = file_util or ProjectFileLocator()
         sources: list[Path] = []
         cfg: dict = {}
 
@@ -90,7 +90,7 @@ class ConfigService:
             filename: str | Path = "config.yaml",
             user_filename: str | Path | None = None,
             target: Literal["project", "user"] = "user",
-            file_util: FileUtil | None = None,
+            file_util: ProjectFileLocator | None = None,
     ) -> Path:
         """
         Store configuration for the given application by delegating to a format handler.
@@ -147,7 +147,7 @@ class ConfigService:
             filename: str | Path = "config.yaml",
             user_filename: str | Path | None = None,
             target: Literal["project", "user"] = "user",
-            file_util: FileUtil | None = None,
+            file_util: ProjectFileLocator | None = None,
     ) -> Path:
         """
         Merge the given patch into the target config file and persist it.
@@ -196,7 +196,7 @@ class ConfigService:
             filename: str | Path,
             user_filename: str | Path | None,
             target: Literal["project", "user"],
-            file_util: FileUtil | None,
+            file_util: ProjectFileLocator | None,
     ) -> tuple[Path, ConfigFormatHandler]:
         """
         Common resolution for store() and update():
@@ -208,7 +208,7 @@ class ConfigService:
         g.ensure_not_empty_str(app_name, "app_name")
         g.ensure_usable_path(filename, "filename")
 
-        fu = file_util or FileUtil()
+        fu = file_util or ProjectFileLocator()
         if target == "project":
             base = fu.get_project_root()
             out_path = base / Path(project_search_path or "") / Path(filename)

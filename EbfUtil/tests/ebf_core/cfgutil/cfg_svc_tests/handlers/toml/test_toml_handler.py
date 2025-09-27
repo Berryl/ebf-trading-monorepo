@@ -5,7 +5,7 @@ from typing import Protocol
 import pytest
 
 from ebf_core.cfgutil import ConfigService
-from ebf_core.fileutil import FileUtil
+from ebf_core.fileutil import ProjectFileLocator
 from tests.ebf_core.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 # Uses current TomlHandler behavior (read-only; store/update unsupported).
@@ -86,7 +86,7 @@ class TomlConfigServiceFixture(ConfigServiceFixture):
 
 class TestTomlLoad(TomlConfigServiceFixture):
     def test_can_load_project_config(
-        self, sut: ConfigService, app_name: str, project_fu: FileUtil, project_config_factory, data: dict
+        self, sut: ConfigService, app_name: str, project_fu: ProjectFileLocator, project_config_factory, data: dict
     ):
         project_cfg = project_config_factory(data)
         cfg, sources = sut.load(app_name, filename=project_cfg.name, return_sources=True, file_util=project_fu)
@@ -99,7 +99,7 @@ class TestTomlLoad(TomlConfigServiceFixture):
         app_name: str,
         project_config_factory,
         user_config_factory,
-        mock_file_util: FileUtil,
+        mock_file_util: ProjectFileLocator,
         data: dict,
     ):
         project_cfg = project_config_factory(data)
@@ -112,7 +112,7 @@ class TestTomlLoad(TomlConfigServiceFixture):
         assert sources == [project_cfg, user_cfg]
 
     def test_unsupported_suffix_yields_empty_dict(
-        self, sut: ConfigService, app_name: str, project_fu: FileUtil, project_root: Path
+        self, sut: ConfigService, app_name: str, project_fu: ProjectFileLocator, project_root: Path
     ):
         file_name = "config.docx"
         # create a bogus file so it appears in sources
@@ -123,7 +123,7 @@ class TestTomlLoad(TomlConfigServiceFixture):
         assert cfg == {}
         assert sources == [p]
 
-    def test_load_ignores_comments(self, sut: ConfigService, app_name: str, project_fu: FileUtil, project_root: Path):
+    def test_load_ignores_comments(self, sut: ConfigService, app_name: str, project_fu: ProjectFileLocator, project_root: Path):
         p = project_root / "config" / "with_comments.toml"
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(
@@ -141,7 +141,7 @@ class TestTomlLoad(TomlConfigServiceFixture):
 
 class TestTomlStore(TomlConfigServiceFixture):
     def test_store_user_raises_not_supported(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_cfg: Path
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path, user_cfg: Path
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
         msg = re.escape("Writing TOML is not supported by this service.")
@@ -151,7 +151,7 @@ class TestTomlStore(TomlConfigServiceFixture):
     def test_store_project_raises_not_supported(
         self, sut: ConfigService, app_name: str, project_root: Path, project_cfg: Path
     ):
-        fu = FileUtil(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root_override=project_root)
         msg = re.escape("Writing TOML is not supported by this service.")
         with pytest.raises(RuntimeError, match=msg):
             sut.store(cfg={"k": 1}, app_name=app_name, filename=project_cfg.name, target="project", file_util=fu)
@@ -159,7 +159,7 @@ class TestTomlStore(TomlConfigServiceFixture):
 
 class TestTomlUpdate(TomlConfigServiceFixture):
     def test_update_user_raises_not_supported(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_cfg: Path
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path, user_cfg: Path
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
         msg = re.escape("Writing TOML is not supported by this service.")
@@ -169,7 +169,7 @@ class TestTomlUpdate(TomlConfigServiceFixture):
     def test_update_project_raises_not_supported(
         self, sut: ConfigService, app_name: str, project_root: Path, project_cfg: Path
     ):
-        fu = FileUtil(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root_override=project_root)
         msg = re.escape("Writing TOML is not supported by this service.")
         with pytest.raises(RuntimeError, match=msg):
             sut.update({"b": 2}, app_name=app_name, filename=project_cfg.name, target="project", file_util=fu)

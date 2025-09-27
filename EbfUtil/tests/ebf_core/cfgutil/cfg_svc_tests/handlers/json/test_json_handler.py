@@ -6,7 +6,7 @@ from typing import Protocol
 import pytest
 
 from ebf_core.cfgutil import ConfigService
-from ebf_core.fileutil import FileUtil
+from ebf_core.fileutil import ProjectFileLocator
 from tests.ebf_core.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 
@@ -58,7 +58,7 @@ class JsonConfigServiceFixture(ConfigServiceFixture):
 
 class TestJsonLoad(JsonConfigServiceFixture):
     def test_can_load_project_config(
-        self, sut: ConfigService, app_name, json_cfg_file, project_fu: FileUtil, project_config_factory, data: dict
+        self, sut: ConfigService, app_name, json_cfg_file, project_fu: ProjectFileLocator, project_config_factory, data: dict
     ):
         project_cfg = project_config_factory(data)
         cfg, sources = sut.load(app_name, filename=project_cfg.name, return_sources=True, file_util=project_fu)
@@ -67,7 +67,7 @@ class TestJsonLoad(JsonConfigServiceFixture):
         assert sources[0].name == json_cfg_file
 
     def test_can_load_user_config_when_project_config_absent(
-        self, sut: ConfigService, mock_file_util: FileUtil, user_config_factory, app_name: str
+        self, sut: ConfigService, mock_file_util: ProjectFileLocator, user_config_factory, app_name: str
     ):
         user_data = {"a": 9, "list": [2], "nest": {"x": 5}}
         user_cfg: Path = user_config_factory(user_data)
@@ -82,7 +82,7 @@ class TestJsonLoad(JsonConfigServiceFixture):
         sut: ConfigService,
         user_config_factory,
         project_config_factory,
-        mock_file_util: FileUtil,
+        mock_file_util: ProjectFileLocator,
         app_name: str,
         data: dict,
     ):
@@ -98,7 +98,7 @@ class TestJsonLoad(JsonConfigServiceFixture):
 
     @pytest.mark.parametrize("suffix", ["docx", "blah"])
     def test_unsupported_suffix_yields_empty_dict(
-        self, sut: ConfigService, project_fu: FileUtil, project_config_factory, app_name: str, suffix,
+        self, sut: ConfigService, project_fu: ProjectFileLocator, project_config_factory, app_name: str, suffix,
     ):
         file_name = f"config.{suffix}"
         project_cfg = project_config_factory({"k": "v"}, file_name=file_name)
@@ -109,7 +109,7 @@ class TestJsonLoad(JsonConfigServiceFixture):
 
 class TestJsonStore(JsonConfigServiceFixture):
     def test_can_store_user_data(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil,
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator,
             user_home: Path, json_cfg_file: str, data: dict
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -122,7 +122,7 @@ class TestJsonStore(JsonConfigServiceFixture):
     def test_store_project_creates_dir_and_writes_json(
         self, sut: ConfigService, app_name: str, project_root: Path, json_cfg_file: str, data: dict
     ):
-        fu = FileUtil(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root_override=project_root)
         out_path = sut.store(data, app_name, filename=json_cfg_file, target="project", file_util=fu)
         expected_path = project_root / "config" / json_cfg_file
         self._assert_stored_output_path_is(out_path, expected_path)
@@ -130,7 +130,7 @@ class TestJsonStore(JsonConfigServiceFixture):
         assert persisted == data
 
     def test_existing_file_is_overwritten_with_new_content(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_config_factory
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path, user_config_factory
     ):
         user_cfg = user_config_factory({"old": 1})
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -141,7 +141,7 @@ class TestJsonStore(JsonConfigServiceFixture):
         assert persisted == new_data
 
     def test_store_unsupported_suffix_raises(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
         msg = re.escape("No handler available to store files with suffix '.docx'")
@@ -157,7 +157,7 @@ class TestJsonStore(JsonConfigServiceFixture):
 
 class TestJsonUpdate(JsonConfigServiceFixture):
     def test_update_merges_deep(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil,
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator,
             user_home: Path, user_config_factory, data: dict,
     ):
         user_cfg = user_config_factory(data)
@@ -169,7 +169,7 @@ class TestJsonUpdate(JsonConfigServiceFixture):
         assert contents == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
 
     def test_update_creates_user_cfg_if_absent(
-        self, sut: ConfigService, app_name: str, user_cfg: Path, mock_file_util: FileUtil, user_home: Path,
+        self, sut: ConfigService, app_name: str, user_cfg: Path, mock_file_util: ProjectFileLocator, user_home: Path,
     ):
         assert not user_cfg.exists()
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -180,7 +180,7 @@ class TestJsonUpdate(JsonConfigServiceFixture):
         assert contents == patch
 
     def test_update_project_ignores_user_cfg_when_merging(
-        self, sut: ConfigService, app_name: str, project_fu: FileUtil,
+        self, sut: ConfigService, app_name: str, project_fu: ProjectFileLocator,
             project_config_factory, user_config_factory, data: dict,
     ):
         project_cfg = project_config_factory(data)
@@ -192,7 +192,7 @@ class TestJsonUpdate(JsonConfigServiceFixture):
         assert contents == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
 
     def test_update_unsupported_suffix_raises(
-        self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path,
+        self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path,
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
         msg = re.escape("No handler available to store files with suffix '.docx'")

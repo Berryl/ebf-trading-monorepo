@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from ebf_core.cfgutil import ConfigService
-from ebf_core.fileutil import FileUtil
+from ebf_core.fileutil import ProjectFileLocator
 from tests.ebf_core.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 
@@ -37,7 +37,7 @@ class YamlConfigServiceFixture(ConfigServiceFixture):
 class TestLoad(YamlConfigServiceFixture):
 
     def test_can_load_project_config(
-            self, sut: ConfigService, app_name, yaml_cfg_file, project_fu: FileUtil, project_config_factory, data: dict
+            self, sut: ConfigService, app_name, yaml_cfg_file, project_fu: ProjectFileLocator, project_config_factory, data: dict
     ):
         project_cfg = project_config_factory(data)  # writes <project_root>/config/<yaml_cfg_file>
 
@@ -48,7 +48,7 @@ class TestLoad(YamlConfigServiceFixture):
         assert sources[0].name == yaml_cfg_file
 
     def test_can_load_user_config_when_project_config_absent(
-            self, sut: ConfigService, mock_file_util: FileUtil, user_config_factory, app_name: str
+            self, sut: ConfigService, mock_file_util: ProjectFileLocator, user_config_factory, app_name: str
     ):
         user_data = {"a": 9, "list": [2], "nest": {"x": 5}}
         user_cfg: Path = user_config_factory(user_data)
@@ -63,7 +63,7 @@ class TestLoad(YamlConfigServiceFixture):
 
     def test_user_cfg_has_precedence_over_project_cfg(
             self, sut: ConfigService,
-            user_config_factory, mock_file_util: FileUtil,
+            user_config_factory, mock_file_util: ProjectFileLocator,
             fake_project_file: Path, app_name: str
     ):
         # project_cfg: {"a": 1, "list": [1], "nest": {"x": 1, "y": 1}}
@@ -81,7 +81,7 @@ class TestLoad(YamlConfigServiceFixture):
 
     @pytest.mark.parametrize("suffix", ["docx", "blah"])
     def test_unsupported_suffix_yields_empty_dict(
-            self, sut: ConfigService, project_fu: FileUtil, project_config_factory, app_name: str, suffix,
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_config_factory, app_name: str, suffix,
     ):
         file_name = f"config.{suffix}"
         # seed a project file with unsupported suffix
@@ -96,7 +96,7 @@ class TestStore(YamlConfigServiceFixture):
 
     def test_can_store_user_data(
             self, sut: ConfigService, app_name: str,
-            mock_file_util: FileUtil, user_home: Path, yaml_cfg_file: str, data: dict
+            mock_file_util: ProjectFileLocator, user_home: Path, yaml_cfg_file: str, data: dict
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
 
@@ -111,7 +111,7 @@ class TestStore(YamlConfigServiceFixture):
     def test_store_project_creates_dir_and_writes_yaml(
             self, sut: ConfigService, app_name: str, project_root: Path, yaml_cfg_file: str, data: dict
     ):
-        fu = FileUtil(project_root_override=project_root)  # resolves project root to our tmp area
+        fu = ProjectFileLocator(project_root_override=project_root)  # resolves project root to our tmp area
 
         out_path = sut.store(data, app_name, filename=yaml_cfg_file, target="project", file_util=fu)
 
@@ -122,7 +122,7 @@ class TestStore(YamlConfigServiceFixture):
         assert persisted == data
 
     def test_existing_file_is_overwritten_with_new_content(
-            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path, user_config_factory
+            self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path, user_config_factory
     ):
         user_cfg = user_config_factory({"old": 1})  # seed initial user config
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -136,7 +136,7 @@ class TestStore(YamlConfigServiceFixture):
         assert persisted == new_data
 
     def test_store_unsupported_suffix_raises(
-            self, sut: ConfigService, app_name: str, mock_file_util: FileUtil, user_home: Path
+            self, sut: ConfigService, app_name: str, mock_file_util: ProjectFileLocator, user_home: Path
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
 
@@ -155,7 +155,7 @@ class TestUpdate(YamlConfigServiceFixture):
 
     def test_update_merges_deep(
             self, sut: ConfigService, app_name: str,
-            mock_file_util: FileUtil, user_home: Path, user_config_factory, data: dict,
+            mock_file_util: ProjectFileLocator, user_home: Path, user_config_factory, data: dict,
     ):
         user_cfg = user_config_factory(data)
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -170,7 +170,7 @@ class TestUpdate(YamlConfigServiceFixture):
         assert contents == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
 
     def test_update_creates_user_cfg_if_absent(
-            self, sut: ConfigService, app_name: str, user_cfg: Path, mock_file_util: FileUtil, user_home: Path,
+            self, sut: ConfigService, app_name: str, user_cfg: Path, mock_file_util: ProjectFileLocator, user_home: Path,
     ):
         assert not user_cfg.exists()
 
@@ -188,7 +188,7 @@ class TestUpdate(YamlConfigServiceFixture):
             self,
             sut: ConfigService,
             app_name: str,
-            project_fu: FileUtil,
+            project_fu: ProjectFileLocator,
             project_config_factory,
             user_config_factory,
             data: dict,
@@ -211,7 +211,7 @@ class TestUpdate(YamlConfigServiceFixture):
             self,
             sut: ConfigService,
             app_name: str,
-            mock_file_util: FileUtil,
+            mock_file_util: ProjectFileLocator,
             user_home: Path,
     ):
         mock_file_util.get_user_base_dir.return_value = user_home
@@ -229,7 +229,7 @@ class TestUpdate(YamlConfigServiceFixture):
 class TestYamlComments(YamlConfigServiceFixture):
 
     def test_ignores_full_line_and_inline_comments(
-            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_root: Path, app_name: str
     ):
         p = project_root / "config" / "with_comments.yaml"
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -244,7 +244,7 @@ class TestYamlComments(YamlConfigServiceFixture):
         assert cfg == {"base": 1, "nest": {"k": "v"}}
 
     def test_commented_out_keys_are_ignored(
-            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_root: Path, app_name: str
     ):
         p = project_root / "config" / "commented_keys.yaml"
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -260,7 +260,7 @@ class TestYamlComments(YamlConfigServiceFixture):
         assert cfg == {"a": 1, "nest": {"x": 3}}
 
     def test_hash_in_quoted_strings_is_not_a_comment(
-            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_root: Path, app_name: str
     ):
         p = project_root / "config" / "quoted_hash.yaml"
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -273,7 +273,7 @@ class TestYamlComments(YamlConfigServiceFixture):
         assert cfg == {"msg": "value with #hash inside", "path": r"C:\#folder\file"}
 
     def test_list_items_with_inline_comments(
-            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_root: Path, app_name: str
     ):
         p = project_root / "config" / "list_comments.yaml"
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -288,7 +288,7 @@ class TestYamlComments(YamlConfigServiceFixture):
         assert cfg == {"nums": [1, 2]}
 
     def test_update_strips_comments_in_output(
-            self, sut: ConfigService, project_fu: FileUtil, project_root: Path, app_name: str
+            self, sut: ConfigService, project_fu: ProjectFileLocator, project_root: Path, app_name: str
     ):
         # Start with commented YAML
         p = project_root / "config" / "roundtrip_comments.yaml"

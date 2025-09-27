@@ -9,7 +9,7 @@ UNLIMITED_DEPTH = 100
 logger = logging.getLogger(__name__)
 
 
-class FileUtil:
+class ProjectFileLocator:
     """
     Utility for locating files in projects.
 

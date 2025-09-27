@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from ebf_core.cfgutil import ConfigService
-from ebf_core.fileutil.file_util import FileUtil
+from ebf_core.fileutil.project_file_locator import ProjectFileLocator
 
 
 class ConfigServiceFixture:
@@ -65,7 +65,7 @@ class ConfigServiceFixture:
 
     @pytest.fixture
     def project_fu(self, project_root: Path):
-        return FileUtil(project_root_override=project_root)
+        return ProjectFileLocator(project_root_override=project_root)
 
     @pytest.fixture
     def fake_project_file(self, project_root: Path, data: dict, make_filename) -> Path:
@@ -76,7 +76,7 @@ class ConfigServiceFixture:
 
     @pytest.fixture
     def mock_file_util(self):
-        return MagicMock(spec=FileUtil)
+        return MagicMock(spec=ProjectFileLocator)
 
     # region Config Factories
     @pytest.fixture
