@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Self, Union
 
-BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'  # intentionally domain specific but overridable
+BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'  # intentionally domain-specific but overridable
 UNLIMITED_DEPTH = 100
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class FileUtil:
        - Uses either a marker search or explicit override to locate the project root.
        - Resolves base_structure relative to that root. This is typical but not limited to testing files
 
-    2. User based:
+    2. User-based:
        - Always resolves to USERPROFILE + base_structure.
        - Ignores project root or markers entirely.
        - This is typical of production files used outside any python project
@@ -48,7 +48,7 @@ class FileUtil:
         Args:
             base_structure: Optional override for the standard Investing path.
                 note: different base structures should use different FileUtil instances
-            markers: Optional list of files/directories that indicate project root.
+            markers: Optional list of files/directories that indicate the project root.
             priority_marker: Optional single marker to prioritize.
             project_root_override: Explicit path to force as project root.
          """
@@ -62,8 +62,7 @@ class FileUtil:
         """
         Explicitly set the project root for this instance, overriding a marker search.
 
-        Use this when your consuming project has a known root you want all
-        resolution to be relative to.
+        Use this when your consuming project has a known root that you want resolution to be relative to.
 
         Example:
             util.set_project_root_override(Path(__file__).parent.parent)
@@ -123,15 +122,15 @@ class FileUtil:
             ValueError: If markers contain empty strings or priority_marker is invalid.
 
         Examples:
-            >>> # Use default markers
-            >>> file_util = FileUtil()
-            >>> root = file_util.get_project_root()
+             # Use default markers
+             file_util = FileUtil()
+             root = file_util.get_project_root()
 
-            >>> # Prioritize Git repositories
-            >>> root = file_util.get_project_root(priority_marker='.git')
+             # Prioritize Git repositories
+             root = file_util.get_project_root(priority_marker='.git')
 
-            >>> # Custom markers without caching
-            >>> root = file_util.get_project_root(markers=['.my_marker'], use_cache=False)
+             # Custom markers without caching
+             root = file_util.get_project_root(markers=['.my_marker'], use_cache=False)
         """
         if self._project_root_override is not None:
             logger.debug(f"Using override project root: {self._project_root_override}")
@@ -264,7 +263,7 @@ class FileUtil:
         Resolves a file path inside the user's base structure directory, returning a
         path to the found file if found, or None if not.
 
-        see get_file_from_user_base_dir.
+        See get_file_from_user_base_dir.
         """
         try:
             return self.get_file_from_user_base_dir(file_name, search_path)
@@ -281,7 +280,7 @@ class FileUtil:
     @staticmethod
     def _ensure_path_exists(full_path: Path, context: str, folder: Union[str, Path]):
         """
-        Consistently format & provide useful debug info
+        Consistently format and provide useful debug info
         :param full_path: full path to validate
         :param context: 'project root' :keyword 'user'
         :param folder: specific folder the file should be in
