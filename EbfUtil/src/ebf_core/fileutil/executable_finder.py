@@ -1,25 +1,77 @@
+import os
 from pathlib import Path
 
 
 class ExecutableFinder:
-    def find_on_system_path(self, executable_names: list[str]) -> Path | None:
-        """
-        Find the first executable in the given list that exists on the system's PATH.
 
-        This method iterates through the provided list of executable names and searches
-        for the first executable that exists in directories specified in the system's
-        PATH environment variable. If a match is found, the path to the executable is
-        returned. If no executable is found, None is returned.
+    @staticmethod
+    def find_on_system_path(names: list[str] | None) -> Path | None:
+        """
+        Return the first executable found by scanning the SYSTEM PATH.
+
+        Search order is deterministic: iterate `names` in order; for each name, scan
+        PATH entries in order. The first match is returned as an absolute Path.
+
+        Windows:
+          - If the candidate name includes an extension (e.g., "foo.exe"), check it as-is.
+          - If no extension is supplied, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD")
+            and check each extension in order.
+        POSIX:
+          - Require the file to exist AND be executable (os.access(..., X_OK)).
 
         Args:
-            executable_names (list[str]): A list of executable names to search for on the
-            system's PATH Extensions are ignored.
+            names: Candidate executable base names (e.g., ["foo", "bar"]). If None or empty,
+                   returns None.
 
         Returns:
-            Path | None: The absolute path to the found executable, or None if no
-            executable is found.
+            Path | None: Resolved path to the first match, or None if nothing is found.
         """
-        pass
+        if not names:
+            return None
+
+        path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
+        if not path_dirs:
+            return None
+
+        def _win_exts() -> list[str]:
+            exts = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+            out: list[str] = []
+            for e in exts:
+                e = e.strip()
+                if not e:
+                    continue
+                out.append(e if e.startswith(".") else f".{e}")
+            return out
+
+        for raw in names:
+            if not raw:
+                continue
+            name = raw.strip().strip('"').strip("'")
+
+            # POSIX – check exactly the name in each PATH dir (must be executable)
+            if os.name != "nt":
+                for d in path_dirs:
+                    cand = d / name
+                    if cand.exists() and os.access(cand, os.X_OK):
+                        return cand.resolve()
+                continue
+
+            # Windows – honor PATHEXT if name has no extension; otherwise check as-is
+            base, ext = os.path.splitext(name)
+            if ext:
+                for d in path_dirs:
+                    cand = d / name
+                    if cand.exists():
+                        return cand.resolve()
+            else:
+                exts = _win_exts()
+                for d in path_dirs:
+                    for e in exts:
+                        cand = d / f"{name}{e}"
+                        if cand.exists():
+                            return cand.resolve()
+
+        return None
 
     def find_start_menu_shortcut(self, vendor_folders: list[str], patterns: list[str]) -> Path | None:
         """

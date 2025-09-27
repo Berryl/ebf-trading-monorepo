@@ -9,39 +9,28 @@ from unittest.mock import patch
 from ebf_core.fileutil.executable_finder import ExecutableFinder
 
 @pytest.fixture
-def system_path_with_exes(tmp_path: Path)-> Callable[[str], list[str]]:
-    def _factory(*names: str):
-        """
-        Creates a temporary directory on PATH and populates it with fake executables.
-
-        Usage:
-            (foo, bar), env = path_with_exes("foo", "bar")
-            with patch.dict(os.environ, env, clear=False):
-                # call code under test
-
-        Args:
-            *names: one or more executable base names (without extension)
-
-        Returns:
-            list[str]: The names that were created and available on PATH.
-        """
-
+def system_path_with_fake_exes(tmp_path: Path, monkeypatch) -> Callable[..., list[str]]:
+    """
+    Create fake executables in a temp bin dir and patch PATH (and PATHEXT on Windows).
+    Returns the list of names you asked it to create, e.g. ["foo", "bar"].
+    """
+    def _factory(*names: str) -> list[str]:
         bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
+        bin_dir.mkdir(exist_ok=True)
+
         for n in names:
-            exe_name = f"{n}.exe" if os.name == "nt" else n
-            p = bin_dir / exe_name
-            p.write_text("")
-            if os.name != "nt":  # make it executable on Unix
-                p.chmod(0o755)
-        env = {"PATH": str(bin_dir)}
+            exe = bin_dir / (f"{n}.exe" if os.name == "nt" else n)
+            exe.write_text("")
+            if os.name != "nt":  # make it executable on POSIX
+                exe.chmod(0o755)
+
+        monkeypatch.setenv("PATH", str(bin_dir))
         if os.name == "nt":
-            env["PATHEXT"] = ".COM;.EXE;.BAT;.CMD"
-        with patch.dict(os.environ, env, clear=False):
-            yield list(names)
+            monkeypatch.setenv("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+
+        return list(names)
 
     return _factory
-
 
 @pytest.fixture
 def sut() -> ExecutableFinder:
@@ -53,14 +42,21 @@ class TestFindOnSystemPath:
         exe_names = system_path_with_fake_exes("foo")
 
         found = sut.find_on_system_path(exe_names)
-        assert found.name.startswith(exe_names.name[0])
+        assert found.stem == "foo"
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only")
+    def test_can_find_executable_if_extension_is_included_and_os_is_windows(
+            self, sut: ExecutableFinder, system_path_with_fake_exes):
+        system_path_with_fake_exes("foo")
+        found = sut.find_on_system_path(["foo.exe"])
+        assert found is not None and found.name == "foo.exe"
 
     def test_missing_executable_names_are_ignored(self, sut: ExecutableFinder, system_path_with_fake_exes):
-        exe_names = system_path_with_fake_exes("foo")
+        system_path_with_fake_exes("foo")
         search_names = list(["bar", "foo"])  # 'bar' isn't there
 
         found = sut.find_on_system_path(search_names)
-        assert found.name.startswith(exe_names.name[0])
+        assert found.stem == "foo"
 
     def test_returns_none_when_no_executable_names_are_present(self, sut: ExecutableFinder):
          assert sut.find_on_system_path(["does-not-exist"]) is None
