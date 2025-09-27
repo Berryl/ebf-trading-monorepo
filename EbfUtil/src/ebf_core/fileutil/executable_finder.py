@@ -33,10 +33,10 @@ class ExecutableFinder:
         if not path_dirs:
             path_dirs = []
 
-        def _win_exts() -> list[str]:
-            exts = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+        def _win_extensions() -> list[str]:
+            exe_extensions = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
             out: list[str] = []
-            for e in exts:
+            for e in exe_extensions:
                 e = e.strip()
                 if not e:
                     continue
@@ -70,7 +70,7 @@ class ExecutableFinder:
                         return cand.resolve()
             else:
                 for d in path_dirs:
-                    for e in _win_exts():
+                    for e in _win_extensions():
                         cand = d / f"{name}{e}"
                         if cand.exists() and os.access(cand, os.X_OK):
                             return cand.resolve()
