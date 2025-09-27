@@ -9,19 +9,19 @@ class ExecutableFinder:
         """
         Return the first executable found by scanning the SYSTEM PATH.
 
-        Search order is deterministic: iterate `names` in order; for each name, scan
-        PATH entries in order. The first match is returned as an absolute Path.
+        Deterministic search: iterate `names` in order; for each, scan PATH entries in order.
+        If a name is absolute, validate it directly and return if executable.
 
         Windows:
-          - If the candidate name includes an extension (e.g., "foo.exe"), check it as-is.
-          - If no extension is supplied, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD")
-            and check each extension in order.
+          - If name includes an extension (e.g., "foo.exe"), check it as-is.
+          - If no extension, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD") in order.
+          - Also check os.access(..., X_OK) for symmetry with POSIX.
+
         POSIX:
-          - Require the file to exist AND be executable (os.access(..., X_OK)).
+          - Require the file to exist and be executable (os.access(..., X_OK)).
 
         Args:
-            names: Candidate executable base names (e.g., ["foo", "bar"]). If None or empty,
-                   returns None.
+            names: Candidate executable base names (e.g., ["foo", "bar"]). If None or empty, returns None.
 
         Returns:
             Path | None: Resolved path to the first match, or None if nothing is found.
@@ -31,7 +31,7 @@ class ExecutableFinder:
 
         path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
         if not path_dirs:
-            return None
+            path_dirs = []
 
         def _win_exts() -> list[str]:
             exts = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
@@ -48,7 +48,13 @@ class ExecutableFinder:
                 continue
             name = raw.strip().strip('"').strip("'")
 
-            # POSIX – check exactly the name in each PATH dir (must be executable)
+            # Absolute path: validate directly, skip PATH scan
+            p = Path(name)
+            if p.is_absolute():
+                if p.exists() and (os.name == "nt" or os.access(p, os.X_OK)):
+                    return p.resolve()
+                continue
+
             if os.name != "nt":
                 for d in path_dirs:
                     cand = d / name
@@ -56,19 +62,17 @@ class ExecutableFinder:
                         return cand.resolve()
                 continue
 
-            # Windows – honor PATHEXT if name has no extension; otherwise check as-is
             base, ext = os.path.splitext(name)
             if ext:
                 for d in path_dirs:
                     cand = d / name
-                    if cand.exists():
+                    if cand.exists() and os.access(cand, os.X_OK):
                         return cand.resolve()
             else:
-                exts = _win_exts()
                 for d in path_dirs:
-                    for e in exts:
+                    for e in _win_exts():
                         cand = d / f"{name}{e}"
-                        if cand.exists():
+                        if cand.exists() and os.access(cand, os.X_OK):
                             return cand.resolve()
 
         return None
