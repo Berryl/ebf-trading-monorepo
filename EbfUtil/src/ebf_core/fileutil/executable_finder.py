@@ -13,7 +13,7 @@ class ExecutableFinder:
         If a name is absolute, validate it directly and return if executable.
 
         Windows:
-          - If name includes an extension (e.g., "foo.exe"), check it as-is.
+          - If a name includes an extension (raw.g., "foo.exe"), check it as-is.
           - If no extension, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD") in order.
           - Also check os.access(..., X_OK) for symmetry with POSIX.
 
@@ -21,7 +21,7 @@ class ExecutableFinder:
           - Require the file to exist and be executable (os.access(..., X_OK)).
 
         Args:
-            names: Candidate executable base names (e.g., ["foo", "bar"]). If None or empty, returns None.
+            names: Candidate executable base names (raw.g., ["foo", "bar"]). If None or empty, returns None.
 
         Returns:
             Path | None: Resolved path to the first match, or None if nothing is found.
@@ -36,17 +36,17 @@ class ExecutableFinder:
         def _win_extensions() -> list[str]:
             exe_extensions = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
             out: list[str] = []
-            for e in exe_extensions:
-                e = e.strip()
-                if not e:
+            for raw in exe_extensions:
+                stripped =raw.strip()
+                if not stripped:
                     continue
-                out.append(e if e.startswith(".") else f".{e}")
+                out.append(stripped if stripped.startswith(".") else f".{stripped}")
             return out
 
-        for raw in names:
-            if not raw:
+        for nm in names:
+            if not nm:
                 continue
-            name = raw.strip().strip('"').strip("'")
+            name = nm.strip().strip('"').strip("'")
 
             # Absolute path: validate directly, skip PATH scan
             p = Path(name)
