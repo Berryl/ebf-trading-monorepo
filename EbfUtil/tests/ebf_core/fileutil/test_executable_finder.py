@@ -3,6 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 import pytest
 
+# noinspection SpellCheckingInspection
+PGM_FILES_STR = "PROGRAMFILES"
+
 from ebf_core.fileutil.executable_finder import (
     find_on_system_path,
     find_start_menu_shortcut,
@@ -146,6 +149,7 @@ class TestFindStartMenuShortcut:
 
 
 class TestFindInCommonRoots:
+
     def test_glob_search_finds_first_match(self, tmp_path: Path):
         program_files = tmp_path / "Program Files"
         program_files_x86 = tmp_path / "Program Files (x86)"
@@ -156,8 +160,8 @@ class TestFindInCommonRoots:
         with patch.dict(
             os.environ,
             {
-                "PROGRAMFILES": str(program_files),
-                "PROGRAMFILES(X86)": str(program_files_x86),
+                PGM_FILES_STR: str(program_files),
+                f"{PGM_FILES_STR}(X86)": str(program_files_x86),
             },
             clear=False,
         ):
@@ -166,12 +170,14 @@ class TestFindInCommonRoots:
 
     def test_returns_none_when_no_match(self, tmp_path: Path):
         with patch.dict(
-            os.environ,
-            {
-                "PROGRAMFILES": str(tmp_path / "Program Files"),
-                "PROGRAMFILES(X86)": str(tmp_path / "Program Files (x86)"),
-            },
-            clear=False,
+                os.environ,
+                {
+                    PGM_FILES_STR: str(tmp_path / "Program Files"),
+                    f"{PGM_FILES_STR}(X86)": str(tmp_path / "Program Files (x86)"),
+                    "LOCALAPPDATA": str(tmp_path / "LocalAppData"),
+                    "ProgramData": str(tmp_path / "ProgramData"),
+                },
+                clear=False,
         ):
             assert find_in_common_roots(["**/*.exe"]) is None
 

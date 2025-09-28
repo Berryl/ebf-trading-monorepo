@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -27,51 +28,22 @@ def find_on_system_path(names: list[str] | None) -> Path | None:
     if not names:
         return None
 
-    path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
-    if not path_dirs:
-        path_dirs = []
-
-    def _win_extensions() -> list[str]:
-        exe_extensions = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-        out: list[str] = []
-        for raw in exe_extensions:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            out.append(stripped if stripped.startswith(".") else f".{stripped}")
-        return out
+    path_env = os.environ.get("PATH", "")
 
     for nm in names:
         if not nm:
             continue
         name = nm.strip().strip('"').strip("'")
 
-        # Absolute path: validate directly, skip PATH scan
         p = Path(name)
         if p.is_absolute():
             if p.exists() and (os.name == "nt" or os.access(p, os.X_OK)):
                 return p.resolve()
             continue
 
-        if os.name != "nt":
-            for d in path_dirs:
-                cand = d / name
-                if cand.exists() and os.access(cand, os.X_OK):
-                    return cand.resolve()
-            continue
-
-        base, ext = os.path.splitext(name)
-        if ext:
-            for d in path_dirs:
-                cand = d / name
-                if cand.exists() and os.access(cand, os.X_OK):
-                    return cand.resolve()
-        else:
-            for d in path_dirs:
-                for e in _win_extensions():
-                    cand = d / f"{name}{e}"
-                    if cand.exists() and os.access(cand, os.X_OK):
-                        return cand.resolve()
+        hit = shutil.which(name, path=path_env)
+        if hit:
+            return Path(hit).resolve()
 
     return None
 
@@ -172,17 +144,20 @@ def find_in_common_roots(globs: list[str]) -> Path | None:
     if not globs:
         return None
 
-    env_keys = ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA", "ProgramData")
-    roots: list[Path] = []
-    for key in env_keys:
+    roots = []
+    for key in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA", "ProgramData"):
         base = os.environ.get(key)
         if base:
             p = Path(base)
             if p.exists():
                 roots.append(p)
 
-    if not roots:
-        return None
+    for root in roots:
+        for pat in globs:
+            matches = sorted((m for m in root.glob(pat) if m.is_file()), key=lambda x: str(x).lower())
+            if matches:
+                return matches[0].resolve()
+    return None
 
     candidates: list[tuple[tuple[int, str], Path]] = []
     for ri, root in enumerate(roots):
