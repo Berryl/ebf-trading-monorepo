@@ -48,22 +48,50 @@ class TestFindOnSystemPath:
         found = find_on_system_path(exe_names)
         assert found.stem == "foo"
 
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only PATHEXT semantics")
     def test_can_find_executable_on_path_with_windows_extension(self, system_path_with_fake_exes):
         exe_names = system_path_with_fake_exes("foo.bat")
         found = find_on_system_path(exe_names)
         assert found.stem == "foo"
 
-    def test_missing_executable_names_are_ignored(self, system_path_with_fake_exes):
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only PATHEXT semantics")
+    def test_can_find_windows_name_without_extension(self, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        (bin_dir / "foo").write_text("echo")  # no extension
+        monkeypatch.setenv("PATH", str(bin_dir))
+        monkeypatch.setenv("PATHEXT", ".EXE;.BAT;.CMD")
+        assert find_on_system_path(["foo"]) is None
+
+    def test_can_find_when_name_is_absolute_path(self, tmp_path):
+        exe = tmp_path / "foo"
+        exe.write_text("echo")
+        exe.chmod(0o755)
+        found = find_on_system_path([str(exe)])
+        assert found.resolve() == exe.resolve()
+
+    def test_executable_names_not_in_system_path_are_ignored(self, system_path_with_fake_exes):
         system_path_with_fake_exes("foo")  # only create foo (and foo.exe on Windows)
         search_names = ["missing", "foo"]  # "missing" does not exist
-        found = find_on_system_path(search_names)
-        assert found and found.stem == "foo"
 
-    def test_returns_none_when_no_executable_names_are_present(self):
+        found = find_on_system_path(search_names)
+        assert found.stem == "foo", "the missing name should not affect finding foo"
+
+    def test_names_order_wins(self, system_path_with_fake_exes):
+        system_path_with_fake_exes("bar", "foo")
+        found = find_on_system_path(["foo", "bar"])
+        assert found.stem == "foo"
+
+    def test_returns_none_when_no_executable_name_is_not_in_system(self):
         assert find_on_system_path(["does-not-exist"]) is None
 
+    @pytest.mark.parametrize("targets", [[], None])
     def test_returns_none_when_list_is_empty_or_none(self, targets):
         assert find_on_system_path(targets) is None
+
+    def test_returns_none_when_path_is_empty(self, monkeypatch):
+        monkeypatch.delenv("PATH", raising=False)
+        assert find_on_system_path(["foo"]) is None
 
 
 class TestFindStartMenuShortcut:
