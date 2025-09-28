@@ -74,6 +74,16 @@ class TestFindOnSystemPath:
         found = find_on_system_path([str(exe)])
         assert found.resolve() == exe.resolve()
 
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only PATHEXT semantics")
+    def test_can_find_windows_name_when_pathext_is_empty(self, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        (bin_dir / "foo.exe").write_text("echo")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        monkeypatch.setenv("PATHEXT", "")  # explicitly empty
+        found = find_on_system_path(["foo"])  # should still resolve via default fallback
+        assert found and found.stem == "foo"
+
     def test_executable_names_not_in_system_path_are_ignored(self, system_path_with_fake_exes):
         system_path_with_fake_exes("foo")  # only create foo (and foo.exe on Windows)
         search_names = ["missing", "foo"]  # "missing" does not exist

@@ -51,6 +51,16 @@ def find_on_system_path(names: Sequence[str] | None) -> Path | None:
         if hit:
             return Path(hit).resolve()
 
+        # Fallback when PATHEXT is explicitly empty: emulate default extensions.
+        if os.name == "nt" and os.environ.get("PATHEXT", None) == "":
+            for d in path_env.split(os.pathsep):
+                if not d:
+                    continue
+                for ext in (".COM", ".EXE", ".BAT", ".CMD"):
+                    candidate = Path(d) / f"{name}{ext}"
+                    if candidate.exists():
+                        return candidate.resolve()
+
     return None
 
 def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[str]) -> Path | None:
