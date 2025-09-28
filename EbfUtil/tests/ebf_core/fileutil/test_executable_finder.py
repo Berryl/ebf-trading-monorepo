@@ -192,6 +192,36 @@ class TestFindInCommonRoots:
         ):
             assert find_in_common_roots(["**/*.exe"]) is None
 
+    def test_non_recursive_glob_does_not_descend(self, tmp_path, monkeypatch):
+        root = tmp_path / "Program Files"
+        nested = root / "Vendor" / "App"
+        nested.mkdir(parents=True)
+        (nested / "tool.exe").write_text("x")
+
+        with patch.dict(os.environ, {
+            PGM_FILES_STR: str(root),
+            f"{PGM_FILES_STR}(X86)": str(tmp_path / "Program Files (x86)"),
+            "LOCALAPPDATA": str(tmp_path / "LocalAppData"),
+            "ProgramData": str(tmp_path / "ProgramData"),
+        }, clear=False):
+            assert find_in_common_roots(["*.exe"]) is None
+
+    def test_recursive_glob_descends(self, tmp_path, monkeypatch):
+        root = tmp_path / "Program Files"
+        nested = root / "Vendor" / "App"
+        exe = nested / "tool.exe"
+        nested.mkdir(parents=True)
+        exe.write_text("x")
+
+        with patch.dict(os.environ, {
+            PGM_FILES_STR: str(root),
+            f"{PGM_FILES_STR}(X86)": str(tmp_path / "Program Files (x86)"),
+            "LOCALAPPDATA": str(tmp_path / "LocalAppData"),
+            "ProgramData": str(tmp_path / "ProgramData"),
+        }, clear=False):
+            found = find_in_common_roots(["**/*.exe"])
+            assert found == exe.resolve()
+
 
 class TestBestOf:
     def test_best_of_returns_first_existing(self, tmp_path: Path):

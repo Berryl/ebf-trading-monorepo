@@ -133,6 +133,7 @@ def find_in_common_roots(globs: list[str]) -> Path | None:
 
     Roots are checked in this order: ProgramFiles, ProgramFiles(x86), LOCALAPPDATA, ProgramData.
     Matching is deterministic: root order first, then lexicographic path among file matches.
+    Note: patterns are non-recursive unless you use ** (e.g., "**/*.exe").
 
     Args:
         globs: Glob patterns relative to each root (e.g., ["**/Fidelity*/Active*Trader*Pro*/**/*.exe"]).
