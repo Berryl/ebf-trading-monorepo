@@ -10,7 +10,7 @@ def start_menu_path(base: str | Path, *relative: str) -> Path:
     return Path(base).joinpath(*START_MENU_PROGRAMS, *relative)
 
 
-def find_on_system_path(names: list[str] | None) -> Path | None:
+def find_on_system_path(names: Sequence[str] | None) -> Path | None:
     """
     Return the first executable found by scanning the SYSTEM PATH.
 
@@ -18,7 +18,7 @@ def find_on_system_path(names: list[str] | None) -> Path | None:
     If a name is absolute, validate it directly and return if executable.
 
     Windows:
-      - If a name includes an extension (raw.g., "foo.exe"), check it as-is.
+      - If a name includes an extension (i.e., "foo.exe"), check it as-is.
       - If no extension, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD") in order.
       - Also check os.access(..., X_OK) for symmetry with POSIX.
 
@@ -71,8 +71,6 @@ def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[s
         env_base = os.environ.get(env_key)
         return start_menu_path(env_base) if env_base else None
 
-        # Prefer user before machine
-
     roots: list[tuple[int, Path]] = []
     for rank, key in enumerate(("APPDATA", "PROGRAMDATA")):
         root = start_menu_root(key)
@@ -82,7 +80,7 @@ def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[s
         return None
 
     filters = [s.casefold() for s in (patterns or [])]
-    vendors = list(vendor_folders or ["",])  # empty -> search from Programs root
+    vendors = list(vendor_folders or ("",))  # empty -> search from Programs root
 
     def match_pattern(name_cf: str) -> str | None:
         if not filters:
