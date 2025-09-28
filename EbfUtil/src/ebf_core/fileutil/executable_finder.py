@@ -3,219 +3,222 @@ from pathlib import Path
 from typing import Optional
 
 
-class ExecutableFinder:
+def find_on_system_path(names: list[str] | None) -> Path | None:
+    """
+    Return the first executable found by scanning the SYSTEM PATH.
 
-    @staticmethod
-    def find_on_system_path(names: list[str] | None) -> Path | None:
-        """
-        Return the first executable found by scanning the SYSTEM PATH.
+    Deterministic search: iterate `names` in order; for each, scan PATH entries in order.
+    If a name is absolute, validate it directly and return if executable.
 
-        Deterministic search: iterate `names` in order; for each, scan PATH entries in order.
-        If a name is absolute, validate it directly and return if executable.
+    Windows:
+      - If a name includes an extension (raw.g., "foo.exe"), check it as-is.
+      - If no extension, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD") in order.
+      - Also check os.access(..., X_OK) for symmetry with POSIX.
 
-        Windows:
-          - If a name includes an extension (raw.g., "foo.exe"), check it as-is.
-          - If no extension, expand PATHEXT (env or default ".COM;.EXE;.BAT;.CMD") in order.
-          - Also check os.access(..., X_OK) for symmetry with POSIX.
+    POSIX:
+      - Require the file to exist and be executable (os.access(..., X_OK)).
 
-        POSIX:
-          - Require the file to exist and be executable (os.access(..., X_OK)).
+    Args:
+        names: Candidate executable base names (raw.g., ["foo", "bar"]). If None or empty, returns None.
 
-        Args:
-            names: Candidate executable base names (raw.g., ["foo", "bar"]). If None or empty, returns None.
-
-        Returns:
-            Path | None: Resolved path to the first match, or None if nothing is found.
-        """
-        if not names:
-            return None
-
-        path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
-        if not path_dirs:
-            path_dirs = []
-
-        def _win_extensions() -> list[str]:
-            exe_extensions = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-            out: list[str] = []
-            for raw in exe_extensions:
-                stripped =raw.strip()
-                if not stripped:
-                    continue
-                out.append(stripped if stripped.startswith(".") else f".{stripped}")
-            return out
-
-        for nm in names:
-            if not nm:
-                continue
-            name = nm.strip().strip('"').strip("'")
-
-            # Absolute path: validate directly, skip PATH scan
-            p = Path(name)
-            if p.is_absolute():
-                if p.exists() and (os.name == "nt" or os.access(p, os.X_OK)):
-                    return p.resolve()
-                continue
-
-            if os.name != "nt":
-                for d in path_dirs:
-                    cand = d / name
-                    if cand.exists() and os.access(cand, os.X_OK):
-                        return cand.resolve()
-                continue
-
-            base, ext = os.path.splitext(name)
-            if ext:
-                for d in path_dirs:
-                    cand = d / name
-                    if cand.exists() and os.access(cand, os.X_OK):
-                        return cand.resolve()
-            else:
-                for d in path_dirs:
-                    for e in _win_extensions():
-                        cand = d / f"{name}{e}"
-                        if cand.exists() and os.access(cand, os.X_OK):
-                            return cand.resolve()
-
+    Returns:
+        Path | None: Resolved path to the first match, or None if nothing is found.
+    """
+    if not names:
         return None
 
-    @staticmethod
-    def find_start_menu_shortcut(vendor_folders: list[str], patterns: list[str]) -> Path | None:
-        """
-        Find a Start Menu `.lnk` shortcut under Windows.
+    path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
+    if not path_dirs:
+        path_dirs = []
 
-        Search order and ranking are deterministic:
-        1) APPDATA over PROGRAMDATA
-        2) More literal characters in the matched pattern
-        3) Fewer wildcards (* or ?)
-        4) Longer pattern
-        5) Lexicographic path
+    def _win_extensions() -> list[str]:
+        exe_extensions = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+        out: list[str] = []
+        for raw in exe_extensions:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            out.append(stripped if stripped.startswith(".") else f".{stripped}")
+        return out
 
-        Args:
-            vendor_folders: Vendor subfolders to search under `.../Start Menu/Programs`.
-                            Example: ["Fidelity Investments"]. If empty, search the entire Programs tree.
-            patterns: Filename matchers for `.lnk` files. Supports fnmatch wildcards.
-                      If a pattern has no wildcards, it is treated as a case-insensitive substring.
+    for nm in names:
+        if not nm:
+            continue
+        name = nm.strip().strip('"').strip("'")
 
-        Returns:
-            Path to the best matching `.lnk` file, or None if nothing matches or non-Windows.
-        """
-        import fnmatch
-        import os
-        from pathlib import Path
+        # Absolute path: validate directly, skip PATH scan
+        p = Path(name)
+        if p.is_absolute():
+            if p.exists() and (os.name == "nt" or os.access(p, os.X_OK)):
+                return p.resolve()
+            continue
 
         if os.name != "nt":
-            return None
+            for d in path_dirs:
+                cand = d / name
+                if cand.exists() and os.access(cand, os.X_OK):
+                    return cand.resolve()
+            continue
 
-        def start_menu_root(env_key: str) -> Path | None:
-            base = os.environ.get(env_key)
-            if not base:
-                return None
-            return Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        base, ext = os.path.splitext(name)
+        if ext:
+            for d in path_dirs:
+                cand = d / name
+                if cand.exists() and os.access(cand, os.X_OK):
+                    return cand.resolve()
+        else:
+            for d in path_dirs:
+                for e in _win_extensions():
+                    cand = d / f"{name}{e}"
+                    if cand.exists() and os.access(cand, os.X_OK):
+                        return cand.resolve()
 
-        # Prefer user before machine
-        roots: list[tuple[int, Path]] = []
-        for rank, key in enumerate(("APPDATA", "PROGRAMDATA")):
-            r = start_menu_root(key)
-            if r and r.exists():
-                roots.append((rank, r))
-        if not roots:
-            return None
+    return None
 
-        pats = [p.lower() for p in (patterns or [])]
-        vendors = vendor_folders or [""]  # empty means search from Programs root
+def find_start_menu_shortcut(vendor_folders: list[str], patterns: list[str]) -> Path | None:
+    """
+    Find a Start Menu `.lnk` shortcut under Windows.
 
-        def match_pattern(name: str) -> str | None:
-            if not pats:
-                return "*.lnk"
-            for pat in pats:
-                if ("*" in pat) or ("?" in pat):
-                    if fnmatch.fnmatch(name, pat):
-                        return pat
-                else:
-                    if pat in name:
-                        return pat
-            return None
+    Search order and ranking are deterministic:
+    1) APPDATA over PROGRAMDATA
+    2) More literal characters in the matched pattern
+    3) Fewer wildcards (* or ?)
+    4) Longer pattern
+    5) Lexicographic path
 
-        def pat_specificity(pat: str) -> tuple[int, int, int]:
-            literal_len = len(pat.replace("*", "").replace("?", ""))  # more is better
-            wc = pat.count("*") + pat.count("?")  # fewer is better
-            return -literal_len, wc, -len(pat)  # negate so "more/longer" sorts first
+    Args:
+        vendor_folders: Vendor subfolders to search under `.../Start Menu/Programs`.
+                        Example: ["Fidelity Investments"]. If empty, search the entire Programs tree.
+        patterns: Filename matchers for `.lnk` files. Supports fnmatch wildcards.
+                  If a pattern has no wildcards, it is treated as a case-insensitive substring.
 
-        candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+    Returns:
+        Path to the best matching `.lnk` file, or None if nothing matches or non-Windows.
+    """
+    import fnmatch
+    import os
+    from pathlib import Path
 
-        for root_rank, root in roots:
-            for vendor in vendors:
-                base = root if not vendor else (root / vendor)
-                if not base.exists():
-                    continue
-                for p in base.rglob("*.lnk"):
-                    pat = match_pattern(p.name.lower())
-                    if pat:
-                        key = (root_rank, *pat_specificity(pat), str(p).lower())
-                        candidates.append((key, p))
-
-        if not candidates:
-            return None
-        candidates.sort(key=lambda t: t[0])
-        return candidates[0][1].resolve()
-
-    @staticmethod
-    def find_in_common_roots(globs: list[str]) -> Path | None:
-        """
-        Search common install roots with the given glob patterns and return the first match.
-
-        Roots are checked in this order: ProgramFiles, ProgramFiles(x86), LOCALAPPDATA, ProgramData.
-        Matching is deterministic: root order first, then lexicographic path among file matches.
-
-        Args:
-            globs: Glob patterns relative to each root (e.g., ["**/Fidelity*/Active*Trader*Pro*/**/*.exe"]).
-
-        Returns:
-            The resolved Path of the first matching file, or None if no matches are found.
-        """
-        if not globs:
-            return None
-
-        env_keys = ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA", "ProgramData")
-        roots: list[Path] = []
-        for key in env_keys:
-            base = os.environ.get(key)
-            if base:
-                p = Path(base)
-                if p.exists():
-                    roots.append(p)
-
-        if not roots:
-            return None
-
-        candidates: list[tuple[tuple[int, str], Path]] = []
-        for ri, root in enumerate(roots):
-            for pat in globs:
-                for m in root.glob(pat):
-                    if m.is_file():
-                        candidates.append(((ri, str(m).lower()), m))
-
-        if not candidates:
-            return None
-
-        candidates.sort(key=lambda x: x[0])
-        return candidates[0][1].resolve()
-
-    @staticmethod
-    def best_of(*candidates: Optional[Path]) -> Path | None:
-        """
-        Return the first existing path from the given candidates (left to right).
-
-        Args:
-            candidates: Zero or more Path objects (or None). None/absent paths are skipped.
-
-        Returns:
-            The first candidate that exists, resolved to an absolute Path; otherwise None.
-        """
-        for cand in candidates:
-            if not cand:
-                continue
-            p = Path(cand)
-            if p.exists():
-                return p.resolve()
+    if os.name != "nt":
         return None
+
+    def start_menu_root(env_key: str) -> Path | None:
+        base = os.environ.get(env_key)
+        if not base:
+            return None
+        return Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+
+    # Prefer user before machine
+    roots: list[tuple[int, Path]] = []
+    for rank, key in enumerate(("APPDATA", "PROGRAMDATA")):
+        r = start_menu_root(key)
+        if r and r.exists():
+            roots.append((rank, r))
+    if not roots:
+        return None
+
+    pats = [p.lower() for p in (patterns or [])]
+    vendors = vendor_folders or [""]  # empty means search from Programs root
+
+    def match_pattern(name: str) -> str | None:
+        if not pats:
+            return "*.lnk"
+        for pat in pats:
+            if ("*" in pat) or ("?" in pat):
+                if fnmatch.fnmatch(name, pat):
+                    return pat
+            else:
+                if pat in name:
+                    return pat
+        return None
+
+    def pat_specificity(pat: str) -> tuple[int, int, int]:
+        literal_len = len(pat.replace("*", "").replace("?", ""))  # more is better
+        wc = pat.count("*") + pat.count("?")  # fewer is better
+        return -literal_len, wc, -len(pat)  # negate so "more/longer" sorts first
+
+    candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+
+    for root_rank, root in roots:
+        for vendor in vendors:
+            base = root if not vendor else (root / vendor)
+            if not base.exists():
+                continue
+            for p in base.rglob("*.lnk"):
+                pat = match_pattern(p.name.lower())
+                if pat:
+                    key = (root_rank, *pat_specificity(pat), str(p).lower())
+                    candidates.append((key, p))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda t: t[0])
+    return candidates[0][1].resolve()
+
+
+def find_in_common_roots(globs: list[str]) -> Path | None:
+    """
+    Search common installation roots with the given glob patterns and return the first match.
+
+    Roots are checked in this order: ProgramFiles, ProgramFiles(x86), LOCALAPPDATA, ProgramData.
+    Matching is deterministic: root order first, then lexicographic path among file matches.
+
+    Args:
+        globs: Glob patterns relative to each root (e.g., ["**/Fidelity*/Active*Trader*Pro*/**/*.exe"]).
+
+    Returns:
+        The resolved Path of the first matching file, or None if no matches are found.
+    """
+    if not globs:
+        return None
+
+    env_keys = ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA", "ProgramData")
+    roots: list[Path] = []
+    for key in env_keys:
+        base = os.environ.get(key)
+        if base:
+            p = Path(base)
+            if p.exists():
+                roots.append(p)
+
+    if not roots:
+        return None
+
+    candidates: list[tuple[tuple[int, str], Path]] = []
+    for ri, root in enumerate(roots):
+        for pat in globs:
+            for m in root.glob(pat):
+                if m.is_file():
+                    candidates.append(((ri, str(m).lower()), m))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x[0])
+    return candidates[0][1].resolve()
+
+
+def best_of(*candidates: Optional[Path]) -> Path | None:
+    """
+    Return the first existing path from the given candidates (left to right).
+
+    Args:
+        candidates: Zero or more Path objects (or None). None/absent paths are skipped.
+
+    Returns:
+        The first candidate that exists, resolved to an absolute Path; otherwise None.
+    """
+    for cand in candidates:
+        if not cand:
+            continue
+        p = Path(cand)
+        if p.exists():
+            return p.resolve()
+    return None
+
+__all__ = [
+    "find_on_system_path",
+    "find_start_menu_shortcut",
+    "find_in_common_roots",
+    "best_of",
+]
