@@ -1,19 +1,21 @@
-from pathlib import Path
 import os
-import sys
+from pathlib import Path
 from typing import Callable
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 
 from ebf_core.fileutil.executable_finder import ExecutableFinder
 
+
+# region fixtures
 @pytest.fixture
 def system_path_with_fake_exes(tmp_path: Path, monkeypatch) -> Callable[..., list[str]]:
     """
     Create fake executables in a temp bin dir and patch PATH (and PATHEXT on Windows).
     Returns the list of names you asked it to create, e.g. ["foo", "bar"].
     """
+
     def _factory(*names: str) -> list[str]:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir(exist_ok=True)
@@ -32,9 +34,13 @@ def system_path_with_fake_exes(tmp_path: Path, monkeypatch) -> Callable[..., lis
 
     return _factory
 
+
 @pytest.fixture
 def sut() -> ExecutableFinder:
     return ExecutableFinder()
+
+
+# endregion
 
 
 class TestFindOnSystemPath:
@@ -59,16 +65,16 @@ class TestFindOnSystemPath:
         assert found.stem == "foo"
 
     def test_returns_none_when_no_executable_names_are_present(self, sut: ExecutableFinder):
-         assert sut.find_on_system_path(["does-not-exist"]) is None
+        assert sut.find_on_system_path(["does-not-exist"]) is None
 
     @pytest.mark.parametrize("targets", [[], None])
     def test_returns_none_when_list_is_empty_or_none(self, sut: ExecutableFinder, targets):
-         assert sut.find_on_system_path(targets) is None
-
+        assert sut.find_on_system_path(targets) is None
 
 
 class TestFindStartMenuShortcut:
-    def _mk_start_menu_tree(self, root: Path) -> Path:
+    @staticmethod
+    def _mk_start_menu_tree(root: Path) -> Path:
         tree = root / r"Microsoft\Windows\Start Menu\Programs"
         (tree / "Fidelity Investments").mkdir(parents=True, exist_ok=True)
         return tree
@@ -82,9 +88,9 @@ class TestFindStartMenuShortcut:
         user.write_text("")
 
         with patch.dict(
-            os.environ,
-            {"PROGRAMDATA": str(progdata), "APPDATA": str(appdata)},
-            clear=False,
+                os.environ,
+                {"PROGRAMDATA": str(progdata), "APPDATA": str(appdata)},
+                clear=False,
         ):
             p = sut.find_start_menu_shortcut(
                 vendor_folders=["Fidelity Investments"],
@@ -109,23 +115,24 @@ class TestFindStartMenuShortcut:
 
     def test_none_when_no_candidates(self, sut: ExecutableFinder, tmp_path: Path):
         with patch.dict(
-            os.environ,
-            {
-                "PROGRAMDATA": str(tmp_path / "pd"),
-                "APPDATA": str(tmp_path / "ad"),
-            },
-            clear=False,
+                os.environ,
+                {
+                    "PROGRAMDATA": str(tmp_path / "pd"),
+                    "APPDATA": str(tmp_path / "ad"),
+                },
+                clear=False,
         ):
             assert (
                     sut.find_start_menu_shortcut(
-                    vendor_folders=["Fidelity Investments"], patterns=["*.lnk"]
-                )
+                        vendor_folders=["Fidelity Investments"], patterns=["*.lnk"]
+                    )
                     is None
             )
 
 
+
 class TestFindInCommonRoots:
-    def test_glob_search_finds_first_match(self, ef: ExecutableFinder, tmp_path: Path):
+    def test_glob_search_finds_first_match(self, sut: ExecutableFinder, tmp_path: Path):
         pf = tmp_path / "ProgramFiles"
         pfx86 = tmp_path / "ProgramFiles(x86)"
         local = tmp_path / "LocalAppData"
@@ -137,30 +144,30 @@ class TestFindInCommonRoots:
         target.write_text("")
 
         with patch.dict(
-            os.environ,
-            {
-                "ProgramFiles": str(pf),
-                "ProgramFiles(x86)": str(pfx86),
-                "LOCALAPPDATA": str(local),
-                "ProgramData": str(pdata),
-            },
-            clear=False,
+                os.environ,
+                {
+                    "ProgramFiles": str(pf),
+                    "ProgramFiles(x86)": str(pfx86),
+                    "LOCALAPPDATA": str(local),
+                    "ProgramData": str(pdata),
+                },
+                clear=False,
         ):
-            p = ef.find_in_common_roots(["**/Fidelity*/Active*Trader*Pro*/**/*"])
+            p = sut.find_in_common_roots(["**/Fidelity*/Active*Trader*Pro*/**/*"])
         assert p == target.resolve()
 
-    def test_returns_none_when_no_match(self, ef: ExecutableFinder, tmp_path: Path):
+    def test_returns_none_when_no_match(self, sut: ExecutableFinder, tmp_path: Path):
         with patch.dict(
-            os.environ,
-            {
-                "ProgramFiles": str(tmp_path / "pf"),
-                "ProgramFiles(x86)": str(tmp_path / "pfx86"),
-                "LOCALAPPDATA": str(tmp_path / "lad"),
-                "ProgramData": str(tmp_path / "pd"),
-            },
-            clear=False,
+                os.environ,
+                {
+                    "ProgramFiles": str(tmp_path / "pf"),
+                    "ProgramFiles(x86)": str(tmp_path / "pfx86"),
+                    "LOCALAPPDATA": str(tmp_path / "lad"),
+                    "ProgramData": str(tmp_path / "pd"),
+                },
+                clear=False,
         ):
-            assert ef.find_in_common_roots(["**/*.exe"]) is None
+            assert sut.find_in_common_roots(["**/*.exe"]) is None
 
 
 class TestBestOf:

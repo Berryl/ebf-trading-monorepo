@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 
 
 class ExecutableFinder:
@@ -77,66 +78,144 @@ class ExecutableFinder:
 
         return None
 
-    def find_start_menu_shortcut(self, vendor_folders: list[str], patterns: list[str]) -> Path | None:
+    @staticmethod
+    def find_start_menu_shortcut(vendor_folders: list[str], patterns: list[str]) -> Path | None:
         """
-        Searches for a Start Menu shortcut by scanning provided vendor folders and matching
-        against specified patterns.
+        Find a Start Menu `.lnk` shortcut under Windows.
 
-        This method iterates through the given vendor folders and attempts to locate a shortcut
-        that matches any of the provided string patterns. If a match is found, it returns the
-        path to the corresponding shortcut file; otherwise, it returns None.
+        Search order and ranking are deterministic:
+        1) APPDATA over PROGRAMDATA
+        2) More literal characters in the matched pattern
+        3) Fewer wildcards (* or ?)
+        4) Longer pattern
+        5) Lexicographic path
 
-        Parameters:
-        vendor_folders: list[str]
-            A list of vendor folders to search for the Start Menu shortcut.
-        patterns: list[str]
-            Patterns used to match the shortcut files in the vendor folders.
+        Args:
+            vendor_folders: Vendor subfolders to search under `.../Start Menu/Programs`.
+                            Example: ["Fidelity Investments"]. If empty, search the entire Programs tree.
+            patterns: Filename matchers for `.lnk` files. Supports fnmatch wildcards.
+                      If a pattern has no wildcards, it is treated as a case-insensitive substring.
 
         Returns:
-        Path | None
-            The path to the matched shortcut file if found; otherwise, None.
+            Path to the best matching `.lnk` file, or None if nothing matches or non-Windows.
         """
-        pass
+        import fnmatch
+        import os
+        from pathlib import Path
 
-    def find_in_common_roots(self, globs: list[str]) -> Path | None:
+        if os.name != "nt":
+            return None
+
+        def start_menu_root(env_key: str) -> Path | None:
+            base = os.environ.get(env_key)
+            if not base:
+                return None
+            return Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+
+        # Prefer user before machine
+        roots: list[tuple[int, Path]] = []
+        for rank, key in enumerate(("APPDATA", "PROGRAMDATA")):
+            r = start_menu_root(key)
+            if r and r.exists():
+                roots.append((rank, r))
+        if not roots:
+            return None
+
+        pats = [p.lower() for p in (patterns or [])]
+        vendors = vendor_folders or [""]  # empty means search from Programs root
+
+        def match_pattern(name: str) -> str | None:
+            if not pats:
+                return "*.lnk"
+            for pat in pats:
+                if ("*" in pat) or ("?" in pat):
+                    if fnmatch.fnmatch(name, pat):
+                        return pat
+                else:
+                    if pat in name:
+                        return pat
+            return None
+
+        def pat_specificity(pat: str) -> tuple[int, int, int]:
+            literal_len = len(pat.replace("*", "").replace("?", ""))  # more is better
+            wc = pat.count("*") + pat.count("?")  # fewer is better
+            return -literal_len, wc, -len(pat)  # negate so "more/longer" sorts first
+
+        candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+
+        for root_rank, root in roots:
+            for vendor in vendors:
+                base = root if not vendor else (root / vendor)
+                if not base.exists():
+                    continue
+                for p in base.rglob("*.lnk"):
+                    pat = match_pattern(p.name.lower())
+                    if pat:
+                        key = (root_rank, *pat_specificity(pat), str(p).lower())
+                        candidates.append((key, p))
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda t: t[0])
+        return candidates[0][1].resolve()
+
+    @staticmethod
+    def find_in_common_roots(globs: list[str]) -> Path | None:
         """
-        Finds a matching path from common root directories based on the provided patterns.
+        Search common install roots with the given glob patterns and return the first match.
 
-        This method checks a predefined set of common root directories and attempts
-        to find a match with any of the patterns provided in the `globs` parameter.
-        If a matching path is found, it is returned; otherwise, `None` is returned.
+        Roots are checked in this order: ProgramFiles, ProgramFiles(x86), LOCALAPPDATA, ProgramData.
+        Matching is deterministic: root order first, then lexicographic path among file matches.
 
-        Parameters:
-        globs: list[str]
-            A list of glob patterns to match against the common root directories.
+        Args:
+            globs: Glob patterns relative to each root (e.g., ["**/Fidelity*/Active*Trader*Pro*/**/*.exe"]).
 
         Returns:
-        Path | None
-            The first matching path found in the common root directories, or `None`
-            if no matches are found.
+            The resolved Path of the first matching file, or None if no matches are found.
         """
-        pass
+        if not globs:
+            return None
 
-    def best_of(self, *candidates: Path | None, b, c) -> Path | None:
+        env_keys = ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA", "ProgramData")
+        roots: list[Path] = []
+        for key in env_keys:
+            base = os.environ.get(key)
+            if base:
+                p = Path(base)
+                if p.exists():
+                    roots.append(p)
+
+        if not roots:
+            return None
+
+        candidates: list[tuple[tuple[int, str], Path]] = []
+        for ri, root in enumerate(roots):
+            for pat in globs:
+                for m in root.glob(pat):
+                    if m.is_file():
+                        candidates.append(((ri, str(m).lower()), m))
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1].resolve()
+
+    @staticmethod
+    def best_of(*candidates: Optional[Path]) -> Path | None:
         """
-        Determines the best option among the provided candidates based on certain criteria.
+        Return the first existing path from the given candidates (left to right).
 
-        This function evaluates multiple candidate paths based on some logic and
-        returns the most optimal one or None if no suitable candidate is found.
-
-        Parameters:
-            candidates (Path | None): A variable-length argument of candidate paths
-                to be evaluated. Can include None values.
-            b: Additional argument affecting the evaluation (type to be inferred).
-            c: Another argument influencing the decision-making process (type to
-                be inferred).
+        Args:
+            candidates: Zero or more Path objects (or None). None/absent paths are skipped.
 
         Returns:
-            Path | None: The most optimal path selected from the candidates or None
-            if no valid candidates are determined.
-
+            The first candidate that exists, resolved to an absolute Path; otherwise None.
         """
-        pass
-
-    def resolve_shortcut(self, path: Path) -> Path | None:
-        pass
+        for cand in candidates:
+            if not cand:
+                continue
+            p = Path(cand)
+            if p.exists():
+                return p.resolve()
+        return None
