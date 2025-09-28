@@ -11,6 +11,7 @@ from ebf_core.fileutil.executable_finder import (
     find_start_menu_shortcut,
     find_in_common_roots,
     best_of,
+    start_menu_path,
 )
 
 
@@ -101,8 +102,8 @@ class TestFindStartMenuShortcut:
     def test_prefers_user_shortcut_over_machine(self, tmp_path: Path):
         appdata = tmp_path / "appdata"
         machine = tmp_path / "machine"
-        user_shortcut = appdata / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Fidelity Investments" / "Fidelity.lnk"
-        machine_shortcut = machine / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Fidelity Investments" / "Active Trader Pro.lnk"
+        user_shortcut = start_menu_path(appdata, "Fidelity Investments" , "Fidelity.lnk")
+        machine_shortcut = start_menu_path(machine, "Fidelity Investments" , "Fidelity.lnk")
         user_shortcut.parent.mkdir(parents=True)
         machine_shortcut.parent.mkdir(parents=True)
         user_shortcut.write_text("")
@@ -117,8 +118,8 @@ class TestFindStartMenuShortcut:
 
     def test_pattern_specificity_wins(self, tmp_path: Path):
         appdata = tmp_path / "appdata"
-        shortcut1 = appdata / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Fidelity Investments" / "Fidelity.lnk"
-        shortcut2 = appdata / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Fidelity Investments" / "Active Trader Pro.lnk"
+        shortcut1 = start_menu_path(appdata, "Fidelity Investments" , "Fidelity.lnk")
+        shortcut2 = start_menu_path(appdata, "Fidelity Investments" , "Active Trader Pro.lnk")
         shortcut1.parent.mkdir(parents=True)
         shortcut1.write_text("")
         shortcut2.write_text("")
@@ -128,7 +129,7 @@ class TestFindStartMenuShortcut:
                 vendor_folders=["Fidelity Investments"],
                 patterns=["*active*trader*pro*.lnk", "*fidelity*.lnk"],
             )
-        assert p == shortcut2
+        assert p == shortcut2, "there are more literals in shortcut2, making it more specific"
 
     def test_none_when_no_candidates(self, tmp_path: Path):
         with patch.dict(

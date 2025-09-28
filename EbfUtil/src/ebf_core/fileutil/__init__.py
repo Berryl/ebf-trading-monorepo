@@ -4,6 +4,7 @@ from .executable_finder import (
     find_start_menu_shortcut,
     find_in_common_roots,
     best_of,
+    start_menu_path,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "find_start_menu_shortcut",
     "find_in_common_roots",
     "best_of",
+    "start_menu_path",
 ]

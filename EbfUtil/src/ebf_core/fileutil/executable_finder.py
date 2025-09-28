@@ -1,7 +1,13 @@
 import os
 import shutil
+import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
+
+START_MENU_PROGRAMS = ("Microsoft", "Windows", "Start Menu", "Programs")
+
+def start_menu_path(base: str | Path, *relative: str) -> Path:
+    return Path(base).joinpath(*START_MENU_PROGRAMS, *relative)
 
 
 def find_on_system_path(names: list[str] | None) -> Path | None:
@@ -47,85 +53,70 @@ def find_on_system_path(names: list[str] | None) -> Path | None:
 
     return None
 
-def find_start_menu_shortcut(vendor_folders: list[str], patterns: list[str]) -> Path | None:
+def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[str]) -> Path | None:
     """
     Find a Start Menu `.lnk` shortcut under Windows.
 
-    Search order and ranking are deterministic:
-    1) APPDATA over PROGRAMDATA
-    2) More literal characters in the matched pattern
-    3) Fewer wildcards (* or ?)
-    4) Longer pattern
-    5) Lexicographic path
-
-    Args:
-        vendor_folders: Vendor subfolders to search under `.../Start Menu/Programs`.
-                        Example: ["Fidelity Investments"]. If empty, search the entire Programs tree.
-        patterns: Filename matchers for `.lnk` files. Supports fnmatch wildcards.
-                  If a pattern has no wildcards, it is treated as a case-insensitive substring.
-
-    Returns:
-        Path to the best matching `.lnk` file, or None if nothing matches or non-Windows.
+    Ranking (deterministic):
+      1) APPDATA over PROGRAMDATA
+      2) More literal characters in the matched pattern
+      3) Fewer wildcards
+      4) Longer pattern
+      5) Lexicographic path
     """
-    import fnmatch
-    import os
-    from pathlib import Path
-
     if os.name != "nt":
         return None
 
     def start_menu_root(env_key: str) -> Path | None:
-        base = os.environ.get(env_key)
-        if not base:
-            return None
-        return Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        env_base = os.environ.get(env_key)
+        return start_menu_path(env_base) if env_base else None
 
-    # Prefer user before machine
+        # Prefer user before machine
+
     roots: list[tuple[int, Path]] = []
     for rank, key in enumerate(("APPDATA", "PROGRAMDATA")):
-        r = start_menu_root(key)
-        if r and r.exists():
-            roots.append((rank, r))
+        root = start_menu_root(key)
+        if root and root.exists():
+            roots.append((rank, root))
     if not roots:
         return None
 
-    pats = [p.lower() for p in (patterns or [])]
-    vendors = vendor_folders or [""]  # empty means search from Programs root
+    filters = [s.casefold() for s in (patterns or [])]
+    vendors = list(vendor_folders or ["",])  # empty -> search from Programs root
 
-    def match_pattern(name: str) -> str | None:
-        if not pats:
-            return "*.lnk"
-        for pat in pats:
-            if ("*" in pat) or ("?" in pat):
-                if fnmatch.fnmatch(name, pat):
-                    return pat
-            else:
-                if pat in name:
-                    return pat
+    def match_pattern(name_cf: str) -> str | None:
+        if not filters:
+            return "*.lnk"  # accept all .lnk when no filters provided
+        for pattern in filters:
+            if ("*" in pattern) or ("?" in pattern):
+                if fnmatch.fnmatch(name_cf, pattern):
+                    return pattern
+            elif pattern in name_cf:
+                return pattern
         return None
 
-    def pat_specificity(pat: str) -> tuple[int, int, int]:
-        literal_len = len(pat.replace("*", "").replace("?", ""))  # more is better
-        wc = pat.count("*") + pat.count("?")  # fewer is better
-        return -literal_len, wc, -len(pat)  # negate so "more/longer" sorts first
+    def pattern_specificity(pattern: str) -> tuple[int, int, int]:
+        literal_len = len(pattern.replace("*", "").replace("?", ""))  # more is better
+        wc = pattern.count("*") + pattern.count("?")  # fewer is better
+        return -literal_len, wc, -len(pattern)  # negate so “more/longer” sorts first
 
-    candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+    best_key: tuple[int, int, int, int, str] | None = None
+    best_path: Path | None = None
 
     for root_rank, root in roots:
         for vendor in vendors:
-            base = root if not vendor else (root / vendor)
-            if not base.exists():
+            search_root = root if not vendor else (root / vendor)
+            if not search_root.exists():
                 continue
-            for p in base.rglob("*.lnk"):
-                pat = match_pattern(p.name.lower())
-                if pat:
-                    key = (root_rank, *pat_specificity(pat), str(p).lower())
-                    candidates.append((key, p))
+            for path in search_root.rglob("*.lnk"):
+                matched = match_pattern(path.name.casefold())
+                if not matched:
+                    continue
+                key = (root_rank, *pattern_specificity(matched), str(path).lower())
+                if best_key is None or key < best_key:
+                    best_key, best_path = key, path
 
-    if not candidates:
-        return None
-    candidates.sort(key=lambda t: t[0])
-    return candidates[0][1].resolve()
+    return best_path.resolve() if best_path else None
 
 
 def find_in_common_roots(globs: list[str]) -> Path | None:
@@ -159,20 +150,6 @@ def find_in_common_roots(globs: list[str]) -> Path | None:
                 return matches[0].resolve()
     return None
 
-    candidates: list[tuple[tuple[int, str], Path]] = []
-    for ri, root in enumerate(roots):
-        for pat in globs:
-            for m in root.glob(pat):
-                if m.is_file():
-                    candidates.append(((ri, str(m).lower()), m))
-
-    if not candidates:
-        return None
-
-    candidates.sort(key=lambda x: x[0])
-    return candidates[0][1].resolve()
-
-
 def best_of(*candidates: Optional[Path]) -> Path | None:
     """
     Return the first existing path from the given candidates (left to right).
@@ -196,4 +173,5 @@ __all__ = [
     "find_start_menu_shortcut",
     "find_in_common_roots",
     "best_of",
+    "start_menu_path"
 ]
