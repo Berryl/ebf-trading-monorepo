@@ -86,7 +86,7 @@ class TestFindOnSystemPath:
         found = find_on_system_path(["foo", "bar"])
         assert found.stem == "foo"
 
-    def test_returns_none_when_no_executable_name_is_not_in_system(self):
+    def test_returns_none_when_executable_name_is_not_in_system(self):
         assert find_on_system_path(["does-not-exist"]) is None
 
     @pytest.mark.parametrize("targets", [[], None])
@@ -109,7 +109,7 @@ class TestFindStartMenuShortcut:
         user_shortcut.write_text("")
         machine_shortcut.write_text("")
 
-        with patch.dict(os.environ, {"APPDATA": str(appdata)}, clear=False):
+        with patch.dict(os.environ, {"APPDATA": str(appdata), "PROGRAMDATA": str(machine)}, clear=False):
             p = find_start_menu_shortcut(
                 vendor_folders=["Fidelity Investments"],
                 patterns=["*fidelity*.lnk", "*active*trader*pro*.lnk"],
