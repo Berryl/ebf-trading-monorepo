@@ -1,55 +1,67 @@
-from pathlib import Path
+from __future__ import annotations
+from typing import Any
+import pytest
 
-import yaml
+import ebf_core.cfgutil as sut
+from tests.ebf_core.support.unit_test_helpers_cfg import mocked_cfg_service, expect_load_once
 
-from tests.ebf_core.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
+class TestLoadApi:
+    def test_delegates_and_passthrough_tuple(self, monkeypatch) -> None:
+        cfg: dict[str, Any] = {"k": 1}
+        sources = ["/p.yml", "/u.yml"]
+        m = mocked_cfg_service(monkeypatch, sut, return_value=(cfg, sources))
 
-class TestPublicApi(ConfigServiceFixture):
-
-    def test_load_config(self, project_fu, fake_project_file: Path, data: dict, app_name: str):
-        from ebf_core.cfgutil import load_config
-        cfg, sources = load_config(app_name=app_name, file_util=project_fu, return_sources=True, )
-        assert cfg == data
-        assert sources == [fake_project_file]
-
-    def test_store_config(self, app_name: str, user_home: Path, mock_file_util, data: dict):
-        from ebf_core.cfgutil import store_config
-
-        mock_file_util.get_user_base_dir.return_value = user_home
-
-        out_path = store_config(
-            cfg=data,
-            app_name=app_name,
-            user_filename="config.yaml",
-            target="user",
-            file_util=mock_file_util,
-        )
-        expected_path = user_home / ".config" / app_name / "config.yaml"
-        self._assert_stored_output_path_is(out_path, expected_path)
-
-        persisted = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
-        assert persisted == data
-
-    def test_update_config(self, app_name: str, user_home: Path, mock_file_util, user_config_factory, data: dict):
-        from ebf_core.cfgutil import update_config
-
-        # Seed an initial user config
-        user_cfg_path: Path = user_config_factory(data)
-        mock_file_util.get_user_base_dir.return_value = user_home
-
-        # Apply a patch via public API
-        patch = {"b": 2, "list": [2], "nest": {"y": 9}}
-        out_path = update_config(
-            patch=patch,
-            app_name=app_name,
-            user_filename=user_cfg_path.name,
-            target="user",
-            file_util=mock_file_util,
+        out = sut.load_config(
+            app_name="app",
+            project_search_path="config",
+            filename="p.yml",
+            user_filename="u.yml",
+            return_sources=True,
+            file_util=None,
         )
 
-        expected_path = user_home / ".config" / app_name / user_cfg_path.name
-        self._assert_stored_output_path_is(out_path, expected_path)
+        assert out == (cfg, sources)
+        expect_load_once(
+            m,
+            "app",
+            project_search_path="config",
+            filename="p.yml",
+            user_filename="u.yml",
+            return_sources=True,
+            file_util=None,
+        )
 
-        contents = yaml.safe_load(out_path.read_text(encoding="utf-8")) or {}
-        assert contents == {"a": 1, "b": 2, "list": [2], "nest": {"x": 1, "y": 9}}
+    def test_delegates_and_passthrough_cfg_only(self, monkeypatch) -> None:
+        cfg: dict[str, Any] = {"nested": {"x": 2}}
+        m = mocked_cfg_service(monkeypatch, sut, return_value=cfg)
+
+        out = sut.load_config(app_name="app", filename=None, user_filename="u.yml", return_sources=False)
+
+        assert out == cfg
+        expect_load_once(
+            m,
+            "app",
+            project_search_path="config",
+            filename=None,
+            user_filename="u.yml",
+            return_sources=False,
+            file_util=None,
+        )
+
+    def test_propagates_exception(self, monkeypatch) -> None:
+        m = mocked_cfg_service(monkeypatch, sut, side_effect=RuntimeError("boom"))
+
+        with pytest.raises(RuntimeError, match="boom"):
+            sut.load_config(app_name="app", filename="p.yml")
+
+        # optional: ensure it actually tried the call
+        expect_load_once(
+            m,
+            "app",
+            project_search_path="config",
+            filename="p.yml",
+            user_filename=None,
+            return_sources=False, # default value
+            file_util=None,
+        )

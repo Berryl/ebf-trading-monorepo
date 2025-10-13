@@ -6,7 +6,7 @@ import yaml
 
 from ebf_core.cfgutil import ConfigService
 from ebf_core.fileutil import ProjectFileLocator
-from tests.ebf_core.cfgutil.fixtures.cfg_svc_fixture import ConfigServiceFixture
+from tests.ebf_core.support.fixtures.cfg_svc_fixture import ConfigServiceFixture
 
 
 class YamlConfigServiceFixture(ConfigServiceFixture):
