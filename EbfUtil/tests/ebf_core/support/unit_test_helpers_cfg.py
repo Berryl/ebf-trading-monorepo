@@ -18,5 +18,5 @@ def mocked_cfg_service(monkeypatch, sut, *, return_value: Any = None, side_effec
     monkeypatch.setattr(sut, "ConfigService", lambda  *_a, **_k: svc_mock)
     return svc_mock
 
-def expect_load_once(m, app_name: str, **kwargs):
+def assert_load_called_once_with_args(m, app_name: str, **kwargs):
     assert m.load.call_args == ((app_name,), kwargs)

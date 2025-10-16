@@ -3,49 +3,52 @@ from typing import Any
 import pytest
 
 import ebf_core.cfgutil as sut
-from tests.ebf_core.support.unit_test_helpers_cfg import mocked_cfg_service, expect_load_once
+from tests.ebf_core.support.unit_test_helpers_cfg import mocked_cfg_service, assert_load_called_once_with_args
 
+"""
+Tests for the public API of the ConfigService.
+For functionality tests, see the test_service.py.
+All we are testing here is that the API delegates correctly to the service.
+"""
 
-class TestLoadApi:
-    def test_delegates_and_passthrough_tuple(self, monkeypatch) -> None:
-        cfg: dict[str, Any] = {"k": 1}
-        sources = ["/p.yml", "/u.yml"]
-        m = mocked_cfg_service(monkeypatch, sut, return_value=(cfg, sources))
+class TestLoadConfig:
 
-        out = sut.load_config(
-            app_name="app",
-            project_search_path="config",
-            filename="p.yml",
-            user_filename="u.yml",
-            return_sources=True,
-            file_util=None,
-        )
-
-        assert out == (cfg, sources)
-        expect_load_once(
-            m,
-            "app",
-            project_search_path="config",
-            filename="p.yml",
-            user_filename="u.yml",
-            return_sources=True,
-            file_util=None,
-        )
-
-    def test_delegates_and_passthrough_cfg_only(self, monkeypatch) -> None:
+    def test_calls_svc_and_returns_cfg_only_when_return_sources_is_false(self, monkeypatch) -> None:
         cfg: dict[str, Any] = {"nested": {"x": 2}}
         m = mocked_cfg_service(monkeypatch, sut, return_value=cfg)
 
-        out = sut.load_config(app_name="app", filename=None, user_filename="u.yml", return_sources=False)
+        result = sut.load_config(app_name="app", filename=None, user_filename="user.yml", return_sources=False)
 
-        assert out == cfg
-        expect_load_once(
+        assert result == cfg
+        assert_load_called_once_with_args(
             m,
             "app",
             project_search_path="config",
             filename=None,
-            user_filename="u.yml",
+            user_filename="user.yml",
             return_sources=False,
+            file_util=None,
+        )
+
+    def test_calls_svc_and_returns_sources_also_when_return_sources_is_true(self, monkeypatch) -> None:
+        cfg: dict[str, Any] = {"k": 1}
+        sources = ["/project.yml", "/user.yml"]
+        m = mocked_cfg_service(monkeypatch, sut, return_value=(cfg, sources))
+
+        result = sut.load_config(app_name="app", project_search_path="config", filename="project.yml",
+            user_filename="user.yml",
+            return_sources=True,
+            file_util=None,
+        )
+
+        assert result == (cfg, sources)
+        assert_load_called_once_with_args(
+            m,
+            "app",
+            project_search_path="config",
+            filename="p.yml",
+            user_filename="user.yml",
+            return_sources=True,
             file_util=None,
         )
 
@@ -56,7 +59,7 @@ class TestLoadApi:
             sut.load_config(app_name="app", filename="p.yml")
 
         # optional: ensure it actually tried the call
-        expect_load_once(
+        assert_load_called_once_with_args(
             m,
             "app",
             project_search_path="config",
