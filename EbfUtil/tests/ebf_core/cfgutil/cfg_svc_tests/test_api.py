@@ -46,7 +46,7 @@ class TestLoadConfig:
             m,
             "app",
             project_search_path="config",
-            filename="p.yml",
+            filename="project.yml",
             user_filename="user.yml",
             return_sources=True,
             file_util=None,
