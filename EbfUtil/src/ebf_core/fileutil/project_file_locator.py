@@ -82,6 +82,7 @@ class ProjectFileLocator:
                 self._project_root_override = Path.cwd().resolve()
             else:
                 logger.debug("project root override intentionally cleared (marker search will be used)")
+                self._project_root_override = None
 
         self._cached_project_root = None  #reset cache
         return self

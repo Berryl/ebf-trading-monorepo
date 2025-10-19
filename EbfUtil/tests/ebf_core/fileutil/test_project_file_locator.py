@@ -19,7 +19,7 @@ def sut() -> ProjectFileLocator:
 
 
 @pytest.mark.integration
-class TestProjectRootOverrideAndCwdFlag:
+class TestProjectRootProperty:
 
     def test_project_root_override_default_is_none(self, sut):
         assert sut._project_root_override is None
@@ -45,9 +45,23 @@ class TestProjectRootOverrideAndCwdFlag:
         assert sut._project_root_override == expected_root
         assert sut.get_project_root() == expected_root, "project_root s/b the project_root_override arg"
 
-    def test_can_reset_root_to_none(self, sut):
+    def test_set_project_root_override_with_path(self, sut, tmp_path):
+        assert sut._project_root_override != tmp_path
+        sut.set_project_root_override(tmp_path)
+        assert sut._project_root_override == tmp_path.resolve()
+
+    def test_set_project_root_override_with_none(self, sut, tmp_path):
+        sut = ProjectFileLocator(project_root_override=tmp_path)
+        assert sut._project_root_override == tmp_path.resolve()
+
         sut.set_project_root_override(None)
-        assert sut._project_root_override is None, "project_root_override should be None forcing maker resolution"
+        assert sut._project_root_override is None
+
+    def test_set_project_root_override_with_none_when_use_cwd_is_true(self, sut, tmp_path):
+        sut = ProjectFileLocator(project_root_override=tmp_path, use_cwd_as_root=True)
+
+        sut.set_project_root_override(None)
+        assert sut._project_root_override == Path.cwd(), "project_root_override should be Path.cwd()"
 
 
 @pytest.mark.integration
@@ -63,6 +77,7 @@ def test_project_file_locator_logs(caplog):
     assert any("Searching for project root" in record.message for record in caplog.records)
     assert any("Found marker" in record.message or "Using cached project root" in record.message
                for record in caplog.records)
+
 
 class TestProjectFileLocator:
     def test_property_base_structure(self, sut):
@@ -135,12 +150,13 @@ class TestGetProjectRoot:
             sut.get_project_root(priority_marker="             ")
 
     def test_try_get_project_file_with_search_path_found(self, sut):
-        p = sut.try_get_file_from_project_root("some_txt_file.txt",search_path=VALID_SEARCH_PATH,)
+        p = sut.try_get_file_from_project_root("some_txt_file.txt", search_path=VALID_SEARCH_PATH, )
         assert p is not None and p.exists()
 
     def test_try_get_project_file_missing_returns_none(self, sut):
         p = sut.try_get_file_from_project_root("does_not_exist.txt")
         assert p is None
+
 
 @pytest.mark.integration
 class TestProjectRootOverride:
