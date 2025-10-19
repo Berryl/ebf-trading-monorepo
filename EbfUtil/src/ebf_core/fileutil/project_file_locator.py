@@ -48,6 +48,10 @@ class ProjectFileLocator:
             priority_marker: Optional single marker to prioritize.
             project_root_override: Explicit path to force as project root.
             use_cwd_as_root: if True, set the project_root_override to the current working directory.
+
+        Note:
+            IF the cwd is changed dynamically after initialization, the project_root_override will not be updated,
+            and set_project_root_override must be called explicitly.
          """
         self.base_structure = base_structure or BASE_DIR_STRUCTURE
         self._cached_project_root = None
@@ -55,12 +59,13 @@ class ProjectFileLocator:
         self._priority_marker = priority_marker
         self._project_root_override = project_root_override
         self._use_cwd_as_root = use_cwd_as_root
-        if self._project_root_override is None and use_cwd_as_root:
-            self._project_root_override = Path.cwd().resolve()
 
-    def set_project_root_override(self, root_override_path: Path) -> Self:
+        self.set_project_root_override(self._project_root_override)
+
+    def set_project_root_override(self, root_override_path: Path | None) -> Self:
         """
-        Explicitly set the project root for this instance, overriding a marker search.
+        Explicitly set the project root for this instance, overriding a marker search. Passing None with
+        _use_cwd_as_root=True captures the current working directory; otherwise clears the override.
 
         Use this when your consuming project has a known root that you want resolution to be relative to.
 
@@ -70,7 +75,15 @@ class ProjectFileLocator:
         Args:
             root_override_path: The path to treat as the project root.
         """
-        self._project_root_override = root_override_path
+        if root_override_path is not None:
+            self._project_root_override = root_override_path.resolve()
+        else:
+            if self._use_cwd_as_root:
+                self._project_root_override = Path.cwd().resolve()
+            else:
+                logger.debug("project root override intentionally cleared (marker search will be used)")
+
+        self._cached_project_root = None  #reset cache
         return self
 
     @property

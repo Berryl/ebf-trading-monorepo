@@ -45,6 +45,10 @@ class TestProjectRootOverrideAndCwdFlag:
         assert sut._project_root_override == expected_root
         assert sut.get_project_root() == expected_root, "project_root s/b the project_root_override arg"
 
+    def test_can_reset_root_to_none(self, sut):
+        sut.set_project_root_override(None)
+        assert sut._project_root_override is None, "project_root_override should be None forcing maker resolution"
+
 
 @pytest.mark.integration
 def test_project_file_locator_logs(caplog):
