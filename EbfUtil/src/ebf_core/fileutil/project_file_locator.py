@@ -89,12 +89,13 @@ class ProjectFileLocator:
             ]
         return self._common_project_markers
 
-    def get_project_root(self,
-                         markers: list[str] | None = None,
-                         use_cache: bool = True,
-                         priority_marker: str | None = None,
-                         max_search_depth: int = 5
-                         ) -> Path:
+    def get_project_root(
+            self,
+            markers: list[str] | None = None,
+            use_cache: bool = True,
+            priority_marker: str | None = None,
+            max_search_depth: int = 5
+    ) -> Path:
         """
         Get the project root by ascending until any project marker is found.
 
@@ -104,7 +105,7 @@ class ProjectFileLocator:
 
         Args:
             markers: Optional list of files/directories that indicate a project root.
-                    If None, uses common_project_markers property.
+                    If None, a list of common markers will be used (see the common_project_markers property).
             use_cache: If True, caches and reuses results for identical parameter sets.
                       Set to False when markers might change between calls.
             priority_marker: Optional single marker to check first at each directory level.

@@ -1,48 +1,63 @@
+import logging
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from ebf_core.fileutil.project_file_locator import ProjectFileLocator
+from ebf_core.fileutil.project_file_locator import ProjectFileLocator, BASE_DIR_STRUCTURE
 
 VALID_SEARCH_PATH = r'tests/ebf_core/fileutil'  # noqa
 
+# Configure logging for the test
+handler = logging.FileHandler('test.log')
+logging.getLogger('ebf_core.fileutil.project_file_locator').addHandler(handler)
+
+
+@pytest.fixture
+def sut() -> ProjectFileLocator:
+    return ProjectFileLocator()
+
 
 @pytest.mark.integration
-class TestProjectRootOverride:
-    """
-    Tests for FileUtil project_root_override behavior.
+def test_project_file_locator_logs(caplog):
+    # Set up the test to capture logs at DEBUG level
+    caplog.set_level(logging.DEBUG, logger='ebf_core.fileutil.project_file_locator')
 
-    Ensures FileUtil can work both in its own repo
-    (by marker search) and with an explicit override
-    provided by consuming projects.
+    # Create instance and call a method that emits logs
+    sut = ProjectFileLocator()
+    sut.get_project_root()
 
-    The pytest supplied fixture "tmp_path" provides a unique, empty temp directory.
-    This simulates an external consuming project defining its root explicitly.
-    """
+    # Verify log output
+    assert any("Searching for project root" in record.message for record in caplog.records)
+    assert any("Found marker" in record.message or "Using cached project root" in record.message
+               for record in caplog.records)
 
-    def test_can_find_file_inside_ebf_util_without_override(self):
-        sut = ProjectFileLocator()
-        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
+class TestProjectFileLocator:
+    def test_property_base_structure(self, sut):
+        assert sut.base_structure == Path('Dropbox') / 'Green Olive' / 'Investing', "default base structure path"
+
+        sut = ProjectFileLocator(base_structure=Path('blah'))
+        assert sut.base_structure == Path('blah'), "override base structure path"
+
+    @pytest.mark.parametrize('marker', ['.idea', '.git', 'pyproject.toml'])
+    def test_property_common_project_markers(self, sut, marker):
+        assert marker in sut.common_project_markers
+
+    def test_priority_marker(self, sut):
+        assert sut._priority_marker is None
+
+        sut = ProjectFileLocator(priority_marker='blah')
+        assert sut._priority_marker == 'blah'
+
+    def test_property_project_root_override(self, sut):
         assert sut._project_root_override is None
-        assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
-    def test_can_find_file_inside_external_project_with_override_in_init(self, tmp_path):
-        sut = ProjectFileLocator(project_root_override=tmp_path)
-        result = sut.get_project_root()
-        assert result == tmp_path
-
-    def test_can_find_file_inside_external_project_with_override_in_setter(self, tmp_path):
-        sut = ProjectFileLocator()
-        sut.set_project_root_override(tmp_path)
-        result = sut.get_project_root()
-        assert result == tmp_path
+        sut = ProjectFileLocator(project_root_override=Path('blah'))
+        assert sut._project_root_override == Path('blah'), "override project root path"
 
 
 @pytest.mark.integration
 class TestGetProjectRoot:
-    @pytest.fixture
-    def sut(self) -> ProjectFileLocator:
-        return ProjectFileLocator()
 
     def test_get_project_root_returns_path_with_at_least_one_common_marker_when_no_args(self, sut):
         found = sut.get_project_root()
@@ -100,6 +115,36 @@ class TestGetProjectRoot:
     def test_try_get_project_file_missing_returns_none(self, sut):
         p = sut.try_get_file_from_project_root("does_not_exist.txt")
         assert p is None
+
+@pytest.mark.integration
+class TestProjectRootOverride:
+    """
+    Tests for FileUtil project_root_override behavior.
+
+    Ensures FileUtil can work both in its own repo
+    (by marker search) and with an explicit override
+    provided by consuming projects.
+
+    The pytest supplied fixture "tmp_path" provides a unique, empty temp directory.
+    This simulates an external consuming project defining its root explicitly.
+    """
+
+    def test_can_find_file_inside_ebf_util_without_override(self):
+        sut = ProjectFileLocator()
+        file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
+        assert sut._project_root_override is None
+        assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
+
+    def test_can_find_file_inside_external_project_with_override_in_init(self, tmp_path):
+        sut = ProjectFileLocator(project_root_override=tmp_path)
+        result = sut.get_project_root()
+        assert result == tmp_path
+
+    def test_can_find_file_inside_external_project_with_override_in_setter(self, tmp_path):
+        sut = ProjectFileLocator()
+        sut.set_project_root_override(tmp_path)
+        result = sut.get_project_root()
+        assert result == tmp_path
 
 
 @pytest.mark.integration
