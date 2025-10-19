@@ -35,15 +35,11 @@ class ProjectFileLocator:
     Note: path support is currently Windows only
     """
 
-    def __init__(
-            self,
-            base_structure: Path | None = None,
-            markers: list[str] | None = None,
-            priority_marker: str | None = None,
-            project_root_override: Path | None = None
-    ):
+    def __init__(self, base_structure: Path | None = None,
+                 markers: list[str] | None = None, priority_marker: str | None = None,
+                 project_root_override: Path | None = None, use_cwd_as_root=False):
         """
-        Initialize FileUtil.
+        Initialize the ProjectFileLocator.
 
         Args:
             base_structure: Optional override for the standard Investing path.
@@ -51,12 +47,16 @@ class ProjectFileLocator:
             markers: Optional list of files/directories that indicate the project root.
             priority_marker: Optional single marker to prioritize.
             project_root_override: Explicit path to force as project root.
+            use_cwd_as_root: if True, set the project_root_override to the current working directory.
          """
         self.base_structure = base_structure or BASE_DIR_STRUCTURE
         self._cached_project_root = None
         self._common_project_markers: list[str] = markers
         self._priority_marker = priority_marker
         self._project_root_override = project_root_override
+        self._use_cwd_as_root = use_cwd_as_root
+        if self._project_root_override is None and use_cwd_as_root:
+            self._project_root_override = Path.cwd().resolve()
 
     def set_project_root_override(self, root_override_path: Path) -> Self:
         """

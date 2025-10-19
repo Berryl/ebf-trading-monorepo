@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ebf_core.fileutil.project_file_locator import ProjectFileLocator, BASE_DIR_STRUCTURE
+from ebf_core.fileutil.project_file_locator import ProjectFileLocator
 
 VALID_SEARCH_PATH = r'tests/ebf_core/fileutil'  # noqa
 
@@ -19,11 +19,39 @@ def sut() -> ProjectFileLocator:
 
 
 @pytest.mark.integration
+class TestProjectRootOverrideAndCwdFlag:
+
+    def test_project_root_override_default_is_none(self, sut):
+        assert sut._project_root_override is None
+
+    def test_use_cwd_default_is_false(self, sut):
+        assert sut._use_cwd_as_root is False
+
+    def test_when_project_root_override_path_is_set(self, sut, tmp_path):
+        expected_root = tmp_path
+        sut = ProjectFileLocator(project_root_override=expected_root)
+        assert sut._project_root_override == expected_root
+        assert sut.get_project_root() == expected_root, "project_root s/b project_root_override arg"
+
+    def test_when_project_root_override_is_none_and_use_cwd_flag_is_true(self):
+        sut = ProjectFileLocator(use_cwd_as_root=True)
+        expected_root = Path.cwd().resolve()
+        assert sut._project_root_override == expected_root
+        assert sut.get_project_root() == expected_root, "project_root s/b Path.cwd().resolve()"
+
+    def test_project_root_override_arg_has_precedence_when_use_cwd_flag_is_true(self, tmp_path):
+        sut = ProjectFileLocator(use_cwd_as_root=True, project_root_override=tmp_path)
+        expected_root = tmp_path
+        assert sut._project_root_override == expected_root
+        assert sut.get_project_root() == expected_root, "project_root s/b the project_root_override arg"
+
+
+@pytest.mark.integration
 def test_project_file_locator_logs(caplog):
     # Set up the test to capture logs at DEBUG level
     caplog.set_level(logging.DEBUG, logger='ebf_core.fileutil.project_file_locator')
 
-    # Create instance and call a method that emits logs
+    # Create the instance and call a method that emits logs
     sut = ProjectFileLocator()
     sut.get_project_root()
 
@@ -48,12 +76,6 @@ class TestProjectFileLocator:
 
         sut = ProjectFileLocator(priority_marker='blah')
         assert sut._priority_marker == 'blah'
-
-    def test_property_project_root_override(self, sut):
-        assert sut._project_root_override is None
-
-        sut = ProjectFileLocator(project_root_override=Path('blah'))
-        assert sut._project_root_override == Path('blah'), "override project root path"
 
 
 @pytest.mark.integration
