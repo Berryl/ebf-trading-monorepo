@@ -60,7 +60,7 @@ class ProjectFileLocator:
         self._project_root = project_root
         self._use_cwd_as_root = use_cwd_as_root
 
-        self.with_project_root(self._project_root)
+        self.with_project_root(self._project_root, self._use_cwd_as_root)
 
     def with_project_root(self, root_override_path: Path | None, use_cwd_as_root: bool | None = None) -> Self:
         """
