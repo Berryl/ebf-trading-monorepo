@@ -62,7 +62,7 @@ class ProjectFileLocator:
 
         self.with_project_root(self._project_root)
 
-    def with_project_root(self, root_override_path: Path | None) -> Self:
+    def with_project_root(self, root_override_path: Path | None, use_cwd_as_root: bool | None = None) -> Self:
         """
         Explicitly set the project root for this instance, overriding a marker search. Passing None with
         _use_cwd_as_root=True captures the current working directory; otherwise clears the override.
@@ -74,11 +74,13 @@ class ProjectFileLocator:
 
         Args:
             root_override_path: The path to treat as the project root.
+            use_cwd_as_root: if True, set the project_root_override to the current working directory. If None,
+            use whatever was set at initialization.
         """
         if root_override_path is not None:
             self._project_root = root_override_path.resolve()
         else:
-            if self._use_cwd_as_root:
+            if self._use_cwd_as_root or use_cwd_as_root:
                 self._project_root = Path.cwd().resolve()
             else:
                 logger.debug("project root override intentionally cleared (marker search will be used)")

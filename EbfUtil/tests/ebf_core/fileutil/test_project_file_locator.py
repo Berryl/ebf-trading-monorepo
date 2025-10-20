@@ -19,7 +19,7 @@ def sut() -> ProjectFileLocator:
 
 
 @pytest.mark.integration
-class TestProjectRootOverrideProperty:
+class TestProjectRootMember:
 
     def test_project_root_override_default_is_none(self, sut):
         assert sut._project_root is None
@@ -57,10 +57,17 @@ class TestProjectRootOverrideProperty:
         sut.with_project_root(None)
         assert sut._project_root is None
 
-    def test_with_project_root_when_arg_is_none_and_use_cwd_is_true(self, sut, tmp_path):
+    def test_with_project_root_when_arg_is_none_and_use_cwd_is_true_from_init(self, sut, tmp_path):
         sut = ProjectFileLocator(project_root=tmp_path, use_cwd_as_root=True)
 
         sut.with_project_root(None)
+        assert sut._project_root == Path.cwd(), "project_root_override should be Path.cwd()"
+
+    def test_with_project_root_when_arg_is_none_and_use_cwd_is_true_from_arg(self, sut, tmp_path):
+        sut = ProjectFileLocator(project_root=tmp_path)
+        assert sut._use_cwd_as_root is False
+
+        sut.with_project_root(None, use_cwd_as_root=True)
         assert sut._project_root == Path.cwd(), "project_root_override should be Path.cwd()"
 
 
