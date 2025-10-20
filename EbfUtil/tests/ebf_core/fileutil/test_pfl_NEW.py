@@ -1,9 +1,12 @@
+import logging
 from pathlib import Path
 
 import pytest
 
-from ebf_core.fileutil.pfl_NEW import ProjectFileLocator
+from ebf_core.fileutil.pfl_NEW import ProjectFileLocator, logger
 
+logger.addHandler(logging.FileHandler('test.log', mode='w'))
+logger.setLevel(logging.DEBUG)
 
 @pytest.fixture
 def sut() -> ProjectFileLocator:
@@ -11,7 +14,7 @@ def sut() -> ProjectFileLocator:
 
 
 @pytest.mark.integration
-class TestProjectRootMember:
+class TestWithProjectRoot:
 
     def test_project_root_default_is_none(self, sut):
         assert sut._project_root is None
@@ -38,3 +41,13 @@ class TestProjectRootMember:
     def test_with_project_root_when_arg_is_none_and_use_cwd_is_true(self, sut, tmp_path):
         sut_with_cwd = sut.with_project_root(None, use_cwd_as_root=True)
         assert sut_with_cwd._project_root == Path.cwd()
+
+
+
+@pytest.mark.integration
+class TestGetProjectRoot:
+
+    def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
+        result = sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
+        assert result == Path.cwd().resolve()
+        assert "Retuning user provided project root" in caplog.text

@@ -142,9 +142,11 @@ class ProjectFileLocator:
             Absolute resolved Path to the project root, or the best-effort fallback.
         """
         if self._project_root is not None:
+            logger.debug("Retuning user provided project root")
             return self._project_root
 
         if use_cache and self._cached_project_root is not None:
+            logger.debug("Retuning cached project root")
             return self._cached_project_root
 
         markers = self._effective_markers()
