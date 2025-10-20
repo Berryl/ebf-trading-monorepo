@@ -89,12 +89,7 @@ class ProjectFileLocator:
             _cached_project_file=None,
         )
 
-    def with_markers(
-        self,
-        markers: Optional[Iterable[str]],
-        *,
-        priority: Optional[str] = None,
-    ) -> ProjectFileLocator:
+    def with_markers(self, markers: Optional[Iterable[str]], *,priority: Optional[str] = None,) -> Self:
         """
         Return a new locator with updated project-root markers and optional priority marker.
         """

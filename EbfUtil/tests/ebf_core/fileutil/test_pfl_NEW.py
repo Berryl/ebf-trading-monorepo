@@ -45,6 +45,20 @@ class TestWithProjectRoot:
 
 
 @pytest.mark.integration
+class TestWithMarkers:
+
+    def test_marker_list_default_is_none(self, sut):
+        assert sut._markers is None
+
+    def test_priority_marker_default_is_none(self, sut):
+        assert sut._priority_marker is None
+
+    def test_with_markers_creates_new_instance(self, sut, tmp_path):
+        sut_clone = sut.with_markers(['blah'])
+        assert sut_clone is not sut
+
+
+@pytest.mark.integration
 class TestGetProjectRoot:
 
     def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
