@@ -122,7 +122,7 @@ class TestJsonStore(JsonConfigServiceFixture):
     def test_store_project_creates_dir_and_writes_json(
         self, sut: ConfigService, app_name: str, project_root: Path, json_cfg_file: str, data: dict
     ):
-        fu = ProjectFileLocator(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root=project_root)
         out_path = sut.store(data, app_name, filename=json_cfg_file, target="project", file_util=fu)
         expected_path = project_root / "config" / json_cfg_file
         self._assert_stored_output_path_is(out_path, expected_path)

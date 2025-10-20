@@ -65,7 +65,7 @@ class ConfigServiceFixture:
 
     @pytest.fixture
     def project_fu(self, project_root: Path):
-        return ProjectFileLocator(project_root_override=project_root)
+        return ProjectFileLocator(project_root=project_root)
 
     @pytest.fixture
     def fake_project_file(self, project_root: Path, data: dict, make_filename) -> Path:

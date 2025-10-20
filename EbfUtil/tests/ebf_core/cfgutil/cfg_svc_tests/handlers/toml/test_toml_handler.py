@@ -151,7 +151,7 @@ class TestTomlStore(TomlConfigServiceFixture):
     def test_store_project_raises_not_supported(
         self, sut: ConfigService, app_name: str, project_root: Path, project_cfg: Path
     ):
-        fu = ProjectFileLocator(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root=project_root)
         msg = re.escape("Writing TOML is not supported by this service.")
         with pytest.raises(RuntimeError, match=msg):
             sut.store(cfg={"k": 1}, app_name=app_name, filename=project_cfg.name, target="project", file_util=fu)
@@ -169,7 +169,7 @@ class TestTomlUpdate(TomlConfigServiceFixture):
     def test_update_project_raises_not_supported(
         self, sut: ConfigService, app_name: str, project_root: Path, project_cfg: Path
     ):
-        fu = ProjectFileLocator(project_root_override=project_root)
+        fu = ProjectFileLocator(project_root=project_root)
         msg = re.escape("Writing TOML is not supported by this service.")
         with pytest.raises(RuntimeError, match=msg):
             sut.update({"b": 2}, app_name=app_name, filename=project_cfg.name, target="project", file_util=fu)

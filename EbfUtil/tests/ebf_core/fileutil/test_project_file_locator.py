@@ -19,49 +19,59 @@ def sut() -> ProjectFileLocator:
 
 
 @pytest.mark.integration
-class TestProjectRootProperty:
+class TestProjectRootOverrideProperty:
 
     def test_project_root_override_default_is_none(self, sut):
-        assert sut._project_root_override is None
+        assert sut._project_root is None
 
     def test_use_cwd_default_is_false(self, sut):
         assert sut._use_cwd_as_root is False
 
     def test_when_project_root_override_path_is_set(self, sut, tmp_path):
         expected_root = tmp_path
-        sut = ProjectFileLocator(project_root_override=expected_root)
-        assert sut._project_root_override == expected_root
+        sut = ProjectFileLocator(project_root=expected_root)
+        assert sut._project_root == expected_root
         assert sut.get_project_root() == expected_root, "project_root s/b project_root_override arg"
 
     def test_when_project_root_override_is_none_and_use_cwd_flag_is_true(self):
         sut = ProjectFileLocator(use_cwd_as_root=True)
         expected_root = Path.cwd().resolve()
-        assert sut._project_root_override == expected_root
+        assert sut._project_root == expected_root
         assert sut.get_project_root() == expected_root, "project_root s/b Path.cwd().resolve()"
 
     def test_project_root_override_arg_has_precedence_when_use_cwd_flag_is_true(self, tmp_path):
-        sut = ProjectFileLocator(use_cwd_as_root=True, project_root_override=tmp_path)
+        sut = ProjectFileLocator(use_cwd_as_root=True, project_root=tmp_path)
         expected_root = tmp_path
-        assert sut._project_root_override == expected_root
+        assert sut._project_root == expected_root
         assert sut.get_project_root() == expected_root, "project_root s/b the project_root_override arg"
 
-    def test_set_project_root_override_with_path(self, sut, tmp_path):
-        assert sut._project_root_override != tmp_path
-        sut.set_project_root_override(tmp_path)
-        assert sut._project_root_override == tmp_path.resolve()
+    def test_with_project_root_when_arg_is_path(self, sut, tmp_path):
+        assert sut._project_root != tmp_path
+        sut.with_project_root(tmp_path)
+        assert sut._project_root == tmp_path.resolve()
 
-    def test_set_project_root_override_with_none(self, sut, tmp_path):
-        sut = ProjectFileLocator(project_root_override=tmp_path)
-        assert sut._project_root_override == tmp_path.resolve()
+    def test_with_project_root_when_arg_is_none(self, sut, tmp_path):
+        sut = ProjectFileLocator(project_root=tmp_path)
+        assert sut._project_root == tmp_path.resolve()
 
-        sut.set_project_root_override(None)
-        assert sut._project_root_override is None
+        sut.with_project_root(None)
+        assert sut._project_root is None
 
-    def test_set_project_root_override_with_none_when_use_cwd_is_true(self, sut, tmp_path):
-        sut = ProjectFileLocator(project_root_override=tmp_path, use_cwd_as_root=True)
+    def test_with_project_root_when_arg_is_none_and_use_cwd_is_true(self, sut, tmp_path):
+        sut = ProjectFileLocator(project_root=tmp_path, use_cwd_as_root=True)
 
-        sut.set_project_root_override(None)
-        assert sut._project_root_override == Path.cwd(), "project_root_override should be Path.cwd()"
+        sut.with_project_root(None)
+        assert sut._project_root == Path.cwd(), "project_root_override should be Path.cwd()"
+
+
+@pytest.mark.integration
+class TestCachedProjectRoot:
+
+    def test_cache_default_is_none(self, sut):
+        assert sut._cached_project_root is None
+
+    def test_cache_is_with_when_use_cache_is_true(self, sut):
+        assert sut._cached_project_root is None
 
 
 @pytest.mark.integration
@@ -102,6 +112,7 @@ class TestGetProjectRoot:
 
     def test_get_project_root_returns_path_with_at_least_one_common_marker_when_no_args(self, sut):
         found = sut.get_project_root()
+        print(found)
         assert any((found / m).exists() for m in sut.common_project_markers)
 
     def test_get_project_root_caches_when_no_args(self, sut):
@@ -174,17 +185,17 @@ class TestProjectRootOverride:
     def test_can_find_file_inside_ebf_util_without_override(self):
         sut = ProjectFileLocator()
         file_path = sut.get_file_from_project_root('some_txt_file.txt', search_path=VALID_SEARCH_PATH)
-        assert sut._project_root_override is None
+        assert sut._project_root is None
         assert file_path.exists(), f"some_txt_file.txt does not exist at {file_path}"
 
     def test_can_find_file_inside_external_project_with_override_in_init(self, tmp_path):
-        sut = ProjectFileLocator(project_root_override=tmp_path)
+        sut = ProjectFileLocator(project_root=tmp_path)
         result = sut.get_project_root()
         assert result == tmp_path
 
     def test_can_find_file_inside_external_project_with_override_in_setter(self, tmp_path):
         sut = ProjectFileLocator()
-        sut.set_project_root_override(tmp_path)
+        sut.with_project_root(tmp_path)
         result = sut.get_project_root()
         assert result == tmp_path
 

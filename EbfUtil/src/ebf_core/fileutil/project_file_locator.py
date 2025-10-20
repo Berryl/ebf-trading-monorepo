@@ -16,7 +16,7 @@ class ProjectFileLocator:
     Supports *two clear resolution strategies*:
 
     1. Project-root-based:
-       - Uses either a marker search or explicit override to locate the project root.
+       - Uses either a marker search, Path.cwd(), or an explicit override to locate the project root.
        - Resolves base_structure relative to that root. This is typical but not limited to testing files
 
     2. User-based:
@@ -37,7 +37,7 @@ class ProjectFileLocator:
 
     def __init__(self, base_structure: Path | None = None,
                  markers: list[str] | None = None, priority_marker: str | None = None,
-                 project_root_override: Path | None = None, use_cwd_as_root=False):
+                 project_root: Path | None = None, use_cwd_as_root=False):
         """
         Initialize the ProjectFileLocator.
 
@@ -46,7 +46,7 @@ class ProjectFileLocator:
                 note: different base structures should use different FileUtil instances
             markers: Optional list of files/directories that indicate the project root.
             priority_marker: Optional single marker to prioritize.
-            project_root_override: Explicit path to force as project root.
+            project_root: Explicit path to force as project root.
             use_cwd_as_root: if True, set the project_root_override to the current working directory.
 
         Note:
@@ -57,12 +57,12 @@ class ProjectFileLocator:
         self._cached_project_root = None
         self._common_project_markers: list[str] = markers
         self._priority_marker = priority_marker
-        self._project_root_override = project_root_override
+        self._project_root = project_root
         self._use_cwd_as_root = use_cwd_as_root
 
-        self.set_project_root_override(self._project_root_override)
+        self.with_project_root(self._project_root)
 
-    def set_project_root_override(self, root_override_path: Path | None) -> Self:
+    def with_project_root(self, root_override_path: Path | None) -> Self:
         """
         Explicitly set the project root for this instance, overriding a marker search. Passing None with
         _use_cwd_as_root=True captures the current working directory; otherwise clears the override.
@@ -76,13 +76,13 @@ class ProjectFileLocator:
             root_override_path: The path to treat as the project root.
         """
         if root_override_path is not None:
-            self._project_root_override = root_override_path.resolve()
+            self._project_root = root_override_path.resolve()
         else:
             if self._use_cwd_as_root:
-                self._project_root_override = Path.cwd().resolve()
+                self._project_root = Path.cwd().resolve()
             else:
                 logger.debug("project root override intentionally cleared (marker search will be used)")
-                self._project_root_override = None
+                self._project_root = None
 
         self._cached_project_root = None  #reset cache
         return self
@@ -138,18 +138,18 @@ class ProjectFileLocator:
 
         Examples:
              # Use default markers
-             file_util = FileUtil()
-             root = file_util.get_project_root()
+             pfl = ProjectFileLocator()
+             root = pfl.get_project_root()
 
              # Prioritize Git repositories
-             root = file_util.get_project_root(priority_marker='.git')
+             root = pfl.get_project_root(priority_marker='.git')
 
              # Custom markers without caching
-             root = file_util.get_project_root(markers=['.my_marker'], use_cache=False)
+             root = pfl.get_project_root(markers=['.my_marker'], use_cache=False)
         """
-        if self._project_root_override is not None:
-            logger.debug(f"Using override project root: {self._project_root_override}")
-            return Path(self._project_root_override).resolve()
+        if self._project_root is not None:
+            logger.debug(f"Using override project root: {self._project_root}")
+            return Path(self._project_root).resolve()
 
         if use_cache and markers is None and priority_marker is None and self._cached_project_root is not None:
             logger.debug(f"Using cached project root: {self._cached_project_root}")

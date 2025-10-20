@@ -111,7 +111,7 @@ class TestStore(YamlConfigServiceFixture):
     def test_store_project_creates_dir_and_writes_yaml(
             self, sut: ConfigService, app_name: str, project_root: Path, yaml_cfg_file: str, data: dict
     ):
-        fu = ProjectFileLocator(project_root_override=project_root)  # resolves project root to our tmp area
+        fu = ProjectFileLocator(project_root=project_root)  # resolves project root to our tmp area
 
         out_path = sut.store(data, app_name, filename=yaml_cfg_file, target="project", file_util=fu)
 
