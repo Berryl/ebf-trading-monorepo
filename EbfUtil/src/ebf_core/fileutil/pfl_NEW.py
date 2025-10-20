@@ -228,7 +228,8 @@ class ProjectFileLocator:
     def _effective_markers(self) -> List[str]:
         return self._markers if self._markers is not None else DEFAULT_MARKERS
 
-    def _validate_markers(self, markers: Iterable[str]) -> None:
+    @staticmethod
+    def _validate_markers(markers: Iterable[str]) -> None:
         if not markers:
             raise ValueError("Marker list must not be empty. Provide markers or use defaults.")
 

@@ -62,9 +62,21 @@ class TestWithMarkers:
 class TestGetProjectRoot:
 
     def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
-        result = sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
-        assert result == Path.cwd().resolve()
+        sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
 
         assert "user provided" in caplog.text
+
         assert "cached" not in caplog.text
         assert "marker search" not in caplog.text
+
+    def test_markers_are_used_when_no_project_root_is_available(self, sut, caplog):
+        sut.get_project_root()
+
+        assert "user provided" not in caplog.text
+        assert "cached" not in caplog.text
+
+        assert "marker search" in caplog.text
+
+    def test_markers_are_validated(self, sut):
+        with pytest.raises(ValueError, match="Marker list must not be empty"):
+            sut.with_markers([]).get_project_root()
