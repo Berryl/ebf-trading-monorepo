@@ -77,6 +77,18 @@ class TestGetProjectRoot:
 
         assert "marker search" in caplog.text
 
+    def test_default_markers_can_determine_the_project_root(self, sut, caplog):
+        found = sut.get_project_root()
+        assert found.exists()
+
+        assert "Found marker '.git'" in caplog.text
+
+    def test_the_start_path_is_returned_if_the_marker_search_fails(self, sut, caplog):
+        found = sut.with_markers(["blah"]).get_project_root()
+        assert found.exists()
+
+        assert "Found marker" not in caplog.text
+
     def test_markers_are_validated(self, sut):
         with pytest.raises(ValueError, match="Marker list must not be empty"):
             sut.with_markers([]).get_project_root()

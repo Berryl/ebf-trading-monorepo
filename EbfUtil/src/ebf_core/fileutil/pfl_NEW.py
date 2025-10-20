@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Optional, Iterable, List, Self
-import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ class ProjectFileLocator:
 
     # ======== Fluent "builder" methods (return NEW instances) ========
 
-    def with_project_root(self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None,) -> Self:
+    def with_project_root(self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> Self:
         """
         Return a new locator with an explicit project root (or cleared).
 
@@ -89,7 +88,7 @@ class ProjectFileLocator:
             _cached_project_file=None,
         )
 
-    def with_markers(self, markers: Optional[Iterable[str]], *,priority: Optional[str] = None,) -> Self:
+    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> Self:
         """
         Return a new locator with updated project-root markers and optional priority marker.
         """
@@ -112,12 +111,7 @@ class ProjectFileLocator:
 
     # ======== Queries ========
 
-    def get_project_root(
-        self,
-        *,
-        max_search_depth: int = 5,
-        use_cache: bool = True,
-    ) -> Path:
+    def get_project_root(self, *, max_search_depth: int = 5, use_cache: bool = True, ) -> Path:
         """
         Get the project root directory.
 
@@ -153,7 +147,7 @@ class ProjectFileLocator:
         current = start
         found: Optional[Path] = None
 
-        depth_iter = range(0, 10**9) if max_search_depth == UNLIMITED_DEPTH else range(max_search_depth)
+        depth_iter = range(0, 10 ** 9) if max_search_depth == UNLIMITED_DEPTH else range(max_search_depth)
         for _ in depth_iter:
             # Priority marker first
             if self._priority_marker and (current / self._priority_marker).exists():
@@ -183,11 +177,11 @@ class ProjectFileLocator:
         return result
 
     def get_project_file(
-        self,
-        relpath: Optional[Path | str] = None,
-        *,
-        must_exist: bool = True,
-        use_cache: bool = True,
+            self,
+            relpath: Optional[Path | str] = None,
+            *,
+            must_exist: bool = True,
+            use_cache: bool = True,
     ) -> Optional[Path]:
         """
         Resolve the project file path.
@@ -233,7 +227,8 @@ class ProjectFileLocator:
         if not markers:
             raise ValueError("Marker list must not be empty. Provide markers or use defaults.")
 
-    def _detect_start_path(self) -> Path:
+    @staticmethod
+    def _detect_start_path() -> Path:
         """
         Decide where to start the upward marker search from.
 
