@@ -50,4 +50,7 @@ class TestGetProjectRoot:
     def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
         result = sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
         assert result == Path.cwd().resolve()
-        assert "Retuning user provided project root" in caplog.text
+
+        assert "user provided" in caplog.text
+        assert "cached" not in caplog.text
+        assert "marker search" not in caplog.text

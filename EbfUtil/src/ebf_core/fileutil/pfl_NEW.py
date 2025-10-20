@@ -153,7 +153,7 @@ class ProjectFileLocator:
         self._validate_markers(markers)
 
         start = self._detect_start_path()
-        logger.debug("Project root search start: %s", start)
+        logger.debug("Starting marker search for project root")
 
         current = start
         found: Optional[Path] = None
