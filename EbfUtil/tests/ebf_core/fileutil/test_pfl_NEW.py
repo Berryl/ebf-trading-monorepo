@@ -5,9 +5,6 @@ import pytest
 
 from ebf_core.fileutil.pfl_NEW import ProjectFileLocator, logger
 
-logger.addHandler(logging.FileHandler('test.log', mode='w'))
-logger.setLevel(logging.DEBUG)
-
 @pytest.fixture
 def sut() -> ProjectFileLocator:
     return ProjectFileLocator()
@@ -62,6 +59,7 @@ class TestWithMarkers:
 class TestGetProjectRoot:
 
     def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
         sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
 
         assert "user provided" in caplog.text
@@ -70,6 +68,7 @@ class TestGetProjectRoot:
         assert "marker search" not in caplog.text
 
     def test_markers_are_used_when_no_project_root_is_available(self, sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
         sut.get_project_root()
 
         assert "user provided" not in caplog.text
@@ -78,12 +77,14 @@ class TestGetProjectRoot:
         assert "marker search" in caplog.text
 
     def test_default_markers_can_determine_the_project_root(self, sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
         found = sut.get_project_root()
         assert found.exists()
 
         assert "Found marker '.git'" in caplog.text
 
     def test_the_start_path_is_returned_if_the_marker_search_fails(self, sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
         found = sut.with_markers(["blah"]).get_project_root()
         assert found.exists()
 
