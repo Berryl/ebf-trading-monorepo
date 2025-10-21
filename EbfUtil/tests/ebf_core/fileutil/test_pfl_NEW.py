@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from platform import android_ver
 
 import pytest
 
@@ -37,7 +38,7 @@ class TestWithProjectRoot:
 
     def test_with_project_root_when_arg_is_none_and_use_cwd_is_true(self, sut, tmp_path):
         sut_with_cwd = sut.with_project_root(None, use_cwd_as_root=True)
-        assert sut_with_cwd._project_root == Path.cwd()
+        assert sut_with_cwd._project_root == Path.cwd().resolve()
 
 
 
@@ -86,7 +87,7 @@ class TestGetProjectRoot:
     def test_the_start_path_is_returned_if_the_marker_search_fails(self, sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
         found = sut.with_markers(["blah"]).get_project_root()
-        assert found.exists()
+        assert found.exists() and found == sut._detect_start_path()
 
         assert "Found marker" not in caplog.text
 
