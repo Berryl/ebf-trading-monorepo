@@ -94,3 +94,13 @@ class TestGetProjectRoot:
     def test_markers_are_validated(self, sut):
         with pytest.raises(ValueError, match="Marker list must not be empty"):
             sut.with_markers([]).get_project_root()
+
+    def test_cached_root_used_on_second_call(self, sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
+        sut.get_project_root()  # the first call has no cache and so performs the search
+        assert "cached" not in caplog.text
+
+        caplog.clear()
+        sut.get_project_root()  # the second call should use cache
+        assert "cached" in caplog.text
+
