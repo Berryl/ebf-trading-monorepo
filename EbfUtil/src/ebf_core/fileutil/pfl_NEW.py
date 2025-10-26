@@ -80,26 +80,16 @@ class ProjectFileLocator:
         else:
             new_root = None
 
-        return replace(
-            self,
-            _project_root=new_root,
-            _use_cwd_as_root=new_flag,
-            _cached_project_root=None,
-            _cached_project_file=None,
-        )
+        return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
+                       _cached_project_root=None, _cached_project_file=None, )
 
     def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> Self:
         """
         Return a new locator with updated project-root markers and optional priority marker.
         """
         new_markers = None if markers is None else list(markers)
-        return replace(
-            self,
-            _markers=new_markers,
-            _priority_marker=priority,
-            _cached_project_root=None,
-            _cached_project_file=None,
-        )
+        return replace(self, _markers=new_markers, _priority_marker=priority,
+                       _cached_project_root=None, _cached_project_file=None, )
 
     def with_project_file(self, relpath: Optional[Path | str]) -> ProjectFileLocator:
         """

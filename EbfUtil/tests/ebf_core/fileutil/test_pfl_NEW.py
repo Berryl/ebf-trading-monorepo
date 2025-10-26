@@ -55,6 +55,12 @@ class TestWithMarkers:
         sut_clone = sut.with_markers(['blah'])
         assert sut_clone is not sut
 
+    def test_with_markers_is_immutable(self, sut):
+        m = [".git"]
+        s2 = sut.with_markers(m, priority=".git")
+        assert sut._markers is None
+        assert s2._markers == m and s2._priority_marker == ".git"
+
 
 @pytest.mark.integration
 class TestGetProjectRoot:
