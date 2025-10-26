@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 from platform import android_ver
 
@@ -110,3 +111,24 @@ class TestGetProjectRoot:
         sut.get_project_root()  # the second call should use cache
         assert "cached" in caplog.text
 
+
+
+@pytest.mark.integration
+class TestWithProjectFile:
+
+    def test_project_file_relpath_default_is_none(self, sut):
+        assert sut._project_file_relpath is None
+
+    def test_cached_project_file_default_is_none(self, sut):
+        assert sut._cached_project_file is None
+
+    def test_with_project_file_creates_new_instance(self, sut):
+        sut_clone = sut.with_project_file(None)
+        assert sut_clone is not sut
+
+    def test_absolute_project_file_paths_are_not_allowed(self, sut, tmp_path):
+        assert tmp_path.is_absolute()
+
+        msg = re.escape("Path must be a *relative* path from the project root")
+        with pytest.raises(ValueError, match=msg):
+            sut.with_project_file(tmp_path)

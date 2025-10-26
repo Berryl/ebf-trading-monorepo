@@ -8,10 +8,6 @@ from ebf_core.fileutil.project_file_locator import ProjectFileLocator
 
 VALID_SEARCH_PATH = r'tests/ebf_core/fileutil'  # noqa
 
-# Configure logging for the test
-handler = logging.FileHandler('test.log')
-logging.getLogger('ebf_core.fileutil.project_file_locator').addHandler(handler)
-
 
 @pytest.fixture
 def sut() -> ProjectFileLocator:
