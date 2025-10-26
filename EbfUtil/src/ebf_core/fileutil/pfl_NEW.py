@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Optional, Iterable, List, Self
+from typing import Optional, Iterable, List
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class ProjectFileLocator:
 
     # ======== Fluent "builder" methods (return NEW instances) ========
 
-    def with_project_root(self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> Self:
+    def with_project_root(self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> ProjectFileLocator:
         """
         Return a new locator with an explicit project root (or cleared).
 
@@ -83,7 +83,7 @@ class ProjectFileLocator:
         return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> Self:
+    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> ProjectFileLocator:
         """
         Return a new locator with updated project-root markers and optional priority marker.
         """
