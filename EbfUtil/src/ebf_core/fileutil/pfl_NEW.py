@@ -182,33 +182,56 @@ class ProjectFileLocator:
             *,
             must_exist: bool = True,
             use_cache: bool = True,
+            restrict_to_root: bool = True,
     ) -> Optional[Path]:
         """
         Resolve the project file path.
 
         Precedence:
-          - `relpath` argument on this call
-          - instance default `_project_file_relpath`
+          - per-call `relpath` argument (absolute or relative)
+          - instance default `_project_file_relpath` (must be relative)
           - None (returns None)
 
         Args:
-            relpath: Relative path from project root (string or Path-like). If None,
-                     the instance default (if any) is used.
-            must_exist: If True, raise FileNotFoundError when the resolved file is missing.
-            use_cache: If True and no per-call relpath is provided, use/set a tiny cache.
+            relpath: If absolute, it is validated and returned directly.
+                     If relative, it is resolved against the project root.
+            must_exist: If True, raise FileNotFoundError when the file is missing.
+            use_cache: Cache only applies when *no* per-call relpath is provided.
+            restrict_to_root: If True, relative paths that resolve *outside*
+                              the project root raise ValueError.
 
         Returns:
-            Absolute resolved Path, or None when no relative path is configured.
+            Absolute resolved Path, or None if no path is configured.
         """
+        # Choose the spec
         chosen_rel = Path(relpath) if relpath is not None else self._project_file_relpath
         if chosen_rel is None:
             return None
 
+        # Cache only for the sticky default (no per-call relpath)
         if use_cache and relpath is None and self._cached_project_file is not None:
+            logger.debug("Returning cached project file: %s", self._cached_project_file)
             return self._cached_project_file
 
+        # Absolute per-call override: validate and return
+        if relpath is not None and chosen_rel.is_absolute():
+            path = chosen_rel.resolve()
+            logger.debug("Using per-call absolute project file: %s", path)
+            if must_exist and not path.exists():
+                raise FileNotFoundError(f"Project file not found: {path}")
+            return path
+
+        # Otherwise resolve against root
         root = self.get_project_root(use_cache=use_cache)
         path = (root / chosen_rel).resolve()
+
+        if restrict_to_root and not _is_within(path, root):
+            raise ValueError(f"Resolved path escapes project root: {path} (root: {root})")
+
+        if relpath is None:
+            logger.debug("Using sticky project file from instance default: %s", path)
+        else:
+            logger.debug("Using per-call relative project file: %s", path)
 
         if must_exist and not path.exists():
             raise FileNotFoundError(f"Project file not found: {path}")
@@ -246,3 +269,16 @@ class ProjectFileLocator:
         if "site-packages" in parts_lower or "dist-packages" in parts_lower:
             return Path.cwd().resolve()
         return here.parent  # start from the module’s directory
+
+    @staticmethod
+    def _is_within(path: Path, root: Path) -> bool:
+        try:
+            # Python 3.9+: Path.is_relative_to
+            return path.is_relative_to(root)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Fallback for older Python
+            try:
+                path.relative_to(root)
+                return True
+            except ValueError:
+                return False
