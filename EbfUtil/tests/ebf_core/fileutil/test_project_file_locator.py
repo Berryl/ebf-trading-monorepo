@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from pathlib import Path
 
@@ -144,17 +145,22 @@ class TestWithProjectFile:
         with pytest.raises(AssertionError, match=msg):
             sut.with_project_file("")
 
-    def test_dot_path_is_trapped(self, sut):
-        msg = re.escape("Path '.' is not allowed as a project file (must be a file path relative to the project root).")
+    def test_dot_path_is_not_allowed(self, sut):
+        msg = re.escape("must be a *relative* path from the project root")
         with pytest.raises(ValueError, match=msg):
             sut.with_project_file(".")
 
-    def test_absolute_project_file_paths_are_not_allowed(self, sut, tmp_path):
+    def test_absolute_project_file_path_is_not_allowed(self, sut, tmp_path):
         assert tmp_path.is_absolute()
 
-        msg = re.escape("Path must be a *relative* path from the project root")
+        msg = re.escape("must be a *relative* path from the project root")
         with pytest.raises(ValueError, match=msg):
             sut.with_project_file(tmp_path)
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only quirk")
+    def test_drive_anchored_relative_is_rejected(self, sut):
+        with pytest.raises(ValueError):
+            sut.with_project_file(Path("C:foo.txt"))
 
 @pytest.mark.integration
 class TestGetProjectFile:

@@ -108,19 +108,28 @@ class ProjectFileLocator:
         if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
 
-        if isinstance(relpath, str):
+        if relpath is _USE_CLASS_DEFAULT:
+            rp = Path(self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+
+        elif isinstance(relpath, str):
             ensure_not_empty_str(relpath, "relpath")
+            rp = Path(relpath).expanduser()
+        else:
+            rp = Path(relpath)
 
-        path = relpath if relpath is not _USE_CLASS_DEFAULT else self.DEFAULT_PROJECT_FILE_RELATIVE_PATH
-        rp = Path(path).expanduser()
-
-        if rp == Path("."):
-            raise ValueError(
-                "Path '.' is not allowed as a project file (must be a file path relative to the project root).")
-        if rp.is_absolute():
-            raise ValueError("Path must be a *relative* path from the project root.")
-
+        self._ensure_relative_path(rp)
         return replace(self, _project_file_relpath=rp, _cached_project_file=None)
+
+    @staticmethod
+    def _ensure_relative_path(path: Path) -> None:
+        err = "The path must be a *relative* path from the project root."
+        if path == Path("."):
+            s = f"'.' is not allowed as a project file; {err}."
+            raise ValueError(s)
+        if getattr(path, "drive", "") or getattr(path, "root", ""):
+            raise ValueError(err)
+        if path.is_absolute():
+            raise ValueError(err)
 
     # endregion
 
