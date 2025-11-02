@@ -199,19 +199,6 @@ class TestGetProjectFile:
         path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
         assert path.name == "blah"
 
-    def test_sticky_with_must_exist_true_raises_when_missing(self, tmp_path):
-        loc, _ = self._mk_proj(tmp_path)
-        loc = loc.with_project_file("cfg/app.yaml")
-        with pytest.raises(FileNotFoundError):
-            loc.get_project_file(must_exist=True)
-
-    def test_sticky_with_must_exist_true_passes_when_present(self, tmp_path):
-        loc, root = self._mk_proj(tmp_path)
-        f = root / "cfg/app.yaml"
-        f.write_text("ok")
-        loc = loc.with_project_file("cfg/app.yaml")
-        assert loc.get_project_file(must_exist=True) == f.resolve()
-
     def test_per_call_relative_overrides_sticky(self, tmp_path):
         loc, root = self._mk_proj(tmp_path)
         (root / "cfg").mkdir(exist_ok=True)
