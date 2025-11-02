@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, replace
 from itertools import count
 from pathlib import Path
-from typing import Optional, Iterable, List, ClassVar
+from typing import Optional, Iterable, List, ClassVar, Self
 
 from ebf_core.guards.guards import ensure_not_empty_str
 
@@ -62,7 +62,7 @@ class ProjectFileLocator:
 
     # region Fluent "builder" methods (return NEW instances)
     def with_project_root(
-            self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> ProjectFileLocator:
+            self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> Self:
         """
         Return a new locator with an explicit project root (or cleared).
 
@@ -88,7 +88,7 @@ class ProjectFileLocator:
         return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> ProjectFileLocator:
+    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> Self:
         """
         Return a new locator with updated project-root markers and optional priority marker.
         """
@@ -96,7 +96,7 @@ class ProjectFileLocator:
         return replace(self, _markers=new_markers, _priority_marker=priority,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> ProjectFileLocator:
+    def with_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> Self:
         """
         Return a new locator with a sticky project file relative to the project root (using relpath).
 
@@ -108,10 +108,15 @@ class ProjectFileLocator:
         if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
 
-        if isinstance(relpath, str) and relpath == "":
-            raise ValueError("Empty relative path is not allowed.")
+        if isinstance(relpath, str):
+            ensure_not_empty_str(relpath, "relpath")
 
-        rp = Path(relpath if relpath is not _USE_CLASS_DEFAULT else self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+        path = relpath if relpath is not _USE_CLASS_DEFAULT else self.DEFAULT_PROJECT_FILE_RELATIVE_PATH
+        rp = Path(path).expanduser()
+
+        if rp == Path("."):
+            raise ValueError(
+                "Path '.' is not allowed as a project file (must be a file path relative to the project root).")
         if rp.is_absolute():
             raise ValueError("Path must be a *relative* path from the project root.")
 

@@ -139,6 +139,16 @@ class TestWithProjectFile:
         result = result.with_project_file(None)
         assert result._project_file_relpath is None
 
+    def test_empty_str_args_are_trapped(self, sut):
+        msg = re.escape("Arg 'relpath' cannot be an empty string")
+        with pytest.raises(AssertionError, match=msg):
+            sut.with_project_file("")
+
+    def test_dot_path_is_trapped(self, sut):
+        msg = re.escape("Path '.' is not allowed as a project file (must be a file path relative to the project root).")
+        with pytest.raises(ValueError, match=msg):
+            sut.with_project_file(".")
+
     def test_absolute_project_file_paths_are_not_allowed(self, sut, tmp_path):
         assert tmp_path.is_absolute()
 
