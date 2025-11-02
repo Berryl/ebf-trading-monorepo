@@ -110,3 +110,37 @@ class TestGetProjectRoot:
         sut.get_project_root()  # the second call should use cache
         assert "cached" in caplog.text
 
+@pytest.mark.integration
+class TestWithProjectFile:
+
+    def test_relpath_default_is_none(self, sut):
+        assert sut._project_file_relpath is None
+
+    def test_cached_project_file_default_is_none(self, sut):
+        assert sut._cached_project_file is None
+
+    def test_a_new_instance_is_created(self, sut):
+        sut_clone = sut.with_project_file()
+        assert sut_clone is not sut
+
+    def test_arg_sets_the_relpath(self, sut):
+        result = sut.with_project_file("pyproject.toml")
+        assert result._project_file_relpath == Path("pyproject.toml")
+
+    def test_default_arg_is_known_relpath(self, sut):
+        result = sut.with_project_file()
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
+
+    def test_none_arg_clears_the_relpath(self, sut):
+        result = sut.with_project_file()
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
+
+        result = result.with_project_file(None)
+        assert result._project_file_relpath is None
+
+    def test_absolute_project_file_paths_are_not_allowed(self, sut, tmp_path):
+        assert tmp_path.is_absolute()
+
+        msg = re.escape("Path must be a *relative* path from the project root")
+        with pytest.raises(ValueError, match=msg):
+            sut.with_project_file(tmp_path)
