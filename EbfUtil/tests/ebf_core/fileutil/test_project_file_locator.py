@@ -175,15 +175,22 @@ class TestGetProjectFile:
         loc = ProjectFileLocator().with_project_root(root)
         return loc, root
 
-    def test_none_when_no_sticky_and_no_per_call(self, sut):
-        assert sut.get_project_file(must_exist=False) is None
-        assert sut.with_project_file(None).get_project_file(must_exist=False) is None
+    @pytest.fixture
+    def sut_with_root(self, tmp_path: Path) -> ProjectFileLocator:
+        return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
 
-    def test_sticky_relative_resolves_against_root(self, tmp_path):
-        loc, root = self._mk_proj(tmp_path)
-        loc = loc.with_project_file("cfg/app.yaml")
-        p = loc.get_project_file(must_exist=False)
-        assert p == (root / "cfg/app.yaml").resolve()
+    def test_when_no_relpath_then_return_is_none(self, sut_with_root):
+        assert sut_with_root.project_file_relpath is None
+
+        assert sut_with_root.get_project_file() is None
+
+    def test_when_default_file_is_used(self, sut_with_root):
+        path = sut_with_root.with_project_file().get_project_file()
+        assert path.exists() and path.name == "config.yaml"
+
+    def test_when_nonexistent_file_is_used_without_requiring_existence(self, sut_with_root):
+        path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
+        assert path.name == "blah"
 
     def test_sticky_with_must_exist_true_raises_when_missing(self, tmp_path):
         loc, _ = self._mk_proj(tmp_path)

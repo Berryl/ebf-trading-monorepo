@@ -100,10 +100,11 @@ class ProjectFileLocator:
         """
         Return a new locator with a sticky project file relative to the project root (using relpath).
 
-        relpath:
-        - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
-        - None: clear the sticky default
-        - Path/str: set that *relative* path
+        Args
+            relpath:
+            - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
+            - None: clear the sticky default
+            - Path/str: set that *relative* path
         """
         if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
@@ -188,13 +189,8 @@ class ProjectFileLocator:
             object.__setattr__(self, "_cached_project_root", result)
         return result
 
-    def get_project_file(
-            self,
-            relpath: Optional[Path | str] = None,
-            *,
-            must_exist: bool = True,
-            use_cache: bool = True,
-            restrict_to_root: bool = True,
+    def get_project_file(self, relpath: Optional[Path | str] = None, *,
+            must_exist: bool = True, use_cache: bool = True, restrict_to_root: bool = True,
     ) -> Optional[Path]:
         """
         Resolve the project file path.
