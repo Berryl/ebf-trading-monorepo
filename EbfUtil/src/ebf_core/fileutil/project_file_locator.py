@@ -32,6 +32,7 @@ class ProjectFileLocator:
       - If running from an installed package path (contains "site-packages"/"dist-packages"),
         the search starts at `Path.cwd()`. Otherwise, we start at `Path(__file__)`.
     """
+
     # region Class-level configuration (customize via subclassing or patching)
     DEFAULT_MARKERS: List[str] = field(
         default_factory=lambda: [
