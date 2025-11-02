@@ -8,6 +8,8 @@ from itertools import count
 from pathlib import Path
 from typing import Optional, Iterable, List, ClassVar
 
+from ebf_core.guards.guards import ensure_not_empty_str
+
 logger = logging.getLogger(__name__)
 
 _USE_CLASS_DEFAULT = object()  # module-level sentinel (see with_project_file)
@@ -105,6 +107,9 @@ class ProjectFileLocator:
         """
         if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
+
+        if isinstance(relpath, str) and relpath == "":
+            raise ValueError("Empty relative path is not allowed.")
 
         rp = Path(relpath if relpath is not _USE_CLASS_DEFAULT else self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
         if rp.is_absolute():
