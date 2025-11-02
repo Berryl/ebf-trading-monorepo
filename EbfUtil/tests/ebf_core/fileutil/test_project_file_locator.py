@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 import pytest
+from jaraco.functools import result_invoke
 
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
@@ -123,17 +124,17 @@ class TestWithProjectFile:
         sut_clone = sut.with_project_file()
         assert sut_clone is not sut
 
+    def test_default_arg_is_known_default_path(self, sut):
+        result = sut.with_project_file()
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+
     def test_arg_sets_the_relpath(self, sut):
         result = sut.with_project_file("pyproject.toml")
         assert result._project_file_relpath == Path("pyproject.toml")
 
-    def test_default_arg_is_known_relpath(self, sut):
-        result = sut.with_project_file()
-        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
-
     def test_none_arg_clears_the_relpath(self, sut):
         result = sut.with_project_file()
-        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
         result = result.with_project_file(None)
         assert result._project_file_relpath is None
@@ -144,3 +145,9 @@ class TestWithProjectFile:
         msg = re.escape("Path must be a *relative* path from the project root")
         with pytest.raises(ValueError, match=msg):
             sut.with_project_file(tmp_path)
+
+@pytest.mark.integration
+class TestGetProjectFile:
+
+    def test_all_defaults(self, sut):
+        result = sut.with_project_root(None, use_cwd_as_root=True).with_project_file().get_project_file(must_exist=False)

@@ -6,10 +6,11 @@ import logging
 from dataclasses import dataclass, replace, field
 from itertools import count
 from pathlib import Path
-from typing import Optional, Iterable, List
+from typing import Optional, Iterable, List, ClassVar
 
 logger = logging.getLogger(__name__)
 
+_USE_CLASS_DEFAULT = object()  # module-level sentinel (see with_project_file)
 
 @dataclass(frozen=True)
 class ProjectFileLocator:
@@ -30,23 +31,16 @@ class ProjectFileLocator:
 
     Start path detection for marker search:
       - If running from an installed package path (contains "site-packages"/"dist-packages"),
-        the search starts at `Path.cwd()`. Otherwise, we start at `Path(__file__)`.
+        the search starts at `Path.cwd()`. Otherwise, we start at module’s directory.
     """
 
     # region Class-level configuration (customize via subclassing or patching)
-    DEFAULT_MARKERS: List[str] = field(
-        default_factory=lambda: [
-            ".git",
-            "pyproject.toml",
-            "requirements.txt",
-            ".idea",
-            ".vscode",
-            "setup.cfg",
-        ]
-    )
-    DEFAULT_PROJECT_FILE: str = "resources/config.yaml"
-    UNLIMITED_DEPTH: int = -1
-    MAX_SEARCH_DEPTH_DEFAULT: int = 5
+    DEFAULT_MARKERS: ClassVar[list[str]] = [
+        ".git", "pyproject.toml", "requirements.txt", ".idea", ".vscode", "setup.cfg"
+    ]
+    DEFAULT_PROJECT_FILE_RELATIVE_PATH: ClassVar[str] = "resources/config.yaml"
+    UNLIMITED_DEPTH: ClassVar[int] = -1
+    MAX_SEARCH_DEPTH_DEFAULT: ClassVar[int] = 5
     # endregion
 
     # region configuration (value fields)
@@ -99,21 +93,26 @@ class ProjectFileLocator:
         return replace(self, _markers=new_markers, _priority_marker=priority,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_project_file(self, relpath: Optional[Path | str] = DEFAULT_PROJECT_FILE) -> ProjectFileLocator:
+    def with_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> ProjectFileLocator:
         """
-        Return a new locator with a default project file (relative to the project root).
-        Call without any arg to make "resources/config.yaml" the default (a common best practice).
-        Call with None to clear the default.
+        Return a new locator with a the passed are to have sticky project file relative to the project root.
 
-        Notes:
-            - The sticky default must be a path that is *relative* to the project root.
-            Use a per-call override in get_project_file(...) if you need an absolute path.
+        relpath:
+      - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
+      - None: clear the sticky default
+      - Path/str: set that *relative* path
         """
-        if relpath is not None:
-            relpath = Path(relpath)
-            if relpath.is_absolute():
-                raise ValueError("Path must be a *relative* path from the project root.")
-        return replace(self, _project_file_relpath=relpath, _cached_project_file=None)
+        if relpath is _USE_CLASS_DEFAULT:
+            rp = Path(self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+        elif relpath is None:
+            return replace(self, _project_file_relpath=None, _cached_project_file=None)
+        else:
+            rp = Path(relpath)
+
+        if rp.is_absolute():
+            raise ValueError("Path must be a *relative* path from the project root.")
+
+        return replace(self, _project_file_relpath=rp, _cached_project_file=None)
 
     # endregion
 
@@ -233,6 +232,7 @@ class ProjectFileLocator:
         path = (root / chosen_rel).resolve()
 
         if restrict_to_root and not self._is_within(path, root):
+            logger.debug("Project file resolved outside root: %s (root: %s)", path, root)
             raise ValueError(f"Resolved path escapes project root: {path} (root: {root})")
 
         if relpath is None:
