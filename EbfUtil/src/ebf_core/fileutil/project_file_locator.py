@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, replace, field
+from dataclasses import dataclass, replace
 from itertools import count
 from pathlib import Path
 from typing import Optional, Iterable, List, ClassVar
@@ -11,6 +11,7 @@ from typing import Optional, Iterable, List, ClassVar
 logger = logging.getLogger(__name__)
 
 _USE_CLASS_DEFAULT = object()  # module-level sentinel (see with_project_file)
+
 
 @dataclass(frozen=True)
 class ProjectFileLocator:
@@ -31,7 +32,7 @@ class ProjectFileLocator:
 
     Start path detection for marker search:
       - If running from an installed package path (contains "site-packages"/"dist-packages"),
-        the search starts at `Path.cwd()`. Otherwise, we start at module’s directory.
+        the search starts at `Path.cwd()`. Otherwise, we start at the module’s directory.
     """
 
     # region Class-level configuration (customize via subclassing or patching)
@@ -95,20 +96,17 @@ class ProjectFileLocator:
 
     def with_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> ProjectFileLocator:
         """
-        Return a new locator with a the passed are to have sticky project file relative to the project root.
+        Return a new locator with a sticky project file relative to the project root (using relpath).
 
         relpath:
-      - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
-      - None: clear the sticky default
-      - Path/str: set that *relative* path
+        - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
+        - None: clear the sticky default
+        - Path/str: set that *relative* path
         """
-        if relpath is _USE_CLASS_DEFAULT:
-            rp = Path(self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
-        elif relpath is None:
+        if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
-        else:
-            rp = Path(relpath)
 
+        rp = Path(relpath if relpath is not _USE_CLASS_DEFAULT else self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
         if rp.is_absolute():
             raise ValueError("Path must be a *relative* path from the project root.")
 
@@ -290,6 +288,7 @@ class ProjectFileLocator:
                 return True
             except ValueError:
                 return False
+
     # endregion
 
     # region overrides
