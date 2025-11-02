@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from ebf_core.cfgutil import ConfigService
-from ebf_core.fileutil.project_file_locator import ProjectFileLocator
+from ebf_core.fileutil.project_file_locator_OLD import ProjectFileLocator
 
 
 class ConfigServiceFixture:

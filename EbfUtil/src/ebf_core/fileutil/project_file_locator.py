@@ -1,310 +1,299 @@
-import logging
-import os
-from pathlib import Path
-from typing import Self, Union
+# ebf_core/fileutil/project_file_locator.py
 
-BASE_DIR_STRUCTURE = Path('Dropbox') / 'Green Olive' / 'Investing'  # intentionally domain-specific but overridable
-UNLIMITED_DEPTH = 100
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, replace, field
+from itertools import count
+from pathlib import Path
+from typing import Optional, Iterable, List
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
 class ProjectFileLocator:
     """
-    Utility for locating files in projects.
+    Fluent, builder-style locator for project roots and project files.
 
-    Supports *two clear resolution strategies*:
+    Immutability model:
+      - Instances are *value objects*. Each `with_*` method returns a **new** instance.
+      - Internal caches (_cached_project_root/_cached_project_file) are not part of the
+        value identity and may be set internally for performance.
 
-    1. Project-root-based:
-       - Uses either a marker search, Path.cwd(), or an explicit override to locate the project root.
-       - Resolves base_structure relative to that root. This is typical but not limited to testing files
+    Precedence:
+      Project root:
+        1) explicit `_project_root` (set by with_project_root)
+        2) (not stored) marker search (see get_project_root) — see the start path detection below.
+      Project file:
+        per-call argument > instance default `_project_file_relpath` > None
 
-    2. User-based:
-       - Always resolves to USERPROFILE + base_structure.
-       - Ignores project root or markers entirely.
-       - This is typical of production files used outside any python project
-
-    Example usage:
-
-        # For project-local files:
-        util.get_file_from_project_root("TestingWb.xlsm")
-
-        # For user-based files:
-        util.get_file_from_user_base_dir("Dev/constants.xlsm")
-
-    Note: path support is currently Windows only
+    Start path detection for marker search:
+      - If running from an installed package path (contains "site-packages"/"dist-packages"),
+        the search starts at `Path.cwd()`. Otherwise, we start at `Path(__file__)`.
     """
+    # region Class-level configuration (customize via subclassing or patching)
+    DEFAULT_MARKERS: List[str] = field(
+        default_factory=lambda: [
+            ".git",
+            "pyproject.toml",
+            "requirements.txt",
+            ".idea",
+            ".vscode",
+            "setup.cfg",
+        ]
+    )
+    DEFAULT_PROJECT_FILE: str = "resources/config.yaml"
+    UNLIMITED_DEPTH: int = -1
+    MAX_SEARCH_DEPTH_DEFAULT: int = 5
+    # endregion
 
-    def __init__(self, base_structure: Path | None = None,
-                 markers: list[str] | None = None, priority_marker: str | None = None,
-                 project_root: Path | None = None, use_cwd_as_root=False):
+    # region configuration (value fields)
+    _project_root: Optional[Path] = None
+    _use_cwd_as_root: bool = False  # retained for API clarity; affects with_project_root(None, use_cwd_as_root=True)
+    _markers: Optional[List[str]] = None
+    _priority_marker: Optional[str] = None
+    _project_file_relpath: Optional[Path] = None
+    # endregion
+
+    # region caches (excluded from identity)
+    _cached_project_root: Optional[Path] = None
+    _cached_project_file: Optional[Path] = None
+
+    # endregion
+
+    # region Fluent "builder" methods (return NEW instances)
+    def with_project_root(
+            self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> ProjectFileLocator:
         """
-        Initialize the ProjectFileLocator.
+        Return a new locator with an explicit project root (or cleared).
 
         Args:
-            base_structure: Optional override for the standard Investing path.
-                note: different base structures should use different FileUtil instances
-            markers: Optional list of files/directories that indicate the project root.
-            priority_marker: Optional single marker to prioritize.
-            project_root: Explicit path to force as project root.
-            use_cwd_as_root: if True, set the project_root_override to the current working directory.
+            root: The absolute (or relative) path to use as project root, or None.
+            use_cwd_as_root: If provided, update the sticky flag on the clone.
+                If `root is None` and this (or current) flag is True, the clone captures
+                `Path.cwd().resolve()` as the explicit root.
 
-        Note:
-            IF the cwd is changed dynamically after initialization, the project_root_override will not be updated,
-            and set_project_root_override must be called explicitly.
-         """
-        self.base_structure = base_structure or BASE_DIR_STRUCTURE
-        self._cached_project_root = None
-        self._common_project_markers: list[str] = markers
-        self._priority_marker = priority_marker
-        self._project_root = project_root
-        self._use_cwd_as_root = use_cwd_as_root
-
-        self.with_project_root(self._project_root, self._use_cwd_as_root)
-
-    def with_project_root(self, root: Path | None, use_cwd_as_root: bool | None = None) -> Self:
+        Notes:
+            - This DOES NOT mutate the instance. A new instance is returned.
+            - Caches are cleared on the clone.
         """
-        Explicitly set the project root for this instance, overriding a marker search. Passing None with
-        _use_cwd_as_root=True captures the current working directory; otherwise clears the override.
+        new_flag = self._use_cwd_as_root if use_cwd_as_root is None else bool(use_cwd_as_root)
 
-        Use this when your consuming project has a known root that you want resolution to be relative to.
-
-        Example:
-            util.set_project_root_override(Path(__file__).parent.parent)
-
-        Args:
-            root: The path to treat as the project root.
-            use_cwd_as_root: if True, set the project_root_override to the current working directory. If None,
-            use whatever was set at initialization.
-        """
         if root is not None:
-            self._project_root = root.resolve()
+            new_root = Path(root).resolve()
+        elif new_flag:
+            new_root = Path.cwd().resolve()
         else:
-            if self._use_cwd_as_root or use_cwd_as_root:
-                self._project_root = Path.cwd().resolve()
-            else:
-                logger.debug("project root override intentionally cleared (marker search will be used)")
-                self._project_root = None
+            new_root = None
 
-        self._cached_project_root = None  #reset cache
-        return self
+        return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
+                       _cached_project_root=None, _cached_project_file=None, )
 
-    @property
-    def common_project_markers(self) -> list[str]:
-        if self._common_project_markers is None:
-            self._common_project_markers = [
-                '.idea',  # PyCharm/IntelliJ
-                '.git',  # Git repository
-                'pyproject.toml',  # Modern Python projects
-                'setup.py',  # Traditional Python packages
-                'Pipfile',  # Pipenv projects
-                'poetry.lock',  # Poetry projects
-                'requirements.txt',  # Common in many Python projects
-                'Makefile',  # Build system
-                '.vscode'  # VS Code workspace
-            ]
-        return self._common_project_markers
-
-    def get_project_root(
-            self,
-            markers: list[str] | None = None,
-            use_cache: bool = True,
-            priority_marker: str | None = None,
-            max_search_depth: int = 5
-    ) -> Path:
+    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> ProjectFileLocator:
         """
-        Get the project root by ascending until any project marker is found.
+        Return a new locator with updated project-root markers and optional priority marker.
+        """
+        new_markers = None if markers is None else list(markers)
+        return replace(self, _markers=new_markers, _priority_marker=priority,
+                       _cached_project_root=None, _cached_project_file=None, )
 
-        The method searches upward from the current file's directory, checking for
-        project markers at each level. If a priority_marker is specified, it's
-        checked first at each level before checking the general markers list.
+    def with_project_file(self, relpath: Optional[Path | str] = DEFAULT_PROJECT_FILE) -> ProjectFileLocator:
+        """
+        Return a new locator with a default project file (relative to the project root).
+        Call without any arg to make "resources/config.yaml" the default (a common best practice).
+        Call with None to clear the default.
+
+        Notes:
+            - The sticky default must be a path that is *relative* to the project root.
+            Use a per-call override in get_project_file(...) if you need an absolute path.
+        """
+        if relpath is not None:
+            relpath = Path(relpath)
+            if relpath.is_absolute():
+                raise ValueError("Path must be a *relative* path from the project root.")
+        return replace(self, _project_file_relpath=relpath, _cached_project_file=None)
+
+    # endregion
+
+    # region Queries
+    def get_project_root(self, *, max_search_depth: int = MAX_SEARCH_DEPTH_DEFAULT, use_cache: bool = True, ) -> Path:
+        """
+        Get the project root directory.
+
+        Resolution order:
+          1) If an explicit root is set on this instance, return it.
+          2) Otherwise, perform a marker search upward from a detected start:
+             - If this module appears to be in site/dist-packages, start at CWD
+             - else start at this module's path
+             The first directory containing either the "priority" marker or any
+             marker from `markers` is returned.
 
         Args:
-            markers: Optional list of files/directories that indicate a project root.
-                    If None, a list of common markers will be used (see the common_project_markers property).
-            use_cache: If True, caches and reuses results for identical parameter sets.
-                      Set to False when markers might change between calls.
-            priority_marker: Optional single marker to check first at each directory level.
-                            Useful for prioritizing .git over requirements.txt, etc.
-            max_search_depth: Maximum number of parent directories to search before giving up.
-                             Default is 5 levels up from the current file.
-                             # Add: "Set to -1 for 'unlimited' search (use cautiously)"
-                             # unlimited means 100 levels (hardcoded for now)
+            max_search_depth: Maximum parent levels to ascend (UNLIMITED_DEPTH = -1).
+            use_cache: Return a cached result when available.
 
         Returns:
-            Path to the project root directory. Falls back to the directory
-            containing this file if no markers are found.
-
-        Raises:
-            ValueError: If markers contain empty strings or priority_marker is invalid.
-
-        Examples:
-             # Use default markers
-             pfl = ProjectFileLocator()
-             root = pfl.get_project_root()
-
-             # Prioritize Git repositories
-             root = pfl.get_project_root(priority_marker='.git')
-
-             # Custom markers without caching
-             root = pfl.get_project_root(markers=['.my_marker'], use_cache=False)
+            Absolute resolved Path to the project root, or the best-effort fallback.
         """
         if self._project_root is not None:
-            logger.debug(f"Using override project root: {self._project_root}")
-            return Path(self._project_root).resolve()
+            logger.debug("Returning user provided project root")
+            return self._project_root
 
-        if use_cache and markers is None and priority_marker is None and self._cached_project_root is not None:
-            logger.debug(f"Using cached project root: {self._cached_project_root}")
+        if use_cache and self._cached_project_root is not None:
+            logger.debug("Returning cached project root")
             return self._cached_project_root
 
-        effective_markers = markers or self.common_project_markers
-        logger.debug(f"Searching with markers: {effective_markers}")
+        markers = self._effective_markers()
+        self._validate_markers(markers)
 
-        if priority_marker is None:
-            priority_marker = self._priority_marker
+        start = self._detect_start_path()
+        logger.debug("Starting marker search for project root")
 
-        self._ensure_valid_marker_args(effective_markers, priority_marker)
+        current = start
+        found: Optional[Path] = None
 
-        try:
-            current_path = Path(__file__).resolve()
-        except NameError:
-            current_path = Path.cwd()
-            logger.warning("__file__ not available, using current working directory")
-
-        logger.debug(f"Searching for project root starting from: {current_path}")
-
-        result = None
-        search_range = range(UNLIMITED_DEPTH) if max_search_depth == -1 else range(max_search_depth)
-        for _ in search_range:
-            if priority_marker and (current_path / priority_marker).exists():
-                logger.debug(f"Found priority marker '{priority_marker}' at: {current_path}")
-                result = current_path.resolve()
+        depth_iter = count() if max_search_depth == self.UNLIMITED_DEPTH else range(max_search_depth)
+        for _ in depth_iter:
+            # Priority marker first
+            if self._priority_marker and (current / self._priority_marker).exists():
+                found = current.resolve()
+                logger.debug("Found priority marker '%s' at %s", self._priority_marker, found)
                 break
 
-            for marker in effective_markers:
-                if (current_path / marker).exists():
-                    logger.debug(f"Found marker '{marker}' at: {current_path}")
-                    result = current_path.resolve()
+            # Any marker
+            for m in markers:
+                if (current / m).exists():
+                    found = current.resolve()
+                    logger.debug("Found marker '%s' at %s", m, found)
                     break
 
-            if result:
+            if found:
                 break
 
-            parent_path = current_path.parent
-            if parent_path == current_path:
-                # Reached filesystem root
+            parent = current.parent
+            if parent == current:
                 break
-            current_path = parent_path
+            current = parent
 
-        if result:
-            if use_cache:
-                self._cached_project_root = result
-            return result
+        # Fallback if nothing matched: use start (common, predictable)
+        result = found or start
+        if use_cache:
+            object.__setattr__(self, "_cached_project_root", result)
+        return result
 
-        # Safe fallback that handles NameError
-        try:
-            fallback = Path(__file__).resolve().parent
-        except NameError:
-            fallback = Path.cwd()
-
-        logger.warning(f"No project markers found; falling back to: {fallback}")
-        return fallback
-
-    def get_file_from_project_root(
+    def get_project_file(
             self,
-            file_name: Union[str, Path],
-            search_path: Union[str, Path] = ""
-    ) -> Path:
+            relpath: Optional[Path | str] = None,
+            *,
+            must_exist: bool = True,
+            use_cache: bool = True,
+            restrict_to_root: bool = True,
+    ) -> Optional[Path]:
         """
-        Resolves a file path relative to the project root.
+        Resolve the project file path.
 
-        Example:
-            get_file_from_project_root("my file.txt", search_path="tests/data")
+        Precedence:
+          - per-call `relpath` argument (absolute or relative)
+          - instance default `_project_file_relpath` (must be relative)
+          - None (returns None)
 
-        Equivalent to:
-            project_root / search_path / file_name
+        Args:
+            relpath: If absolute, it is validated and returned directly.
+                     If relative, it is resolved against the project root.
+            must_exist: If True, raise FileNotFoundError when the file is missing.
+            use_cache: Cache only applies when *no* per-call relpath is provided.
+            restrict_to_root: If True, relative paths that resolve *outside*
+                              the project root raise ValueError.
 
-        Raises:
-            FileNotFoundError if the resulting file does not exist.
+        Returns:
+            Absolute resolved Path, or None if no path is configured.
         """
-        if isinstance(file_name, str):
-            file_name = Path(file_name)
-        if isinstance(search_path, str):
-            search_path = Path(search_path)
-
-        full_path = self.get_project_root() / search_path / file_name
-        self._ensure_path_exists(full_path, "project root", search_path)
-        return full_path
-
-    def try_get_file_from_project_root(
-            self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path | None:
-        """
-        See get_file_from_project_root, but returning None instead of raising FileNotFoundError.
-        """
-        try:
-            return self.get_file_from_project_root(file_name, search_path)
-        except FileNotFoundError:
+        # Choose the spec
+        chosen_rel = Path(relpath) if relpath is not None else self._project_file_relpath
+        if chosen_rel is None:
             return None
 
-    def get_user_base_dir(self) -> Path:
-        """
-        Returns the user's base structure directory path.
-        """
-        try:
-            username = os.getlogin()
-        except OSError:
-            username = os.environ.get('USERNAME', 'default')
-        return Path(f"C:/Users/{username}") / self.base_structure
+        # Cache only for the sticky default (no per-call relpath)
+        if use_cache and relpath is None and self._cached_project_file is not None:
+            logger.debug("Returning cached project file: %s", self._cached_project_file)
+            return self._cached_project_file
 
-    def get_file_from_user_base_dir(self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path:
-        """
-        Resolves a file path inside the user's base structure directory.
+        # Absolute per-call override: validate and return
+        if relpath is not None and chosen_rel.is_absolute():
+            path = chosen_rel.resolve()
+            logger.debug("Using per-call absolute project file: %s", path)
+            if must_exist and not path.exists():
+                raise FileNotFoundError(f"Project file not found: {path}")
+            return path
 
-        Accepts an optional search_path to specify subdirectories.
+        # Otherwise resolve against root
+        root = self.get_project_root(use_cache=use_cache)
+        path = (root / chosen_rel).resolve()
 
-        This ignores the project root entirely.
+        if restrict_to_root and not self._is_within(path, root):
+            raise ValueError(f"Resolved path escapes project root: {path} (root: {root})")
 
-        Raises:
-            FileNotFoundError if the file does not exist.
-        """
-        base = self.get_user_base_dir()
-        if isinstance(search_path, str):
-            search_path = Path(search_path)
-        full_path = base / search_path / file_name
-        self._ensure_path_exists(full_path, 'user', base)
-        return full_path
+        if relpath is None:
+            logger.debug("Using sticky project file from instance default: %s", path)
+        else:
+            logger.debug("Using per-call relative project file: %s", path)
 
-    def try_get_file_from_user_base_dir(
-            self, file_name: Union[str, Path], search_path: Union[str, Path] = "") -> Path | None:
-        """
-        Resolves a file path inside the user's base structure directory, returning a
-        path to the found file if found, or None if not.
+        if must_exist and not path.exists():
+            raise FileNotFoundError(f"Project file not found: {path}")
 
-        See get_file_from_user_base_dir.
-        """
-        try:
-            return self.get_file_from_user_base_dir(file_name, search_path)
-        except FileNotFoundError:
-            return None
+        if use_cache and relpath is None:
+            object.__setattr__(self, "_cached_project_file", path)
+        return path
+
+    # endregion
+
+    # region Helpers
+    def _effective_markers(self) -> List[str]:
+        return self._markers if self._markers is not None else self.DEFAULT_MARKERS
 
     @staticmethod
-    def _ensure_valid_marker_args(markers, priority_marker):
-        if not all(isinstance(m, str) and m.strip() for m in markers):
-            raise ValueError("Markers must be non-empty strings")
-        if priority_marker and (not isinstance(priority_marker, str) or not priority_marker.strip()):
-            raise ValueError("Priority marker must be a non-empty string")
+    def _validate_markers(markers: Iterable[str]) -> None:
+        if not markers:
+            raise ValueError("Marker list must not be empty. Provide markers or use defaults.")
 
     @staticmethod
-    def _ensure_path_exists(full_path: Path, context: str, folder: Union[str, Path]):
+    def _detect_start_path() -> Path:
         """
-        Consistently format and provide useful debug info
-        :param full_path: full path to validate
-        :param context: 'project root' :keyword 'user'
-        :param folder: specific folder the file should be in
-        :return:
+        Decide where to start the upward marker search from.
+
+        Logic:
+          - If this file looks like it's inside site/dist-packages (installed package),
+            start from CWD (so consumers like EbfLauncher are detected).
+          - Otherwise, start from this module's file location.
         """
-        if not full_path.exists():
-            folder_desc = folder.name if isinstance(folder, Path) else context
-            msg = (f"The '{context}' file '{full_path.name}' does not "
-                   f"exist in the '{folder_desc}' folder. [{(full_path.resolve())}]")
-            raise FileNotFoundError(msg)
+        try:
+            here = Path(__file__).resolve()
+        except NameError:
+            here = Path.cwd().resolve()
+
+        parts_lower = {p.lower() for p in here.parts}
+        if "site-packages" in parts_lower or "dist-packages" in parts_lower:
+            return Path.cwd().resolve()
+        return here.parent  # start from the module’s directory
+
+    @staticmethod
+    def _is_within(path: Path, root: Path) -> bool:
+        try:
+            # Python 3.9+: Path.is_relative_to
+            return path.is_relative_to(root)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Fallback for older Python
+            try:
+                path.relative_to(root)
+                return True
+            except ValueError:
+                return False
+    # endregion
+
+    # region overrides
+    def __repr__(self) -> str:
+        root = self._project_root or "<auto>"
+        file = self._project_file_relpath or "<none>"
+        return f"<ProjectFileLocator root={root} file={file}>"
+    # endregion
