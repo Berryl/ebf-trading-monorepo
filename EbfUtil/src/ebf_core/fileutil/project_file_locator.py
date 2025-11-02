@@ -120,17 +120,6 @@ class ProjectFileLocator:
         self._ensure_relative_path(rp)
         return replace(self, _project_file_relpath=rp, _cached_project_file=None)
 
-    @staticmethod
-    def _ensure_relative_path(path: Path) -> None:
-        err = "The path must be a *relative* path from the project root."
-        if path == Path("."):
-            s = f"'.' is not allowed as a project file; {err}."
-            raise ValueError(s)
-        if getattr(path, "drive", "") or getattr(path, "root", ""):
-            raise ValueError(err)
-        if path.is_absolute():
-            raise ValueError(err)
-
     # endregion
 
     # region Queries
@@ -307,6 +296,17 @@ class ProjectFileLocator:
                 return True
             except ValueError:
                 return False
+
+    @staticmethod
+    def _ensure_relative_path(path: Path) -> None:
+        err = "The path must be a *relative* path from the project root."
+        if path == Path("."):
+            s = f"'.' is not allowed as a project file; {err}."
+            raise ValueError(s)
+        if getattr(path, "drive", "") or getattr(path, "root", ""):
+            raise ValueError(err)
+        if path.is_absolute():
+            raise ValueError(err)
 
     # endregion
 

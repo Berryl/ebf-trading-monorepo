@@ -158,7 +158,7 @@ class TestWithProjectFile:
             sut.with_project_file(tmp_path)
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows-only quirk")
-    def test_drive_anchored_relative_is_rejected(self, sut):
+    def test_drive_anchored_relative_is_not_allowed(self, sut):
         with pytest.raises(ValueError):
             sut.with_project_file(Path("C:foo.txt"))
 
