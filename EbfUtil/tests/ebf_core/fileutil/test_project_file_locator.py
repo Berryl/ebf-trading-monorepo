@@ -116,7 +116,7 @@ class TestGetProjectRoot:
 class TestWithProjectFile:
 
     def test_relpath_default_is_none(self, sut):
-        assert sut._project_file_relpath is None
+        assert sut.project_file_relpath is None
 
     def test_cached_project_file_default_is_none(self, sut):
         assert sut._cached_project_file is None
@@ -127,18 +127,18 @@ class TestWithProjectFile:
 
     def test_default_arg_is_known_default_path(self, sut):
         result = sut.with_project_file()
-        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+        assert result.project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
     def test_arg_sets_the_relpath(self, sut):
         result = sut.with_project_file("pyproject.toml")
-        assert result._project_file_relpath == Path("pyproject.toml")
+        assert result.project_file_relpath == Path("pyproject.toml")
 
     def test_none_arg_clears_the_relpath(self, sut):
         result = sut.with_project_file()
-        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
+        assert result.project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
         result = result.with_project_file(None)
-        assert result._project_file_relpath is None
+        assert result.project_file_relpath is None
 
     def test_empty_str_args_are_trapped(self, sut):
         msg = re.escape("Arg 'relpath' cannot be an empty string")
@@ -168,8 +168,118 @@ class TestWithProjectFile:
 
 @pytest.mark.integration
 class TestGetProjectFile:
+    # helpers
+    def _mk_proj(self, tmp_path: Path) -> tuple[ProjectFileLocator, Path]:
+        root = tmp_path / "proj"
+        (root / "cfg").mkdir(parents=True)
+        loc = ProjectFileLocator().with_project_root(root)
+        return loc, root
 
-    def test_all_defaults(self, sut):
-        instance = sut.with_project_root(None, use_cwd_as_root=True).with_project_file()
-        path = instance.get_project_file(must_exist=False)
-        assert str(path).endswith("config.yaml")
+    def test_none_when_no_sticky_and_no_per_call(self, sut):
+        assert sut.get_project_file(must_exist=False) is None
+        assert sut.with_project_file(None).get_project_file(must_exist=False) is None
+
+    def test_sticky_relative_resolves_against_root(self, tmp_path):
+        loc, root = self._mk_proj(tmp_path)
+        loc = loc.with_project_file("cfg/app.yaml")
+        p = loc.get_project_file(must_exist=False)
+        assert p == (root / "cfg/app.yaml").resolve()
+
+    def test_sticky_with_must_exist_true_raises_when_missing(self, tmp_path):
+        loc, _ = self._mk_proj(tmp_path)
+        loc = loc.with_project_file("cfg/app.yaml")
+        with pytest.raises(FileNotFoundError):
+            loc.get_project_file(must_exist=True)
+
+    def test_sticky_with_must_exist_true_passes_when_present(self, tmp_path):
+        loc, root = self._mk_proj(tmp_path)
+        f = root / "cfg/app.yaml"
+        f.write_text("ok")
+        loc = loc.with_project_file("cfg/app.yaml")
+        assert loc.get_project_file(must_exist=True) == f.resolve()
+
+    def test_per_call_relative_overrides_sticky(self, tmp_path):
+        loc, root = self._mk_proj(tmp_path)
+        (root / "cfg").mkdir(exist_ok=True)
+        loc = loc.with_project_file("cfg/default.yaml")
+        override = "cfg/override.yaml"
+        (root / override).write_text("x")
+        p = loc.get_project_file(override, must_exist=True)
+        assert p == (root / override).resolve()
+
+    def test_per_call_absolute_allowed_bypasses_restrict_to_root(self, tmp_path):
+        loc, _ = self._mk_proj(tmp_path)
+        outside = tmp_path / "outside.yaml"
+        outside.write_text("x")
+        p = loc.get_project_file(outside, must_exist=True, restrict_to_root=True)
+        assert p == outside.resolve()
+
+    def test_per_call_relative_escape_blocked_by_restrict_to_root(self, tmp_path):
+        loc, root = self._mk_proj(tmp_path)
+        (root / "cfg").mkdir(exist_ok=True)
+        with pytest.raises(ValueError):
+            loc.get_project_file("../outside.yaml", must_exist=False, restrict_to_root=True)
+
+    def test_per_call_relative_escape_allowed_when_restrict_is_false(self, tmp_path):
+        loc, root = self._mk_proj(tmp_path)
+        outside = root.parent / "ok.yaml"
+        outside.write_text("x")
+        p = loc.get_project_file("../ok.yaml", must_exist=True, restrict_to_root=False)
+        assert p == outside.resolve()
+
+    def test_cached_used_only_for_sticky_default(self, tmp_path, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
+        loc, root = self._mk_proj(tmp_path)
+        f = root / "cfg/app.yaml"
+        f.write_text("ok")
+        loc = loc.with_project_file("cfg/app.yaml")
+
+        caplog.clear()
+        loc.get_project_file(must_exist=True)  # prime cache
+        caplog.clear()
+        loc.get_project_file(must_exist=True)  # should hit cache
+        assert "cached project file" in caplog.text.lower()
+
+        caplog.clear()
+        loc.get_project_file("cfg/app.yaml", must_exist=True)  # per-call: no cache
+        assert "cached project file" not in caplog.text.lower()
+
+    def test_use_cache_false_bypasses_cache(self, tmp_path, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
+        loc, root = self._mk_proj(tmp_path)
+        f = root / "cfg/app.yaml"; f.write_text("ok")
+        loc = loc.with_project_file("cfg/app.yaml")
+        loc.get_project_file(must_exist=True)  # prime
+        caplog.clear()
+        loc.get_project_file(must_exist=True, use_cache=False)
+        assert "cached project file" not in caplog.text.lower()
+
+    def test_per_call_empty_string_is_rejected(self, sut):
+        with pytest.raises(AssertionError, match="relpath"):
+            sut.get_project_file("", must_exist=False)
+
+    def test_per_call_dot_is_rejected(self, sut):
+        with pytest.raises(ValueError):
+            sut.get_project_file(Path("."), must_exist=False)
+
+    def test_per_call_tilde_expands(self, tmp_path, monkeypatch):
+        # Point HOME to tmp_path and create ~/cfg.yaml
+        home = tmp_path / "home"; home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
+        p = home / "cfg.yaml"; p.write_text("x")
+        sut = ProjectFileLocator().with_project_root(None, use_cwd_as_root=True)
+        got = sut.get_project_file("~/cfg.yaml", must_exist=True, restrict_to_root=False)
+        assert got == p.resolve()
+
+    def test_cache_is_cleared_when_sticky_changes(self, tmp_path, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
+        loc, root = self._mk_proj(tmp_path)
+        f1 = root / "cfg/a.yaml"; f1.write_text("a")
+        f2 = root / "cfg/b.yaml"; f2.write_text("b")
+
+        loc = loc.with_project_file("cfg/a.yaml")
+        loc.get_project_file(must_exist=True)
+        loc = loc.with_project_file("cfg/b.yaml")  # new instance, cache cleared
+        caplog.clear()
+        loc.get_project_file(must_exist=True)
+        assert "cached project file" not in caplog.text.lower()
