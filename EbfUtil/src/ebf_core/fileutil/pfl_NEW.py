@@ -3,23 +3,12 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, replace, field
+from itertools import count
 from pathlib import Path
 from typing import Optional, Iterable, List
 
 logger = logging.getLogger(__name__)
-
-# Reasonable defaults; adjust to your repos’ conventions as needed.
-DEFAULT_MARKERS: List[str] = [
-    ".git",
-    "pyproject.toml",
-    "requirements.txt",
-    ".idea",
-    ".vscode",
-    "setup.cfg",
-]
-
-UNLIMITED_DEPTH = -1
 
 
 @dataclass(frozen=True)
@@ -35,28 +24,45 @@ class ProjectFileLocator:
     Precedence:
       Project root:
         1) explicit `_project_root` (set by with_project_root)
-        2) (not stored) marker search (see get_project_root) — start path detection below.
+        2) (not stored) marker search (see get_project_root) — see the start path detection below.
       Project file:
         per-call argument > instance default `_project_file_relpath` > None
 
     Start path detection for marker search:
       - If running from an installed package path (contains "site-packages"/"dist-packages"),
-        the search starts at `Path.cwd()`. Otherwise we start at `Path(__file__)`.
+        the search starts at `Path.cwd()`. Otherwise, we start at `Path(__file__)`.
     """
+    # region Class-level configuration (customize via subclassing or patching)
+    DEFAULT_MARKERS: List[str] = field(
+        default_factory=lambda: [
+            ".git",
+            "pyproject.toml",
+            "requirements.txt",
+            ".idea",
+            ".vscode",
+            "setup.cfg",
+        ]
+    )
+    DEFAULT_PROJECT_FILE: str = "resources/config.yaml"
+    UNLIMITED_DEPTH: int = -1
+    MAX_SEARCH_DEPTH_DEFAULT: int = 5
+    # endregion
 
-    # ---------- configuration (value fields) ----------
+    # region configuration (value fields)
     _project_root: Optional[Path] = None
     _use_cwd_as_root: bool = False  # retained for API clarity; affects with_project_root(None, use_cwd_as_root=True)
     _markers: Optional[List[str]] = None
     _priority_marker: Optional[str] = None
     _project_file_relpath: Optional[Path] = None
+    # endregion
 
-    # ---------- caches (excluded from identity) ----------
+    # region caches (excluded from identity)
     _cached_project_root: Optional[Path] = None
     _cached_project_file: Optional[Path] = None
 
-    # ======== Fluent "builder" methods (return NEW instances) ========
+    # endregion
 
+    # region Fluent "builder" methods (return NEW instances)
     def with_project_root(
             self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> ProjectFileLocator:
         """
@@ -92,26 +98,26 @@ class ProjectFileLocator:
         return replace(self, _markers=new_markers, _priority_marker=priority,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_project_file(self, relpath: Optional[Path | str]) -> ProjectFileLocator:
+    def with_project_file(self, relpath: Optional[Path | str] = DEFAULT_PROJECT_FILE) -> ProjectFileLocator:
         """
         Return a new locator with a default project file (relative to the project root).
-        Pass None to clear the default.
+        Call without any arg to make "resources/config.yaml" the default (a common best practice).
+        Call with None to clear the default.
 
         Notes:
             - The sticky default must be a path that is *relative* to the project root.
             Use a per-call override in get_project_file(...) if you need an absolute path.
         """
-        if relpath is None:
-            rp = None
-        else:
-            rp = Path(relpath)
-            if rp.is_absolute():
+        if relpath is not None:
+            relpath = Path(relpath)
+            if relpath.is_absolute():
                 raise ValueError("Path must be a *relative* path from the project root.")
-        return replace(self, _project_file_relpath=rp, _cached_project_file=None)
+        return replace(self, _project_file_relpath=relpath, _cached_project_file=None)
 
-    # ======== Queries ========
+    # endregion
 
-    def get_project_root(self, *, max_search_depth: int = 5, use_cache: bool = True, ) -> Path:
+    # region Queries
+    def get_project_root(self, *, max_search_depth: int = MAX_SEARCH_DEPTH_DEFAULT, use_cache: bool = True, ) -> Path:
         """
         Get the project root directory.
 
@@ -131,11 +137,11 @@ class ProjectFileLocator:
             Absolute resolved Path to the project root, or the best-effort fallback.
         """
         if self._project_root is not None:
-            logger.debug("Retuning user provided project root")
+            logger.debug("Returning user provided project root")
             return self._project_root
 
         if use_cache and self._cached_project_root is not None:
-            logger.debug("Retuning cached project root")
+            logger.debug("Returning cached project root")
             return self._cached_project_root
 
         markers = self._effective_markers()
@@ -147,7 +153,7 @@ class ProjectFileLocator:
         current = start
         found: Optional[Path] = None
 
-        depth_iter = range(0, 10 ** 9) if max_search_depth == UNLIMITED_DEPTH else range(max_search_depth)
+        depth_iter = count() if max_search_depth == self.UNLIMITED_DEPTH else range(max_search_depth)
         for _ in depth_iter:
             # Priority marker first
             if self._priority_marker and (current / self._priority_marker).exists():
@@ -225,7 +231,7 @@ class ProjectFileLocator:
         root = self.get_project_root(use_cache=use_cache)
         path = (root / chosen_rel).resolve()
 
-        if restrict_to_root and not _is_within(path, root):
+        if restrict_to_root and not self._is_within(path, root):
             raise ValueError(f"Resolved path escapes project root: {path} (root: {root})")
 
         if relpath is None:
@@ -240,10 +246,11 @@ class ProjectFileLocator:
             object.__setattr__(self, "_cached_project_file", path)
         return path
 
-    # ======== Helpers ========
+    # endregion
 
+    # region Helpers
     def _effective_markers(self) -> List[str]:
-        return self._markers if self._markers is not None else DEFAULT_MARKERS
+        return self._markers if self._markers is not None else self.DEFAULT_MARKERS
 
     @staticmethod
     def _validate_markers(markers: Iterable[str]) -> None:
@@ -282,3 +289,11 @@ class ProjectFileLocator:
                 return True
             except ValueError:
                 return False
+    # endregion
+
+    # region overrides
+    def __repr__(self) -> str:
+        root = self._project_root or "<auto>"
+        file = self._project_file_relpath or "<none>"
+        return f"<ProjectFileLocator root={root} file={file}>"
+    # endregion

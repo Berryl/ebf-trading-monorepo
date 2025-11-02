@@ -1,11 +1,11 @@
 import logging
 import re
 from pathlib import Path
-from platform import android_ver
 
 import pytest
 
 from ebf_core.fileutil.pfl_NEW import ProjectFileLocator, logger
+
 
 @pytest.fixture
 def sut() -> ProjectFileLocator:
@@ -40,7 +40,6 @@ class TestWithProjectRoot:
     def test_with_project_root_when_arg_is_none_and_use_cwd_is_true(self, sut, tmp_path):
         sut_with_cwd = sut.with_project_root(None, use_cwd_as_root=True)
         assert sut_with_cwd._project_root == Path.cwd().resolve()
-
 
 
 @pytest.mark.integration
@@ -112,19 +111,33 @@ class TestGetProjectRoot:
         assert "cached" in caplog.text
 
 
-
 @pytest.mark.integration
 class TestWithProjectFile:
 
-    def test_project_file_relpath_default_is_none(self, sut):
+    def test_relpath_default_is_none(self, sut):
         assert sut._project_file_relpath is None
 
     def test_cached_project_file_default_is_none(self, sut):
         assert sut._cached_project_file is None
 
-    def test_with_project_file_creates_new_instance(self, sut):
-        sut_clone = sut.with_project_file(None)
+    def test_a_new_instance_is_created(self, sut):
+        sut_clone = sut.with_project_file()
         assert sut_clone is not sut
+
+    def test_arg_sets_the_relpath(self, sut):
+        result = sut.with_project_file("pyproject.toml")
+        assert result._project_file_relpath == Path("pyproject.toml")
+
+    def test_default_arg_is_known_relpath(self, sut):
+        result = sut.with_project_file()
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
+
+    def test_none_arg_clears_the_relpath(self, sut):
+        result = sut.with_project_file()
+        assert result._project_file_relpath == Path(result.DEFAULT_PROJECT_FILE)
+
+        result = result.with_project_file(None)
+        assert result._project_file_relpath is None
 
     def test_absolute_project_file_paths_are_not_allowed(self, sut, tmp_path):
         assert tmp_path.is_absolute()
