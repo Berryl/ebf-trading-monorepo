@@ -166,4 +166,6 @@ class TestWithProjectFile:
 class TestGetProjectFile:
 
     def test_all_defaults(self, sut):
-        result = sut.with_project_root(None, use_cwd_as_root=True).with_project_file().get_project_file(must_exist=False)
+        instance = sut.with_project_root(None, use_cwd_as_root=True).with_project_file()
+        path = instance.get_project_file(must_exist=False)
+        assert str(path).endswith("config.yaml")

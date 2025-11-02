@@ -253,6 +253,10 @@ class ProjectFileLocator:
             object.__setattr__(self, "_cached_project_file", path)
         return path
 
+    @property
+    def project_file_relpath(self) -> Optional[Path]:
+        return self._project_file_relpath
+
     # endregion
 
     # region Helpers
