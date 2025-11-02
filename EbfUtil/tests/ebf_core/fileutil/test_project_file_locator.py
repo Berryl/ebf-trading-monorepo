@@ -4,7 +4,6 @@ import re
 from pathlib import Path
 
 import pytest
-from jaraco.functools import result_invoke
 
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
@@ -112,6 +111,7 @@ class TestGetProjectRoot:
         sut.get_project_root()  # the second call should use cache
         assert "cached" in caplog.text
 
+
 @pytest.mark.integration
 class TestWithProjectFile:
 
@@ -147,6 +147,8 @@ class TestWithProjectFile:
 
     def test_dot_path_is_not_allowed(self, sut):
         msg = re.escape("must be a *relative* path from the project root")
+        msg =  f"'.' is not allowed.*{msg}"
+
         with pytest.raises(ValueError, match=msg):
             sut.with_project_file(".")
 
@@ -159,8 +161,10 @@ class TestWithProjectFile:
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows-only quirk")
     def test_drive_anchored_relative_is_not_allowed(self, sut):
-        with pytest.raises(ValueError):
+        msg = re.escape("must be a *relative* path from the project root")
+        with pytest.raises(ValueError, match=msg):
             sut.with_project_file(Path("C:foo.txt"))
+
 
 @pytest.mark.integration
 class TestGetProjectFile:
