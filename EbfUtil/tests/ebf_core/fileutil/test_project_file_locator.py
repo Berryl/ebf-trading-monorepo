@@ -188,7 +188,14 @@ class TestGetProjectFile:
         path = sut_with_root.with_project_file().get_project_file()
         assert path.exists() and path.name == "config.yaml"
 
-    def test_when_nonexistent_file_is_used_without_requiring_existence(self, sut_with_root):
+    def test_when_nonexistent_relpath_is_used_default_is_error(self, sut_with_root):
+        msg = re.escape("Project file not found: ")
+        msg = f"^{msg}.*blah$"
+
+        with pytest.raises(FileNotFoundError, match=msg):
+            sut_with_root.with_project_file("blah").get_project_file()
+
+    def test_when_nonexistent_relpath_is_used_without_requiring_existence(self, sut_with_root):
         path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
         assert path.name == "blah"
 
