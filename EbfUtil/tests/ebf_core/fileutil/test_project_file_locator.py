@@ -197,16 +197,14 @@ class TestGetProjectFile:
 
     def test_when_nonexistent_relpath_is_used_without_requiring_existence(self, sut_with_root):
         path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
-        assert path.name == "blah"
+        assert path.name == "blah", "this doesn't exist, but we told it not to require existence"
 
-    def test_per_call_relative_overrides_sticky(self, tmp_path):
-        loc, root = self._mk_proj(tmp_path)
-        (root / "cfg").mkdir(exist_ok=True)
-        loc = loc.with_project_file("cfg/default.yaml")
-        override = "cfg/override.yaml"
-        (root / override).write_text("x")
-        p = loc.get_project_file(override, must_exist=True)
-        assert p == (root / override).resolve()
+    def test_relative_path_arg_overrides_member_relative_path(self, sut_with_root):
+        instance = sut_with_root.with_project_file()
+        assert instance.project_file_relpath.name == 'config.yaml'
+
+        path = instance.get_project_file("resources/settings.yaml", must_exist=True)
+        assert path.name == "settings.yaml"
 
     def test_per_call_absolute_allowed_bypasses_restrict_to_root(self, tmp_path):
         loc, _ = self._mk_proj(tmp_path)

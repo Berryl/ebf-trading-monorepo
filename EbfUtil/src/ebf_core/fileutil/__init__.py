@@ -1,4 +1,4 @@
-from .project_file_locator_OLD import ProjectFileLocator
+from .project_file_locator import ProjectFileLocator
 from .executable_finder import (
     find_on_system_path,
     find_start_menu_shortcut,
