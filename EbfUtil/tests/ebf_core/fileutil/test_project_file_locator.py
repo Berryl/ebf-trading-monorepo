@@ -166,8 +166,36 @@ class TestWithProjectFile:
             sut.with_project_file(Path("C:foo.txt"))
 
 
+@pytest.fixture
+def rooted_sut() -> ProjectFileLocator:
+    return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
+
 @pytest.mark.integration
 class TestGetProjectFile:
+
+    def test_when_no_relpath(self, rooted_sut):
+        assert rooted_sut.project_file_relpath is None
+
+        path = rooted_sut.get_project_file()
+        assert path is None
+
+    def test_when_default_file_is_used(self, rooted_sut):
+        pfl = rooted_sut.with_project_file()
+
+        path = pfl.get_project_file()
+        assert path.exists() and path.name == "config.yaml"
+
+    def test_when_nonexistent_path_is_used(self, rooted_sut):
+        nonexistent_filename = "blah"
+        msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
+
+        with pytest.raises(FileNotFoundError, match=msg):
+            rooted_sut.with_project_file("blah").get_project_file()
+
+
+
+@pytest.mark.integration
+class TestGetProjectFileRelativePathArg:
     # helpers
     def _mk_proj(self, tmp_path: Path) -> tuple[ProjectFileLocator, Path]:
         root = tmp_path / "proj"
@@ -176,24 +204,8 @@ class TestGetProjectFile:
         return loc, root
 
     @pytest.fixture
-    def sut_with_root(self, tmp_path: Path) -> ProjectFileLocator:
+    def sut_with_root(self) -> ProjectFileLocator:
         return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
-
-    def test_when_no_relpath_then_return_is_none(self, sut_with_root):
-        assert sut_with_root.project_file_relpath is None
-
-        assert sut_with_root.get_project_file() is None
-
-    def test_when_default_file_is_used(self, sut_with_root):
-        path = sut_with_root.with_project_file().get_project_file()
-        assert path.exists() and path.name == "config.yaml"
-
-    def test_when_nonexistent_relpath_is_used_default_is_error(self, sut_with_root):
-        msg = re.escape("Project file not found: ")
-        msg = f"^{msg}.*blah$"
-
-        with pytest.raises(FileNotFoundError, match=msg):
-            sut_with_root.with_project_file("blah").get_project_file()
 
     def test_when_nonexistent_relpath_is_used_without_requiring_existence(self, sut_with_root):
         path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
@@ -204,6 +216,7 @@ class TestGetProjectFile:
         assert instance.project_file_relpath.name == 'config.yaml'
 
         path = instance.get_project_file("resources/settings.yaml", must_exist=True)
+        assert instance.project_file_relpath.name == 'config.yaml'
         assert path.name == "settings.yaml"
 
     def test_per_call_absolute_allowed_bypasses_restrict_to_root(self, tmp_path):
