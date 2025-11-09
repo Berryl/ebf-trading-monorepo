@@ -189,8 +189,22 @@ class TestGetProjectFile:
         nonexistent_filename = "blah"
         msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
 
-        with pytest.raises(FileNotFoundError, match=msg):
-            rooted_sut.with_project_file("blah").get_project_file()
+        with (pytest.raises(FileNotFoundError, match=msg)):
+            rooted_sut.with_project_file("blah"
+                                         ).get_project_file()
+
+    def test_can_override_existence_check(self, rooted_sut):
+        path = (rooted_sut.with_project_file("blah")
+                .get_project_file(must_exist=False))
+        assert not path.exists() and path.name == "blah"
+
+    def test_can_supply_per_call_relative_path(self, rooted_sut):
+        pfl = rooted_sut.with_project_file()
+        assert pfl.project_file_relpath.name == 'config.yaml'
+
+        path = pfl.get_project_file("resources/settings.yaml", must_exist=True)
+        assert pfl.project_file_relpath.name == 'config.yaml', "relpath member should not change"
+        assert path.name == "settings.yaml", "relpath uses supplied arg on this call"
 
 
 
@@ -206,18 +220,6 @@ class TestGetProjectFileRelativePathArg:
     @pytest.fixture
     def sut_with_root(self) -> ProjectFileLocator:
         return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
-
-    def test_when_nonexistent_relpath_is_used_without_requiring_existence(self, sut_with_root):
-        path = sut_with_root.with_project_file("blah").get_project_file(must_exist=False)
-        assert path.name == "blah", "this doesn't exist, but we told it not to require existence"
-
-    def test_relative_path_arg_overrides_member_relative_path(self, sut_with_root):
-        instance = sut_with_root.with_project_file()
-        assert instance.project_file_relpath.name == 'config.yaml'
-
-        path = instance.get_project_file("resources/settings.yaml", must_exist=True)
-        assert instance.project_file_relpath.name == 'config.yaml'
-        assert path.name == "settings.yaml"
 
     def test_per_call_absolute_allowed_bypasses_restrict_to_root(self, tmp_path):
         loc, _ = self._mk_proj(tmp_path)
