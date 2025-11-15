@@ -1,10 +1,10 @@
 import logging
 import os
 import re
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 import pytest
-
+from contextlib import nullcontext as does_not_raise
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
 
@@ -220,13 +220,21 @@ class TestGetProjectFile:
         with (pytest.raises(FileNotFoundError, match=msg)):
             rooted_sut.with_project_file().get_project_file(Path("C:/blah"))
 
-    def test_can_restrict_relpath_to_be_within_root(self, sut: ProjectFileLocator):
-        root_path = Path.cwd() / 'resources'
-        outside_relpath = Path('..') / Path(__file__).name
 
-        pfl = ProjectFileLocator().with_project_root(root_path)
+@pytest.mark.integration
+class TestGetProjectFileRootRestriction:
+
+    @pytest.fixture
+    def outside_relpath(self) -> Path:
+        return Path('..') / Path(__file__).name
+
+    def test_default_restricts_relpath_escape_from_root(self, rooted_sut, outside_relpath):
         with pytest.raises(ValueError, match="Resolved path escapes project root"):
-            pfl.get_project_file(relpath=outside_relpath, restrict_to_root=True)
+            rooted_sut.get_project_file(relpath=outside_relpath, restrict_to_root=True)
+
+    def test_can_allow_relpath_escape_from_root(self, rooted_sut, outside_relpath):
+        with does_not_raise():
+            rooted_sut.get_project_file(relpath=outside_relpath, restrict_to_root=False, must_exist=False)
 
 
 
@@ -248,13 +256,6 @@ class TestGetProjectFileRelativePathArg:
         (root / "cfg").mkdir(exist_ok=True)
         with pytest.raises(ValueError):
             loc.get_project_file("../outside.yaml", must_exist=False, restrict_to_root=True)
-
-    def test_per_call_relative_escape_allowed_when_restrict_is_false(self, tmp_path):
-        loc, root = self._mk_proj(tmp_path)
-        outside = root.parent / "ok.yaml"
-        outside.write_text("x")
-        p = loc.get_project_file("../ok.yaml", must_exist=True, restrict_to_root=False)
-        assert p == outside.resolve()
 
     def test_cached_used_only_for_sticky_default(self, tmp_path, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
