@@ -234,8 +234,9 @@ class ProjectFileLocator:
         path = (root / chosen_rel).resolve()
 
         if restrict_to_root and not self._is_within(path, root):
-            logger.debug("Project file resolved outside root: %s (root: %s)", path, root)
-            raise ValueError(f"Resolved path escapes project root: {path} (root: {root})")
+            msg = f"Resolved path escapes project root: {path} (root: {root})"
+            logger.debug(msg)
+            raise ValueError(msg)
 
         if relpath is None:
             logger.debug("Using sticky project file from instance default: %s", path)

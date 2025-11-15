@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -185,7 +185,7 @@ class TestGetProjectFile:
         path = pfl.get_project_file()
         assert path.exists() and path.name == "config.yaml"
 
-    def test_when_nonexistent_path_is_used(self, rooted_sut):
+    def test_can_catch_nonexistent_path(self, rooted_sut):
         nonexistent_filename = "blah"
         msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
 
@@ -206,6 +206,28 @@ class TestGetProjectFile:
         assert pfl.project_file_relpath.name == 'config.yaml', "relpath member should not change"
         assert path.name == "settings.yaml", "relpath uses supplied arg on this call"
 
+    def test_can_supply_absolute_path(self, rooted_sut):
+        notepad_path = Path("C:/Windows/System32/notepad.exe")
+        pfl = rooted_sut.with_project_file()
+
+        path = pfl.get_project_file(notepad_path)
+        assert path == notepad_path
+
+    def test_can_catch_nonexistent_absolute_path(self, rooted_sut):
+        nonexistent_filename = "blah"
+        msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
+
+        with (pytest.raises(FileNotFoundError, match=msg)):
+            rooted_sut.with_project_file().get_project_file(Path("C:/blah"))
+
+    def test_can_restrict_path_to_be_within_root(self, sut: ProjectFileLocator):
+        root_path = Path.cwd() / 'resources'
+        outside_path = Path('..') / Path(__file__).name
+
+        pfl = ProjectFileLocator().with_project_root(root_path)
+        with pytest.raises(ValueError, match="Resolved path escapes project root"):
+            pfl.get_project_file(relpath=outside_path, restrict_to_root=True, must_exist=False)
+
 
 
 @pytest.mark.integration
@@ -220,13 +242,6 @@ class TestGetProjectFileRelativePathArg:
     @pytest.fixture
     def sut_with_root(self) -> ProjectFileLocator:
         return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
-
-    def test_per_call_absolute_allowed_bypasses_restrict_to_root(self, tmp_path):
-        loc, _ = self._mk_proj(tmp_path)
-        outside = tmp_path / "outside.yaml"
-        outside.write_text("x")
-        p = loc.get_project_file(outside, must_exist=True, restrict_to_root=True)
-        assert p == outside.resolve()
 
     def test_per_call_relative_escape_blocked_by_restrict_to_root(self, tmp_path):
         loc, root = self._mk_proj(tmp_path)
