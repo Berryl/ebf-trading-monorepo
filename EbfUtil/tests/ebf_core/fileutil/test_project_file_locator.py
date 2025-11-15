@@ -220,13 +220,13 @@ class TestGetProjectFile:
         with (pytest.raises(FileNotFoundError, match=msg)):
             rooted_sut.with_project_file().get_project_file(Path("C:/blah"))
 
-    def test_can_restrict_path_to_be_within_root(self, sut: ProjectFileLocator):
+    def test_can_restrict_relpath_to_be_within_root(self, sut: ProjectFileLocator):
         root_path = Path.cwd() / 'resources'
-        outside_path = Path('..') / Path(__file__).name
+        outside_relpath = Path('..') / Path(__file__).name
 
         pfl = ProjectFileLocator().with_project_root(root_path)
         with pytest.raises(ValueError, match="Resolved path escapes project root"):
-            pfl.get_project_file(relpath=outside_path, restrict_to_root=True, must_exist=False)
+            pfl.get_project_file(relpath=outside_relpath, restrict_to_root=True)
 
 
 
