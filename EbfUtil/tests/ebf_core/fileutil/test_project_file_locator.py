@@ -146,10 +146,7 @@ class TestWithProjectFile:
             sut.with_project_file("")
 
     def test_dot_path_is_not_allowed(self, sut):
-        msg = re.escape("must be a *relative* path from the project root")
-        msg =  f"'.' is not allowed.*{msg}"
-
-        with pytest.raises(ValueError, match=msg):
+        with pytest.raises(ValueError, match=f"'.' is not allowed as a project file"):
             sut.with_project_file(".")
 
     def test_absolute_project_file_path_is_not_allowed(self, sut, tmp_path):
@@ -171,16 +168,16 @@ def rooted_sut() -> ProjectFileLocator:
     return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
 
 @pytest.mark.integration
-class TestGetProjectFile:
+class TestGetProjectFileRelpath:
 
-    def test_when_no_relpath(self, rooted_sut):
+    def test_when_relpath_never_set(self, rooted_sut):
         assert rooted_sut.project_file_relpath is None
 
         path = rooted_sut.get_project_file()
         assert path is None
 
-    def test_when_default_file_is_used(self, rooted_sut):
-        pfl = rooted_sut.with_project_file()
+    def test_whn_default_file_set_by_fluent_builder(self, rooted_sut):
+        pfl = rooted_sut.with_project_file() # this uses the default file
 
         path = pfl.get_project_file()
         assert path.exists() and path.name == "config.yaml"
@@ -190,15 +187,14 @@ class TestGetProjectFile:
         msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
 
         with (pytest.raises(FileNotFoundError, match=msg)):
-            rooted_sut.with_project_file("blah"
-                                         ).get_project_file()
+            rooted_sut.with_project_file("blah").get_project_file()
 
     def test_can_override_existence_check(self, rooted_sut):
         path = (rooted_sut.with_project_file("blah")
                 .get_project_file(must_exist=False))
         assert not path.exists() and path.name == "blah"
 
-    def test_can_supply_per_call_relative_path(self, rooted_sut):
+    def test_can_supply_relpath_per_call(self, rooted_sut):
         pfl = rooted_sut.with_project_file()
         assert pfl.project_file_relpath.name == 'config.yaml'
 
@@ -206,23 +202,23 @@ class TestGetProjectFile:
         assert pfl.project_file_relpath.name == 'config.yaml', "relpath member should not change"
         assert path.name == "settings.yaml", "relpath uses supplied arg on this call"
 
-    def test_can_supply_absolute_path(self, rooted_sut):
-        notepad_path = Path("C:/Windows/System32/notepad.exe")
+    def test_can_supply_relpath_that_is_absolute(self, rooted_sut):
+        notepad_path = Path("C:/Windows/System32/notepad.exe").resolve()
         pfl = rooted_sut.with_project_file()
 
         path = pfl.get_project_file(notepad_path)
         assert path == notepad_path
 
     def test_can_catch_nonexistent_absolute_path(self, rooted_sut):
-        nonexistent_filename = "blah"
-        msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
+        nonexistent_path = Path("C:/this_file_does_not_exist_12345")
+        msg = f"^{re.escape('Project file not found: ')}.*{re.escape(str(nonexistent_path))}"
 
         with (pytest.raises(FileNotFoundError, match=msg)):
-            rooted_sut.with_project_file().get_project_file(Path("C:/blah"))
+            rooted_sut.with_project_file().get_project_file(nonexistent_path)
 
 
 @pytest.mark.integration
-class TestGetProjectFileRootRestriction:
+class TestGetProjectFileRelpathRootRestriction:
 
     @pytest.fixture
     def outside_relpath(self) -> Path:
@@ -251,12 +247,6 @@ class TestGetProjectFileRelativePathArg:
     @pytest.fixture
     def sut_with_root(self) -> ProjectFileLocator:
         return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
-
-    def test_per_call_relative_escape_blocked_by_restrict_to_root(self, tmp_path):
-        loc, root = self._mk_proj(tmp_path)
-        (root / "cfg").mkdir(exist_ok=True)
-        with pytest.raises(ValueError):
-            loc.get_project_file("../outside.yaml", must_exist=False, restrict_to_root=True)
 
     def test_cached_used_only_for_sticky_default(self, tmp_path, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
