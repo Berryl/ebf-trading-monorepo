@@ -229,8 +229,9 @@ class TestGetProjectFileRootRestriction:
         return Path('..') / Path(__file__).name
 
     def test_default_restricts_relpath_escape_from_root(self, rooted_sut, outside_relpath):
+        # restrict_to_root=True by default
         with pytest.raises(ValueError, match="Resolved path escapes project root"):
-            rooted_sut.get_project_file(relpath=outside_relpath, restrict_to_root=True)
+            rooted_sut.get_project_file(relpath=outside_relpath)
 
     def test_can_allow_relpath_escape_from_root(self, rooted_sut, outside_relpath):
         with does_not_raise():
