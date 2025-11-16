@@ -287,6 +287,10 @@ class TestGetProjectFileRelativePathArg:
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
 
+    def test_tilde_expansion(self, rooted_sut):
+        path = rooted_sut.get_project_file("~/settings.yaml")
+        assert path.name == "settings.yaml"
+
     #
     # def test_per_call_tilde_expands(self, tmp_path, monkeypatch):
     #     # Point HOME to tmp_path and create ~/cfg.yaml

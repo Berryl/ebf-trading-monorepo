@@ -191,65 +191,70 @@ class ProjectFileLocator:
         return result
 
     def get_project_file(self, relpath: Optional[Path | str] = None, *,
-            must_exist: bool = True, use_cache: bool = True, restrict_to_root: bool = True,
-    ) -> Optional[Path]:
+                         must_exist: bool = True, use_cache: bool = True, restrict_to_root: bool = True,
+                         ) -> Optional[Path]:
         """
         Resolve the project file path.
 
         Precedence:
-          - per-call `relpath` argument (absolute or relative)
-          - instance default `_project_file_relpath` (must be relative)
+          - per-call `relpath` argument (absolute or relative, with ~ expansion)
+          - instance default `_project_file_relpath` (must be relative, no ~)
           - None (returns None)
 
         Args:
-            relpath: If absolute, it is validated and returned directly.
-                     If relative, it is resolved against the project root.
-            must_exist: If True, raise FileNotFoundError when the file is missing.
-            use_cache: Cache only applies when *no* per-call relpath is provided.
-            restrict_to_root: If True, relative paths that resolve *outside*
-                              the project root raise ValueError.
+            relpath: If provided, expanded with ~, then:
+                     - If absolute → used directly
+                     - If relative → resolved under project root
+            must_exist: Raise FileNotFoundError if path does not exist.
+            use_cache: Cache result when using sticky default.
+            restrict_to_root: Prevent relative paths from escaping project root.
 
         Returns:
-            Absolute resolved Path, or None if no path is configured.
+            Absolute resolved Path, or None.
         """
-        # Choose the spec
-        path = Path(relpath) if relpath is not None else self._project_file_relpath
-        if path is None:
-            return None
+        # Choose source: per-call or sticky
+        if relpath is not None:
+            source_path = Path(relpath).expanduser()
+            is_per_call = True
+        else:
+            if self._project_file_relpath is None:
+                return None
+            source_path = self._project_file_relpath
+            is_per_call = False
 
-        # Cache only for the sticky default (no per-call relpath)
-        if use_cache and relpath is None and self._cached_project_file is not None:
-            logger.debug("Using cached project file: %s", self._cached_project_file)
+        # Cache hit: sticky default only
+        if use_cache and not is_per_call and self._cached_project_file is not None:
+            logger.debug("Returning cached project file: %s", self._cached_project_file)
             return self._cached_project_file
 
-        # Absolute per-call override: validate and return
-        if relpath is not None and path.is_absolute():
-            absolute_path = path.resolve()
-            logger.debug("Using per-call absolute project file: %s", absolute_path)
-            if must_exist and not absolute_path.exists():
-                raise FileNotFoundError(f"Project file not found: {absolute_path}")
-            return absolute_path
-
-        # Otherwise resolve against root
-        root = self.get_project_root(use_cache=use_cache)
-        absolute_path = (root / path).resolve()
-
-        if restrict_to_root and not self._is_within(absolute_path, root):
-            msg = f"Resolved path escapes project root: {absolute_path} (root: {root})"
-            logger.debug(msg)
-            raise ValueError(msg)
-
-        if relpath is None:
-            logger.debug("Using previously set sticky project file: %s", absolute_path)
+        # Resolve path
+        if source_path.is_absolute():
+            # Only per-call may be absolute (e.g. from ~)
+            if not is_per_call:
+                raise ValueError("Sticky project file path cannot be absolute")
+            path = source_path.resolve()
+            logger.debug("Using per-call absolute project file: %s", path)
         else:
-            logger.debug("Using per-call relative project file: %s", absolute_path)
+            # Relative: resolve under project root
+            root = self.get_project_root(use_cache=use_cache)
+            path = (root / source_path).resolve()
 
-        if must_exist and not absolute_path.exists():
-            raise FileNotFoundError(f"Project file not found: {absolute_path}")
+            if restrict_to_root and not self._is_within(path, root):
+                msg = f"Resolved path escapes project root: {path} (root: {root})"
+                logger.debug(msg)
+                raise ValueError(msg)
 
-        if use_cache and relpath is None:
-            object.__setattr__(self, "_cached_project_file", absolute_path)
-        return absolute_path
+            logger.debug("Using %s project file: %s", "sticky" if not is_per_call else "per-call relative", path)
+
+        # Existence check
+        if must_exist and not path.exists():
+            raise FileNotFoundError(f"Project file not found: {path}")
+
+        # Cache sticky result
+        if use_cache and not is_per_call:
+            object.__setattr__(self, "_cached_project_file", path)
+
+        return path
 
     @property
     def project_file_relpath(self) -> Optional[Path]:
