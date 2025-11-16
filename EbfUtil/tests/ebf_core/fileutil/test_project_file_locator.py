@@ -252,7 +252,8 @@ class TestGetProjectFileCaching:
     def caplog(self, caplog):
         caplog.set_level(logging.DEBUG, logger="ebf_core.fileutil.project_file_locator")
         caplog.clear()
-        return caplog
+        yield caplog
+        caplog.clear()
 
     @pytest.fixture
     def path1(self) -> Path:
