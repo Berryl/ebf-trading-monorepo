@@ -74,9 +74,9 @@ class TestWithMarkers:
 @pytest.mark.integration
 class TestGetProjectRoot:
 
-    def test_user_provided_project_root_is_returned_first_when_available(self, sut, caplog):
+    def test_user_provided_project_root_is_returned_first_when_available(self, rooted_sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
-        sut.with_project_root(None, use_cwd_as_root=True).get_project_root()
+        rooted_sut.get_project_root()
 
         assert "user provided" in caplog.text
 
@@ -182,7 +182,7 @@ class TestWithProjectFile:
 
 @pytest.fixture
 def rooted_sut() -> ProjectFileLocator:
-    return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
+    return ProjectFileLocator().with_cwd_project_root()
 
 @pytest.mark.integration
 class TestGetProjectFileRelpath:

@@ -60,32 +60,20 @@ class ProjectFileLocator:
     # endregion
 
     # region Fluent "builder" methods (return NEW instances)
-    def with_project_root(
-            self, root: Optional[Path], *, use_cwd_as_root: Optional[bool] = None, ) -> Self:
+    def with_project_root(self, root: Optional[Path]) -> Self:
         """
         Return a new locator with an explicit project root (or cleared).
 
         Args:
             root: The absolute (or relative) path to use as project root, or None.
-            use_cwd_as_root: If provided, update the sticky flag on the clone.
-                If `root is None` and this (or current) flag is True, the clone captures
-                `Path.cwd().resolve()` as the explicit root.
 
         Notes:
             - This DOES NOT mutate the instance. A new instance is returned.
             - Caches are cleared on the clone.
         """
-        new_flag = self._use_cwd_as_root if use_cwd_as_root is None else bool(use_cwd_as_root)
+        new_root = None if root is None else Path(root).resolve()
 
-        if root is not None:
-            new_root = Path(root).resolve()
-        elif new_flag:
-            new_root = Path.cwd().resolve()
-        else:
-            new_root = None
-
-        return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
-                       _cached_project_root=None, _cached_project_file=None, )
+        return replace(self, _project_root=new_root, _cached_project_root=None, _cached_project_file=None, )
 
     def with_cwd_project_root(self):
         return self.with_project_root(Path.cwd())
