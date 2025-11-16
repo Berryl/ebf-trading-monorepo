@@ -47,7 +47,6 @@ class ProjectFileLocator:
 
     # region configuration (value fields)
     _project_root: Optional[Path] = None
-    _use_cwd_as_root: bool = False  # retained for API clarity; affects with_project_root(None, use_cwd_as_root=True)
     _markers: Optional[List[str]] = None
     _priority_marker: Optional[str] = None
     _project_file_relpath: Optional[Path] = None
