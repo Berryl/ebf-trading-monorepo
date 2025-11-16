@@ -38,7 +38,7 @@ class ProjectFileLocator:
 
     # region Class-level configuration (customize via subclassing or patching)
     DEFAULT_MARKERS: ClassVar[list[str]] = [
-        ".git", "pyproject.toml", "requirements.txt", ".idea", ".vscode", "setup.cfg"
+        ".git", "pyproject.toml", "requirements.txt", "setup.cfg"
     ]
     DEFAULT_PROJECT_FILE_RELATIVE_PATH: ClassVar[str] = "resources/config.yaml"
     UNLIMITED_DEPTH: ClassVar[int] = -1
