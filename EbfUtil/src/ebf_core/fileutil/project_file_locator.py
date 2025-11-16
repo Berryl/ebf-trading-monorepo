@@ -74,7 +74,7 @@ class ProjectFileLocator:
 
         return replace(self, _project_root=new_root, _cached_project_root=None, _cached_project_file=None, )
 
-    def with_cwd_project_root(self):
+    def with_cwd_project_root(self) -> Self:
         return self.with_project_root(Path.cwd())
 
 

@@ -219,6 +219,7 @@ class TestGetProjectFile:
         assert pfl.project_file_relpath.name == 'config.yaml', "relpath member should not change"
         assert path.name == "settings.yaml", "relpath uses supplied arg on this call"
 
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only")
     def test_relpath_can_be_absolute(self, rooted_sut):
         some_absolute_path = Path("C:/Windows/System32/notepad.exe").resolve()
         pfl = rooted_sut.with_project_file()
@@ -226,6 +227,7 @@ class TestGetProjectFile:
         path = pfl.get_project_file(some_absolute_path)
         assert path == some_absolute_path
 
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only")
     def test_nonexistent_absolute_path_must_exist_by_default(self, rooted_sut):
         nonexistent_path = Path("C:/this_file_does_not_exist_12345")
         msg = f"^{re.escape('Project file not found: ')}.*{re.escape(str(nonexistent_path))}"
