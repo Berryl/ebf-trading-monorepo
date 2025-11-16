@@ -262,6 +262,10 @@ class ProjectFileLocator:
         return path
 
     @property
+    def project_root(self) -> Optional[Path]:
+        return self._project_root
+
+    @property
     def project_file_relpath(self) -> Optional[Path]:
         return self._project_file_relpath
 
