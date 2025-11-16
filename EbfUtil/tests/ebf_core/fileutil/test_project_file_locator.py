@@ -250,7 +250,7 @@ class TestGetProjectFileRelpathRootRestriction:
 
 
 @pytest.mark.integration
-class TestGetProjectFileRelativePathArg:
+class TestGetProjectFileCaching:
 
     def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
@@ -289,6 +289,10 @@ class TestGetProjectFileRelativePathArg:
         instance.get_project_file(DEFAULT_RELPATH)  # 2nd call uses a new path so no cache
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
+
+
+@pytest.mark.integration
+class TestGetProjectFilePathExpansion:
 
     def test_tilde_expansion_works_when_no_exitance_check(self, rooted_sut):
         path = rooted_sut.get_project_file("~/settings.yaml", must_exist=False)
