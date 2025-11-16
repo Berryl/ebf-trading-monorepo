@@ -297,3 +297,9 @@ class TestGetProjectFilePathExpansion:
     def test_tilde_expansion_works_when_no_exitance_check(self, rooted_sut):
         path = rooted_sut.get_project_file("~/settings.yaml", must_exist=False)
         assert path.name == "settings.yaml"
+
+    def test_tilde_expansion_fails_with_exitance_check(self, rooted_sut):
+        msg = "Cannot use ~ expansion and existence check: '~/settings.yaml'"
+
+        with pytest.raises(ValueError, match=msg):
+            rooted_sut.get_project_file("~/settings.yaml", must_exist=True)

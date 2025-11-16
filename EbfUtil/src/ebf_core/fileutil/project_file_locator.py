@@ -248,6 +248,9 @@ class ProjectFileLocator:
 
         # Existence check
         if must_exist and not path.exists():
+            if isinstance(relpath, str):
+                if relpath.startswith("~"):
+                    raise ValueError(f"Cannot use ~ expansion and existence check: {relpath!r}")
             raise FileNotFoundError(f"Project file not found: {path}")
 
         # Cache sticky result
