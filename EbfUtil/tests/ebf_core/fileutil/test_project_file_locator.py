@@ -51,8 +51,10 @@ class TestWithCwdProjectRoot:
         assert sut_clone is not sut
 
     def test_project_root_is_cwd(self, sut):
-        instance = sut.with_cwd_project_root()
-        assert instance.get_project_root() == Path.cwd().resolve()
+        expected_project_root = Path.cwd().resolve()
+
+        pfl = sut.with_cwd_project_root()
+        assert pfl.get_project_root() == expected_project_root
 
 
 @pytest.mark.integration
