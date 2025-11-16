@@ -8,7 +8,6 @@ from contextlib import nullcontext as does_not_raise
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
 DEFAULT_RELPATH =  Path("resources/config.yaml")
-ALTERNATE_RELPATH =  Path("resources/settings.yaml")
 
 
 @pytest.fixture
@@ -251,12 +250,18 @@ class TestGetProjectFileRelpathRootRestriction:
 
 @pytest.mark.integration
 class TestGetProjectFileCaching:
-
-    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog):
-        caplog.set_level(logging.DEBUG, logger=logger.name)
+    @pytest.fixture
+    def caplog(self, caplog):
+        caplog.set_level(logging.DEBUG, logger="ebf_core.fileutil.project_file_locator")
         caplog.clear()
+        return caplog
 
-        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
+    @pytest.fixture
+    def alternate_relpath(self) -> Path:
+        return Path("resources/settings.yaml")
+
+    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog, alternate_relpath):
+        instance = rooted_sut.with_project_file(alternate_relpath)
 
         instance.get_project_file()  # 1st call to prime cache
         caplog.clear()
@@ -264,11 +269,8 @@ class TestGetProjectFileCaching:
         instance.get_project_file()  # 2nd call uses cache
         assert "cached project file" in caplog.text.lower()
 
-    def test_cache_can_be_bypassed(self, rooted_sut, caplog):
-        caplog.set_level(logging.DEBUG, logger=logger.name)
-        caplog.clear()
-
-        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
+    def test_cache_can_be_bypassed(self, rooted_sut, caplog, alternate_relpath):
+        instance = rooted_sut.with_project_file(alternate_relpath)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
@@ -277,11 +279,8 @@ class TestGetProjectFileCaching:
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
 
-    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog):
-        caplog.set_level(logging.DEBUG, logger=logger.name)
-        caplog.clear()
-
-        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
+    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, alternate_relpath):
+        instance = rooted_sut.with_project_file(alternate_relpath)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
