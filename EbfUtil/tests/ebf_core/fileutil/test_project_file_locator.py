@@ -7,8 +7,6 @@ import pytest
 from contextlib import nullcontext as does_not_raise
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
-DEFAULT_RELPATH =  Path("resources/config.yaml")
-
 
 @pytest.fixture
 def sut() -> ProjectFileLocator:
@@ -257,11 +255,15 @@ class TestGetProjectFileCaching:
         return caplog
 
     @pytest.fixture
-    def alternate_relpath(self) -> Path:
+    def path1(self) -> Path:
+        return Path("resources/config.yaml")
+
+    @pytest.fixture
+    def path2(self) -> Path:
         return Path("resources/settings.yaml")
 
-    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog, alternate_relpath):
-        instance = rooted_sut.with_project_file(alternate_relpath)
+    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog, path1):
+        instance = rooted_sut.with_project_file(path1)
 
         instance.get_project_file()  # 1st call to prime cache
         caplog.clear()
@@ -269,8 +271,8 @@ class TestGetProjectFileCaching:
         instance.get_project_file()  # 2nd call uses cache
         assert "cached project file" in caplog.text.lower()
 
-    def test_cache_can_be_bypassed(self, rooted_sut, caplog, alternate_relpath):
-        instance = rooted_sut.with_project_file(alternate_relpath)
+    def test_cache_can_be_bypassed(self, rooted_sut, caplog, path1):
+        instance = rooted_sut.with_project_file(path1)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
@@ -279,13 +281,13 @@ class TestGetProjectFileCaching:
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
 
-    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, alternate_relpath):
-        instance = rooted_sut.with_project_file(alternate_relpath)
+    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, path1, path2):
+        instance = rooted_sut.with_project_file(path1)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
 
-        instance.get_project_file(DEFAULT_RELPATH)  # 2nd call uses a new path so no cache
+        instance.get_project_file(path2)  # 2nd call uses a new path so no cache
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
 
