@@ -1,5 +1,3 @@
-# ebf_core/fileutil/project_file_locator.py
-
 from __future__ import annotations
 
 import logging
@@ -24,6 +22,7 @@ class ProjectFileLocator:
       - Instances are *value objects*. Each `with_*` method returns a **new** instance.
       - Internal caches (_cached_project_root/_cached_project_file) are not part of the
         value identity and may be set internally for performance.
+        NOTE: this is not thread safe and counter-intuitive.to being truly frozen.
 
     Precedence:
       Project root:
@@ -87,6 +86,10 @@ class ProjectFileLocator:
 
         return replace(self, _project_root=new_root, _use_cwd_as_root=new_flag,
                        _cached_project_root=None, _cached_project_file=None, )
+
+    def with_cwd_project_root(self):
+        return self.with_project_root(Path.cwd())
+
 
     def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None, ) -> Self:
         """
@@ -197,22 +200,22 @@ class ProjectFileLocator:
         Resolve the project file path.
 
         Precedence:
-          - per-call `relpath` argument (absolute or relative, with ~ expansion)
-          - instance default `_project_file_relpath` (must be relative, no ~)
+          - per-call there is a `relpath` argument (absolute or relative, with ~ expansion)
+          - instance 'sticky' default `_project_file_relpath` (must be relative, no ~)
           - None (returns None)
 
         Args:
             relpath: If provided, expanded with ~, then:
                      - If absolute → used directly
                      - If relative → resolved under project root
-            must_exist: Raise FileNotFoundError if path does not exist.
+            must_exist: Raise FileNotFoundError if the path does not exist.
             use_cache: Cache result when using sticky default.
-            restrict_to_root: Prevent relative paths from escaping project root.
+            restrict_to_root: Prevent relative paths from escaping the project root.
 
         Returns:
             Absolute resolved Path, or None.
         """
-        # Choose source: per-call or sticky
+        # Choose the source: per-call or sticky
         if relpath is not None:
             source_path = Path(relpath).expanduser()
             is_per_call = True

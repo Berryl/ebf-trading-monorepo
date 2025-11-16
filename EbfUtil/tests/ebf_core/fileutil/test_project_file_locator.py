@@ -44,6 +44,18 @@ class TestWithProjectRoot:
 
 
 @pytest.mark.integration
+class TestWithCwdProjectRoot:
+
+    def test_new_instance_is_created(self, sut):
+        sut_clone = sut.with_cwd_project_root()
+        assert sut_clone is not sut
+
+    def test_project_root_is_cwd(self, sut):
+        instance = sut.with_cwd_project_root()
+        assert instance.get_project_root() == Path.cwd().resolve()
+
+
+@pytest.mark.integration
 class TestWithMarkers:
 
     def test_marker_list_default_is_none(self, sut):
