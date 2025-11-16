@@ -185,7 +185,7 @@ def rooted_sut() -> ProjectFileLocator:
     return ProjectFileLocator().with_cwd_project_root()
 
 @pytest.mark.integration
-class TestGetProjectFileRelpath:
+class TestGetProjectFile:
 
     def test_when_relpath_never_set(self, rooted_sut):
         assert rooted_sut.project_file_relpath is None

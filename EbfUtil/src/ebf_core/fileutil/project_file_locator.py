@@ -92,7 +92,7 @@ class ProjectFileLocator:
 
         Args
             relpath:
-            - _USE_CLASS_DEFAULT (arg omitted): use self.DEFAULT_PROJECT_FILE
+            - DEFAULT_PROJECT_FILE_RELATIVE_PATH if arg omitted
             - None: clear the sticky default
             - Path/str: set that *relative* path
         """
@@ -187,6 +187,8 @@ class ProjectFileLocator:
 
         Precedence:
           - per-call there is a `relpath` argument (absolute or relative, with ~ expansion)
+            NOTE: per-call args do NOT  updates sticky defaults. It's more useful to use this as
+            an override of the cache
           - instance 'sticky' default `_project_file_relpath` (must be relative, no ~)
           - None (returns None)
 
