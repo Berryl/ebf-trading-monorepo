@@ -114,7 +114,8 @@ class ProjectFileLocator:
 
         elif isinstance(relpath, str):
             ensure_not_empty_str(relpath, "relpath")
-            rp = Path(relpath).expanduser()
+            self._validate_string_path(relpath)
+            rp = Path(relpath)
         else:
             rp = Path(relpath)
 
@@ -212,43 +213,43 @@ class ProjectFileLocator:
             Absolute resolved Path, or None if no path is configured.
         """
         # Choose the spec
-        chosen_rel = Path(relpath) if relpath is not None else self._project_file_relpath
-        if chosen_rel is None:
+        path = Path(relpath) if relpath is not None else self._project_file_relpath
+        if path is None:
             return None
 
         # Cache only for the sticky default (no per-call relpath)
         if use_cache and relpath is None and self._cached_project_file is not None:
-            logger.debug("Returning cached project file: %s", self._cached_project_file)
+            logger.debug("Using cached project file: %s", self._cached_project_file)
             return self._cached_project_file
 
         # Absolute per-call override: validate and return
-        if relpath is not None and chosen_rel.is_absolute():
-            path = chosen_rel.resolve()
-            logger.debug("Using per-call absolute project file: %s", path)
-            if must_exist and not path.exists():
-                raise FileNotFoundError(f"Project file not found: {path}")
-            return path
+        if relpath is not None and path.is_absolute():
+            absolute_path = path.resolve()
+            logger.debug("Using per-call absolute project file: %s", absolute_path)
+            if must_exist and not absolute_path.exists():
+                raise FileNotFoundError(f"Project file not found: {absolute_path}")
+            return absolute_path
 
         # Otherwise resolve against root
         root = self.get_project_root(use_cache=use_cache)
-        path = (root / chosen_rel).resolve()
+        absolute_path = (root / path).resolve()
 
-        if restrict_to_root and not self._is_within(path, root):
-            msg = f"Resolved path escapes project root: {path} (root: {root})"
+        if restrict_to_root and not self._is_within(absolute_path, root):
+            msg = f"Resolved path escapes project root: {absolute_path} (root: {root})"
             logger.debug(msg)
             raise ValueError(msg)
 
         if relpath is None:
-            logger.debug("Using sticky project file from instance default: %s", path)
+            logger.debug("Using previously set sticky project file: %s", absolute_path)
         else:
-            logger.debug("Using per-call relative project file: %s", path)
+            logger.debug("Using per-call relative project file: %s", absolute_path)
 
-        if must_exist and not path.exists():
-            raise FileNotFoundError(f"Project file not found: {path}")
+        if must_exist and not absolute_path.exists():
+            raise FileNotFoundError(f"Project file not found: {absolute_path}")
 
         if use_cache and relpath is None:
-            object.__setattr__(self, "_cached_project_file", path)
-        return path
+            object.__setattr__(self, "_cached_project_file", absolute_path)
+        return absolute_path
 
     @property
     def project_file_relpath(self) -> Optional[Path]:
@@ -299,11 +300,18 @@ class ProjectFileLocator:
                 return False
 
     @staticmethod
+    def _validate_string_path(str_path: str) -> None:
+        ensure_not_empty_str(str_path, "relpath")
+        if str_path == ".":
+            s = f"'.' is not allowed as a project file;."
+            raise ValueError(s)
+        if str_path.startswith("~"):
+            s = "~ expansion is not allowed in with_project_file."
+            raise ValueError(f"{s}: {str_path!r}")
+
+    @staticmethod
     def _ensure_relative_path(path: Path) -> None:
         err = "The path must be a *relative* path from the project root."
-        if path == Path("."):
-            s = f"'.' is not allowed as a project file; {err}."
-            raise ValueError(s)
         if getattr(path, "drive", "") or getattr(path, "root", ""):
             raise ValueError(err)
         if path.is_absolute():

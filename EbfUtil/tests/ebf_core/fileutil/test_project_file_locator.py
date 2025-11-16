@@ -7,6 +7,9 @@ import pytest
 from contextlib import nullcontext as does_not_raise
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
+DEFAULT_RELPATH =  Path("resources/config.yaml")
+ALTERNATE_RELPATH =  Path("resources/settings.yaml")
+
 
 @pytest.fixture
 def sut() -> ProjectFileLocator:
@@ -133,24 +136,30 @@ class TestWithProjectFile:
         result = sut.with_project_file("pyproject.toml")
         assert result.project_file_relpath == Path("pyproject.toml")
 
+    def test_empty_str_is_error(self, sut):
+        msg = re.escape("Arg 'relpath' cannot be an empty string")
+
+        with pytest.raises(AssertionError, match=msg):
+            sut.with_project_file("")
+
+    def test_single_dot_is_not_allowed(self, sut):
+        msg = re.escape("'.' is not allowed as a project file")
+
+        with pytest.raises(ValueError, match=msg):
+            sut.with_project_file(".")
+
+    def test_tilde_expanded_is_not_allowed(self, rooted_sut):
+        msg = "~ expansion is not allowed in with_project_file."
+
+        with pytest.raises(ValueError, match=msg):
+            rooted_sut.with_project_file("~/settings.yaml")
+
     def test_none_arg_clears_the_relpath(self, sut):
         result = sut.with_project_file()
         assert result.project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
         result = result.with_project_file(None)
         assert result.project_file_relpath is None
-
-    def test_empty_str_args_are_trapped(self, sut):
-        msg = re.escape("Arg 'relpath' cannot be an empty string")
-
-        with pytest.raises(AssertionError, match=msg):
-            sut.with_project_file("")
-
-    def test_dot_path_is_not_allowed(self, sut):
-        msg = f"'.' is not allowed as a project file"
-
-        with pytest.raises(ValueError, match=msg):
-            sut.with_project_file(".")
 
     def test_absolute_project_file_path_is_not_allowed(self, sut, tmp_path):
         assert tmp_path.is_absolute()
@@ -206,11 +215,11 @@ class TestGetProjectFileRelpath:
         assert path.name == "settings.yaml", "relpath uses supplied arg on this call"
 
     def test_relpath_can_be_absolute(self, rooted_sut):
-        notepad_path = Path("C:/Windows/System32/notepad.exe").resolve()
+        some_absolute_path = Path("C:/Windows/System32/notepad.exe").resolve()
         pfl = rooted_sut.with_project_file()
 
-        path = pfl.get_project_file(notepad_path)
-        assert path == notepad_path
+        path = pfl.get_project_file(some_absolute_path)
+        assert path == some_absolute_path
 
     def test_nonexistent_absolute_path_must_exist_by_default(self, rooted_sut):
         nonexistent_path = Path("C:/this_file_does_not_exist_12345")
@@ -241,7 +250,6 @@ class TestGetProjectFileRelpathRootRestriction:
 
 
 
-@pytest.mark.skip()
 class TestGetProjectFileRelativePathArg:
     # helpers
     def _mk_proj(self, tmp_path: Path) -> tuple[ProjectFileLocator, Path]:
@@ -254,57 +262,50 @@ class TestGetProjectFileRelativePathArg:
     def sut_with_root(self) -> ProjectFileLocator:
         return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
 
-    def test_cached_used_only_for_sticky_default(self, rooted_sut, caplog):
+    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
         caplog.clear()
 
-        instance = rooted_sut.with_project_file()
+        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
 
-        instance.get_project_file(must_exist=True)  # prime cache
+        instance.get_project_file()  # 1st call to prime cache
         caplog.clear()
-        instance.get_project_file(must_exist=True)  # should hit cache
+
+        instance.get_project_file()  # 2nd call uses cache
         assert "cached project file" in caplog.text.lower()
-        #
-        # caplog.clear()
-        # rooted_sut.get_project_file("cfg/app.yaml", must_exist=True)  # per-call: no cache
-        # assert "cached project file" not in caplog.text.lower()
 
-    def test_use_cache_false_bypasses_cache(self, tmp_path, caplog):
+    def test_cache_can_be_bypassed(self, rooted_sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
-        loc, root = self._mk_proj(tmp_path)
-        f = root / "cfg/app.yaml"; f.write_text("ok")
-        loc = loc.with_project_file("cfg/app.yaml")
-        loc.get_project_file(must_exist=True)  # prime
         caplog.clear()
-        loc.get_project_file(must_exist=True, use_cache=False)
-        assert "cached project file" not in caplog.text.lower()
 
-    def test_per_call_empty_string_is_rejected(self, sut):
-        with pytest.raises(AssertionError, match="relpath"):
-            sut.get_project_file("", must_exist=False)
+        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
 
-    def test_per_call_dot_is_rejected(self, sut):
-        with pytest.raises(ValueError):
-            sut.get_project_file(Path("."), must_exist=False)
-
-    def test_per_call_tilde_expands(self, tmp_path, monkeypatch):
-        # Point HOME to tmp_path and create ~/cfg.yaml
-        home = tmp_path / "home"; home.mkdir()
-        monkeypatch.setenv("HOME", str(home))
-        p = home / "cfg.yaml"; p.write_text("x")
-        sut = ProjectFileLocator().with_project_root(None, use_cwd_as_root=True)
-        got = sut.get_project_file("~/cfg.yaml", must_exist=True, restrict_to_root=False)
-        assert got == p.resolve()
-
-    def test_cache_is_cleared_when_sticky_changes(self, tmp_path, caplog):
-        caplog.set_level(logging.DEBUG, logger=logger.name)
-        loc, root = self._mk_proj(tmp_path)
-        f1 = root / "cfg/a.yaml"; f1.write_text("a")
-        f2 = root / "cfg/b.yaml"; f2.write_text("b")
-
-        loc = loc.with_project_file("cfg/a.yaml")
-        loc.get_project_file(must_exist=True)
-        loc = loc.with_project_file("cfg/b.yaml")  # new instance, cache cleared
+        instance.get_project_file()  # 1st call to prime cache
         caplog.clear()
-        loc.get_project_file(must_exist=True)
+
+        instance.get_project_file(use_cache=False)  # 2nd call uses cache
         assert "cached project file" not in caplog.text.lower()
+        assert "Using previously set sticky project file"
+
+    #
+    # def test_per_call_tilde_expands(self, tmp_path, monkeypatch):
+    #     # Point HOME to tmp_path and create ~/cfg.yaml
+    #     home = tmp_path / "home"; home.mkdir()
+    #     monkeypatch.setenv("HOME", str(home))
+    #     p = home / "cfg.yaml"; p.write_text("x")
+    #     sut = ProjectFileLocator().with_project_root(None, use_cwd_as_root=True)
+    #     got = sut.get_project_file("~/cfg.yaml", must_exist=True, restrict_to_root=False)
+    #     assert got == p.resolve()
+    #
+    # def test_cache_is_cleared_when_sticky_changes(self, tmp_path, caplog):
+    #     caplog.set_level(logging.DEBUG, logger=logger.name)
+    #     loc, root = self._mk_proj(tmp_path)
+    #     f1 = root / "cfg/a.yaml"; f1.write_text("a")
+    #     f2 = root / "cfg/b.yaml"; f2.write_text("b")
+    #
+    #     loc = loc.with_project_file("cfg/a.yaml")
+    #     loc.get_project_file(must_exist=True)
+    #     loc = loc.with_project_file("cfg/b.yaml")  # new instance, cache cleared
+    #     caplog.clear()
+    #     loc.get_project_file(must_exist=True)
+    #     assert "cached project file" not in caplog.text.lower()
