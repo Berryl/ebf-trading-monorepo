@@ -288,7 +288,7 @@ class TestGetProjectFileCaching:
 
         instance.get_project_file(use_cache=False)  # explicit cache bypass
         assert "cached project file" not in caplog.text.lower()
-        assert "Using previously set sticky project file"
+        assert "sticky project file"
 
     def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, path1, path2):
         instance = rooted_sut.with_project_file(path1)
@@ -298,7 +298,7 @@ class TestGetProjectFileCaching:
 
         instance.get_project_file(path2)  # 2nd call uses a new path so no cache
         assert "cached project file" not in caplog.text.lower()
-        assert "Using previously set sticky project file"
+        assert "sticky project file"
 
 
 @pytest.mark.integration

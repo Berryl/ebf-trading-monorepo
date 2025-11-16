@@ -103,7 +103,6 @@ class ProjectFileLocator:
             rp = Path(self.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
         elif isinstance(relpath, str):
-            ensure_not_empty_str(relpath, "relpath")
             self._validate_string_path(relpath)
             rp = Path(relpath)
         else:
@@ -304,7 +303,7 @@ class ProjectFileLocator:
     def _validate_string_path(str_path: str) -> None:
         ensure_not_empty_str(str_path, "relpath")
         if str_path == ".":
-            s = f"'.' is not allowed as a project file;."
+            s = f"'.' is not allowed as a project file."
             raise ValueError(s)
         if str_path.startswith("~"):
             s = "~ expansion is not allowed in with_project_file."
