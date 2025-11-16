@@ -249,18 +249,8 @@ class TestGetProjectFileRelpathRootRestriction:
             rooted_sut.get_project_file(relpath=outside_relpath, restrict_to_root=False, must_exist=False)
 
 
-
+@pytest.mark.integration
 class TestGetProjectFileRelativePathArg:
-    # helpers
-    def _mk_proj(self, tmp_path: Path) -> tuple[ProjectFileLocator, Path]:
-        root = tmp_path / "proj"
-        (root / "cfg").mkdir(parents=True)
-        loc = ProjectFileLocator().with_project_root(root)
-        return loc, root
-
-    @pytest.fixture
-    def sut_with_root(self) -> ProjectFileLocator:
-        return ProjectFileLocator().with_project_root(root=None, use_cwd_as_root=True)
 
     def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog):
         caplog.set_level(logging.DEBUG, logger=logger.name)
@@ -280,36 +270,26 @@ class TestGetProjectFileRelativePathArg:
 
         instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
 
-        instance.get_project_file()  # 1st call to prime cache
+        instance.get_project_file()  # prime cache
         caplog.clear()
 
-        instance.get_project_file(use_cache=False)  # 2nd call uses cache
+        instance.get_project_file(use_cache=False)  # explicit cache bypass
         assert "cached project file" not in caplog.text.lower()
         assert "Using previously set sticky project file"
 
-    def test_tilde_expansion(self, rooted_sut):
-        path = rooted_sut.get_project_file("~/settings.yaml")
-        assert path.name == "settings.yaml"
+    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog):
+        caplog.set_level(logging.DEBUG, logger=logger.name)
+        caplog.clear()
 
-    #
-    # def test_per_call_tilde_expands(self, tmp_path, monkeypatch):
-    #     # Point HOME to tmp_path and create ~/cfg.yaml
-    #     home = tmp_path / "home"; home.mkdir()
-    #     monkeypatch.setenv("HOME", str(home))
-    #     p = home / "cfg.yaml"; p.write_text("x")
-    #     sut = ProjectFileLocator().with_project_root(None, use_cwd_as_root=True)
-    #     got = sut.get_project_file("~/cfg.yaml", must_exist=True, restrict_to_root=False)
-    #     assert got == p.resolve()
-    #
-    # def test_cache_is_cleared_when_sticky_changes(self, tmp_path, caplog):
-    #     caplog.set_level(logging.DEBUG, logger=logger.name)
-    #     loc, root = self._mk_proj(tmp_path)
-    #     f1 = root / "cfg/a.yaml"; f1.write_text("a")
-    #     f2 = root / "cfg/b.yaml"; f2.write_text("b")
-    #
-    #     loc = loc.with_project_file("cfg/a.yaml")
-    #     loc.get_project_file(must_exist=True)
-    #     loc = loc.with_project_file("cfg/b.yaml")  # new instance, cache cleared
-    #     caplog.clear()
-    #     loc.get_project_file(must_exist=True)
-    #     assert "cached project file" not in caplog.text.lower()
+        instance = rooted_sut.with_project_file(ALTERNATE_RELPATH)
+
+        instance.get_project_file()  # prime cache
+        caplog.clear()
+
+        instance.get_project_file(DEFAULT_RELPATH)  # 2nd call uses a new path so no cache
+        assert "cached project file" not in caplog.text.lower()
+        assert "Using previously set sticky project file"
+
+    def test_tilde_expansion_works_when_no_exitance_check(self, rooted_sut):
+        path = rooted_sut.get_project_file("~/settings.yaml", must_exist=False)
+        assert path.name == "settings.yaml"

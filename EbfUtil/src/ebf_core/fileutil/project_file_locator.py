@@ -229,13 +229,13 @@ class ProjectFileLocator:
 
         # Resolve path
         if source_path.is_absolute():
-            # Only per-call may be absolute (e.g. from ~)
+            # Only per-call may be absolute (e.g., from ~)
             if not is_per_call:
                 raise ValueError("Sticky project file path cannot be absolute")
             path = source_path.resolve()
             logger.debug("Using per-call absolute project file: %s", path)
         else:
-            # Relative: resolve under project root
+            # Relative: resolve under the project root
             root = self.get_project_root(use_cache=use_cache)
             path = (root / source_path).resolve()
 
