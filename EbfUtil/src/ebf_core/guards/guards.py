@@ -1,7 +1,7 @@
 import traceback
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar, NoReturn
 
 from typeguard import (
     CollectionCheckStrategy,
@@ -11,22 +11,62 @@ from typeguard import (
 )
 
 
+# region helpers
+class ContractError(AssertionError):
+    """Raised when a programming contract is violated in our own code."""
+
+
+def create_clean_error_context(
+        description: str,
+        object_info: dict[str, Any] | None,
+        frames_to_show: int = 3,
+        skip_patterns: list[str] | None = None,
+) -> str:
+    """
+    Creates a clean, formatted error context with filtered traceback.
+    """
+    object_info = object_info or {}
+    skip_patterns = skip_patterns or ['pytest', 'pluggy', '_pytest', 'site-packages']
+
+    stack = traceback.extract_stack()
+    relevant_frames = [frame for frame in stack if not any(skip in frame.filename.lower() for skip in skip_patterns)]
+
+    clean_traceback = ''.join(traceback.format_list(relevant_frames[-(frames_to_show or 3):]))
+
+    error_parts = [description]
+    if object_info:
+        error_parts.extend(f"{key}: {value}" for key, value in object_info.items())
+
+    error_parts.append("\nRelevant call stack:")
+    error_parts.append(clean_traceback)
+
+    return "\n".join(error_parts)
+
+
+def _fail(message: str, **context: Any) -> NoReturn:
+    """Central point of truth for all guard failures."""
+    raise ContractError(
+        create_clean_error_context(
+            description=message,
+            object_info=context or None,
+            frames_to_show=3,
+            skip_patterns=None,
+        )
+    )
+# endregion
+
+
 def ensure_not_none(candidate: Any, description: str | None = None) -> None:
     """
-    Ensures that the candidate is not None, raising an AssertionError if it is.
+    Ensures that the candidate is not None, raising a ContractError if it is.
     """
     if candidate is None:
         prefix = f"Arg '{description}'" if description else "Value"
-
-        object_info = {
-            "Description": description or "Unnamed",
-            "Received": "None"
-        }
-
-        raise AssertionError(create_clean_error_context(
-            description=f"{prefix} cannot be None",
-            object_info=object_info
-        ))
+        _fail(
+            message=f"{prefix} cannot be None",
+            Description=description or "Unnamed",
+            Received="None",
+        )
 
 
 def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
@@ -38,16 +78,11 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
 
     if not candidate.strip():
         prefix = f"Arg '{description}'" if description else "Value"
-
-        object_info = {
-            "Description": description or "Unnamed",
-            "Received": "Empty String"
-        }
-
-        raise AssertionError(create_clean_error_context(
-            description=f"{prefix} cannot be an empty string",
-            object_info=object_info
-        ))
+        _fail(
+            message=f"{prefix} cannot be an empty string",
+            Description=description or "Unnamed",
+            Received="Empty String",
+        )
 
 
 T = TypeVar('T')
@@ -148,32 +183,6 @@ def ensure_in(candidate: Any, choices: Iterable, description: str | None = None)
     ))
 
 
-def create_clean_error_context(
-        description: str,
-        object_info: Optional[dict] = None,
-        skip_patterns: Optional[list[str]] = None,
-        frames_to_show: int = 3
-) -> str:
-    """
-    Creates a clean, formatted error context with filtered traceback.
-    """
-    skip_patterns = skip_patterns or ['pytest', 'pluggy', '_pytest', 'site-packages']
-
-    stack = traceback.extract_stack()
-    relevant_frames = [frame for frame in stack if not any(skip in frame.filename.lower() for skip in skip_patterns)]
-
-    clean_traceback = ''.join(traceback.format_list(relevant_frames[-(frames_to_show or 3):]))
-
-    error_parts = [description]
-    if object_info:
-        error_parts.extend(f"{key}: {value}" for key, value in object_info.items())
-
-    error_parts.append("\nRelevant call stack:")
-    error_parts.append(clean_traceback)
-
-    return "\n".join(error_parts)
-
-
 def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
     """
     Ensures that the candidate is either a non-empty string or a pathlib.Path.
@@ -230,6 +239,7 @@ def ensure_true(condition: bool, description: str = "") -> None:
             frames_to_show=3
         ))
 
+
 def ensure_false(condition: bool, description: str = "") -> None:
     """
     Ensures that the provided condition is strictly False.
@@ -255,4 +265,3 @@ def ensure_false(condition: bool, description: str = "") -> None:
             },
             frames_to_show=3
         ))
-
