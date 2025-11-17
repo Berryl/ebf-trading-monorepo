@@ -211,7 +211,7 @@ def ensure_true(condition: bool, description: str = "") -> None:
         message = f"Assertion failed: {description}" if description else "Condition must be True"
         _fail(
             message=message,
-            Description=description or "Unnamed",
+            Description=description,
             Received=repr(condition),
             Received_Type=type(condition).__name__,
         )
@@ -228,7 +228,7 @@ def ensure_false(condition: bool, description: str = "") -> None:
         message = f"Assertion failed: {description}" if description else "Condition must be False"
         _fail(
             message=message,
-            Description=description or "Unnamed",
+            Description=description,
             Received=repr(condition),
             Received_Type=type(condition).__name__,
         )
