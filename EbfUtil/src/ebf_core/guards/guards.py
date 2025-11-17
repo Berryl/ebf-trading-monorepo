@@ -71,7 +71,7 @@ def ensure_not_none(candidate: Any, description: str | None = None) -> None:
 
 def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
     """
-    Ensures that the candidate is not None or an empty string, raising an AssertionError if it is.
+    Ensures that the candidate is not None or an empty string, raising a ContractError if it is.
     """
     ensure_not_none(candidate, description)
     ensure_type(candidate, str, description)
@@ -88,32 +88,35 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
 T = TypeVar('T')
 
 
-def ensure_type(candidate: Any, expected_type: type[T], description: str | None = None) -> T:
+def ensure_type(candidate: Any, expected_type: type[T], description: str | None = None, ) -> T:
     """
-    Ensures that the candidate is of the expected type, raising an AssertionError if not.
+    Ensures that the candidate is of the expected type, raising a ContractError if not.
     """
     try:
-        check_type(value=candidate,
-                   expected_type=expected_type,
-                   forward_ref_policy=ForwardRefPolicy.ERROR,
-                   collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS)
+        check_type(
+            value=candidate,
+            expected_type=expected_type,
+            forward_ref_policy=ForwardRefPolicy.ERROR,
+            collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS,
+        )
         return candidate
     except TypeCheckError as e:
         actual_type = type(candidate).__name__ if candidate is not None else "None"
         prefix = f"Arg '{description}'" if description else "Value"
-        expected_name = getattr(expected_type, '__name__', str(expected_type))
+        expected_name = getattr(expected_type, "__name__", str(expected_type))
 
-        message = (f"{prefix} must be of type {expected_name} "
-                   f"(it was type {actual_type})") \
-            if not hasattr(expected_type, '__origin__') else f"{prefix}: {e} (it was type {actual_type})"
+        if hasattr(expected_type, "__origin__"):
+            # Generic like list[int] → use typeguard's message
+            message = f"{prefix}: {e}"
+        else:
+            message = f"{prefix} must be of type {expected_name} (it was type {actual_type})"
 
-        raise AssertionError(create_clean_error_context(
-            description=message,
-            object_info={"Description": description or "Unnamed",
-                         "Expected Type": expected_name, "Received Type": actual_type},
-            frames_to_show=3
-        )) from e
-
+        _fail(
+            message=message,
+            Description=description or "Unnamed",
+            Expected_Type=expected_name,
+            Received_Type=actual_type,
+        )
 
 def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = None) -> T:
     """
