@@ -105,22 +105,16 @@ class TestEnsureAttribute:
             value = 42
 
         g.ensure_attribute(Example(), "value", "example_value")
-        pass  # No exception should be raised
+        # No exception should be raised
 
     def test_when_attribute_does_not_exist_with_description(self):
         class Example:
             pass
 
-        expected_msg = re.escape("example_value") + r"\nObject type: Example\nRequested attribute: missing_attr"
+        expected_msg = re.escape("example_value has no attribute 'missing_attr'")
 
-        with pytest.raises(AttributeError) as exc_info:
+        with pytest.raises(AssertionError, match=expected_msg):
             g.ensure_attribute(Example(), "missing_attr", "example_value")
-
-        # Extract actual error message
-        actual_message = str(exc_info.value)
-
-        # Use regex search instead of match to allow for extra lines
-        assert re.search(expected_msg, actual_message)
 
     def test_when_attribute_does_not_exist_without_description(self):
         class Example:
@@ -128,19 +122,15 @@ class TestEnsureAttribute:
 
         expected_msg = re.escape("Example has no attribute 'missing_attr'")
 
-        with pytest.raises(AttributeError) as exc_info:
+        with pytest.raises(AssertionError, match=expected_msg):
             g.ensure_attribute(Example(), "missing_attr")
-
-        actual_message = str(exc_info.value)
-
-        assert re.search(expected_msg, actual_message)
 
     def test_when_attribute_is_none(self):
         class Example:
             value = None
 
         g.ensure_attribute(Example(), "value", "example_value")
-        pass  # No exception should be raised (presence is checked, not value)
+        # No exception should be raised (presence is checked, not value)
 
     def test_when_candidate_is_none(self):
         msg = re.escape("Arg 'example_value' cannot be None")

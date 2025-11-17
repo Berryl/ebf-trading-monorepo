@@ -53,6 +53,8 @@ def _fail(message: str, **context: Any) -> NoReturn:
             skip_patterns=None,
         )
     )
+
+
 # endregion
 
 
@@ -118,29 +120,29 @@ def ensure_type(candidate: Any, expected_type: type[T], description: str | None 
             Received_Type=actual_type,
         )
 
-def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = None) -> T:
+
+def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = None, ) -> T:
     """
     Ensures that the candidate has the specified attribute.
     """
     ensure_not_none(candidate, description)
 
     if not hasattr(candidate, attr_spec):
-        description = description or f"{type(candidate).__name__} has no attribute '{attr_spec}'"
-
+        description_str = description or f"{type(candidate).__name__}"
         available_attrs = sorted(dir(candidate))
-        attr_list = ", ".join(available_attrs[:10])
-        if len(available_attrs) > 10:
-            attr_list += "..."
+        attr_list = ", ".join(available_attrs[:20])
+        if len(available_attrs) > 20:
+            attr_list += ", ..."
 
-        object_info = {
-            "Object type": type(candidate).__name__,
-            "Requested attribute": attr_spec,
-            "Available attributes": attr_list
-        }
+        _fail(
+            message=f"{description_str} has no attribute '{attr_spec}'",
+            Description=description or "Unnamed",
+            Object_type=type(candidate).__name__,
+            Requested_attribute=attr_spec,
+            Available_attributes=attr_list,
+        )
 
-        raise AttributeError(create_clean_error_context(description, object_info))
-
-    return candidate
+    return candidate  # type: ignore[return-value]
 
 
 def ensure_in(candidate: Any, choices: Iterable, description: str | None = None) -> None:
