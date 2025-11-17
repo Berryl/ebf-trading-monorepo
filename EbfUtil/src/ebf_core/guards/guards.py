@@ -172,6 +172,7 @@ def ensure_in(candidate: Any, choices: Iterable[Any], description: str | None = 
         Allowed_sample=preview or "(empty)",
     )
 
+
 def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path:
     """
     Ensures that the candidate is either a non-empty string or a PathLib.Path.
@@ -200,35 +201,28 @@ def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path
         **{"Received Type": type(candidate).__name__},
     )
 
-def ensure_true(condition: bool, description: str = "") -> None:
-    """
-    Ensures that the provided condition is strictly True.
 
-    Passes only when the condition is the boolean Truth.
-    Fails for False, None, 0, "", [], or any non-bool truthy value (1, "yes", [1], etc.).
-    """
-    if not (isinstance(condition, bool) and condition):
-        message = f"Assertion failed: {description}" if description else "Condition must be True"
+def _ensure_bool_strict(condition: bool, expected: bool, description: str = "", ) -> None:
+    if not (isinstance(condition, bool) and condition is expected):
+        expected_str = "True" if expected else "False"
+        message = (
+            f"Assertion failed: {description}"
+            if description
+            else f"Condition must be {expected_str}"
+        )
         _fail(
             message=message,
-            Description=description,
+            Description=description or None,
             Received=repr(condition),
             Received_Type=type(condition).__name__,
         )
+
+
+def ensure_true(condition: bool, description: str = "") -> None:
+    """Ensures that the provided condition is strictly True."""
+    _ensure_bool_strict(condition, expected=True, description=description)
 
 
 def ensure_false(condition: bool, description: str = "") -> None:
-    """
-    Ensures that the provided condition is strictly False.
-
-    Passes only when the condition is the boolean False.
-    Fails for True, or any non-bool value (including falsy values like 0, "", [], None).
-    """
-    if not (isinstance(condition, bool) and not condition):
-        message = f"Assertion failed: {description}" if description else "Condition must be False"
-        _fail(
-            message=message,
-            Description=description,
-            Received=repr(condition),
-            Received_Type=type(condition).__name__,
-        )
+    """Ensures that the provided condition is strictly False."""
+    _ensure_bool_strict(condition, expected=False, description=description)
