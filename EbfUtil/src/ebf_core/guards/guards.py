@@ -145,48 +145,32 @@ def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = N
     return candidate  # type: ignore[return-value]
 
 
-def ensure_in(candidate: Any, choices: Iterable, description: str | None = None) -> None:
+def ensure_in(candidate: Any, choices: Iterable[Any], description: str | None = None, ) -> None:
     """
     Ensures that the candidate is a member of the provided choices.
     """
     ensure_not_none(choices, "choices")
 
-    try:
-        if candidate in choices:
-            return
-    except TypeError:
-        try:
-            for item in choices:
-                if candidate == item:
-                    return
-        except TypeError:
-            pass  # Non-iterable 'choices' — will fall through to error
+    if candidate in choices:
+        return
 
-    shown_items: list[Any] = []
+    # Build a nice preview of allowed values
     try:
-        it = iter(choices)
-        for _ in range(10):
-            shown_items.append(next(it))
-    except Exception:  # noqa PyBroadException
-        pass
-
-    shown = ", ".join(repr(x) for x in shown_items)
-    try:
-        if len(choices) > len(shown_items):  # type: ignore[arg-type]
-            shown = (shown + ", ...") if shown else "..."
-    except Exception:  # noqa PyBroadException
-        pass
+        items = list(iter(choices))
+        preview = ", ".join(repr(x) for x in items[:20])
+        if len(items) > 20:
+            preview += ", ..."
+    except Exception:  # noqa: no cover — defensive, very rare
+        preview = "<unprintable>"
 
     prefix = f"Arg '{description}'" if description else "Value"
-    raise AssertionError(create_clean_error_context(
-        description=f"{prefix} must be one of the allowed choices",
-        object_info={
-            "Description": description or "Unnamed",
-            "Received": repr(candidate),
-            "Allowed (sample)": shown if shown else "(unavailable)"
-        }
-    ))
 
+    _fail(
+        message=f"{prefix} must be one of the allowed choices",
+        Description=description or "Unnamed",
+        Received=candidate,
+        Allowed_sample=preview or "(empty)",
+    )
 
 def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
     """
