@@ -172,21 +172,21 @@ def ensure_in(candidate: Any, choices: Iterable[Any], description: str | None = 
         Allowed_sample=preview or "(empty)",
     )
 
-def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
+def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path:
     """
-    Ensures that the candidate is either a non-empty string or a pathlib.Path.
+    Ensures that the candidate is either a non-empty string or a PathLib.Path.
     Returns a Path object.
     """
     ensure_not_none(candidate, description)
 
     if isinstance(candidate, Path):
-        if not str(candidate):
+        if not str(candidate).strip():
             prefix = f"Arg '{description}'" if description else "Value"
-            raise AssertionError(create_clean_error_context(
-                description=f"{prefix} cannot be an empty path",
-                object_info={"Description": description or "Unnamed",
-                             "Received": "Empty Path"}
-            ))
+            _fail(
+                message=f"{prefix} cannot be an empty path",
+                Description=description or "Unnamed",
+                Received="Empty Path",
+            )
         return candidate
 
     if isinstance(candidate, str):
@@ -194,63 +194,41 @@ def ensure_usable_path(candidate: Any, description: str | None = None) -> Path:
         return Path(candidate)
 
     prefix = f"Arg '{description}'" if description else "Value"
-    raise AssertionError(create_clean_error_context(
-        description=f"{prefix} must be a Path or non-empty string",
-        object_info={"Description": description or "Unnamed",
-                     "Received Type": type(candidate).__name__}
-    ))
-
+    _fail(
+        message=f"{prefix} must be a Path or non-empty string",
+        Description=description or "Unnamed",
+        **{"Received Type": type(candidate).__name__},
+    )
 
 def ensure_true(condition: bool, description: str = "") -> None:
     """
     Ensures that the provided condition is strictly True.
 
-    Behavior:
-    - Passes only when the condition is boolean True.
-    - Fails when the condition is False, None, 0, empty containers, or any other falsy value.
-    - Also fails when condition is a non-bool truthy value (e.g., 1, [1]) because it is not strictly True.
-
-    Args:
-        condition: The condition to verify. Must be boolean True.
-        description: Optional additional context for the assertion message.
-
-    Raises:
-        AssertionError: If the condition is not strictly True.
+    Passes only when the condition is the boolean Truth.
+    Fails for False, None, 0, "", [], or any non-bool truthy value (1, "yes", [1], etc.).
     """
     if not (isinstance(condition, bool) and condition):
         message = f"Assertion failed: {description}" if description else "Condition must be True"
-        raise AssertionError(create_clean_error_context(
-            description=message,
-            object_info={
-                "Received": repr(condition),
-                "Received Type": type(condition).__name__
-            },
-            frames_to_show=3
-        ))
+        _fail(
+            message=message,
+            Description=description or "Unnamed",
+            Received=repr(condition),
+            Received_Type=type(condition).__name__,
+        )
 
 
 def ensure_false(condition: bool, description: str = "") -> None:
     """
     Ensures that the provided condition is strictly False.
 
-    Behavior:
-    - Passes only when the condition is the boolean False.
-    - Fails when the condition is True, or any non-bool value (including falsy values like 0, '', [], None).
-
-    Args:
-        condition: The condition to verify. Must be the boolean False.
-        description: Optional additional context for the assertion message.
-
-    Raises:
-        AssertionError: If the condition is not strictly False.
+    Passes only when the condition is the boolean False.
+    Fails for True, or any non-bool value (including falsy values like 0, "", [], None).
     """
     if not (isinstance(condition, bool) and not condition):
         message = f"Assertion failed: {description}" if description else "Condition must be False"
-        raise AssertionError(create_clean_error_context(
-            description=message,
-            object_info={
-                "Received": repr(condition),
-                "Received Type": type(condition).__name__
-            },
-            frames_to_show=3
-        ))
+        _fail(
+            message=message,
+            Description=description or "Unnamed",
+            Received=repr(condition),
+            Received_Type=type(condition).__name__,
+        )
