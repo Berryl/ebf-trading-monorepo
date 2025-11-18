@@ -53,7 +53,7 @@ class TestEnumFromStr:
             enum_from_str("purple", Color)
 
     def test_raises_contract_error_on_none(self):
-        with pytest.raises(ContractError):
+        with pytest.raises(ContractError, match="Arg 'value' cannot be None"):
             enum_from_str(None, Color)
 
     def test_raises_value_error_on_empty_string(self):
