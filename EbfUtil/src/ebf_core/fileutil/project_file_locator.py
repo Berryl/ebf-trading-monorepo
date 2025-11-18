@@ -265,7 +265,12 @@ class ProjectFileLocator:
 
     @staticmethod
     def _validate_markers(markers: Iterable[str]) -> None:
-        if not markers:
+        found_any = False
+        for m in markers:
+            found_any = True
+            ensure_not_empty_str(m, "marker")
+
+        if not found_any:
             raise ValueError("Marker list must not be empty. Provide markers or use defaults.")
 
     @staticmethod
