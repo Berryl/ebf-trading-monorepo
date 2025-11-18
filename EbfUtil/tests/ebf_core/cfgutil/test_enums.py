@@ -43,14 +43,14 @@ class TestEnumFromStr:
             ("dry-run", Mode.DRY_RUN),
         ],
     )
-    def test_hyphens_spaces_underscores(self, input_str, expected):
+    def test_hyphens_spaces_underscores_are_handled(self, input_str, expected):
         assert enum_from_str(input_str, Mode) is expected
 
-    def test_raises_value_error_on_invalid(self):
-        with pytest.raises(ValueError) as exc:
+    def test_raises_value_error_on_non_existent_enum_val(self):
+        msg = f"'purple' is not a valid Color. Valid options: RED, BLUE, GREEN"
+
+        with pytest.raises(ValueError, match=msg) as exc:
             enum_from_str("purple", Color)
-        assert "purple" in str(exc.value)
-        assert "RED, BLUE, GREEN" in str(exc.value)
 
     def test_raises_contract_error_on_none(self):
         with pytest.raises(ContractError):
