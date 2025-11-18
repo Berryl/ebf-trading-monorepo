@@ -174,7 +174,7 @@ class ProjectFileLocator:
             current = parent
 
         # Fallback if nothing matched: use start (common, predictable)
-        result = found or start
+        result = (found or start).resolve()
         if use_cache:
             object.__setattr__(self, "_cached_project_root", result)
         return result
@@ -187,7 +187,7 @@ class ProjectFileLocator:
 
         Precedence:
           - per-call there is a `relpath` argument (absolute or relative, with ~ expansion)
-            NOTE: per-call args do NOT  updates sticky defaults. It's more useful to use this as
+            NOTE: per-call args do NOT update sticky defaults. It's more useful to use this as
             an override of the cache
           - instance 'sticky' default `_project_file_relpath` (must be relative, no ~)
           - None (returns None)
