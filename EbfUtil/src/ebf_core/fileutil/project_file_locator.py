@@ -86,16 +86,19 @@ class ProjectFileLocator:
         return replace(self, _markers=new_markers, _priority_marker=priority,
                        _cached_project_root=None, _cached_project_file=None, )
 
-    def with_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> Self:
+    def with_sticky_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> Self:
         """
-        Return a new locator with a sticky project file relative to the project root (using relpath).
+            Configure the *default* project file for this locator.
 
-        Args
-            relpath:
-            - DEFAULT_PROJECT_FILE_RELATIVE_PATH if arg omitted
-            - None: clear the sticky default
-            - Path/str: set that *relative* path
-        """
+            Use this when most calls use the same project file; callers can still
+            override it per-call via get_project_file(relpath=...).
+
+            Args:
+                relpath:
+                - _USE_CLASS_DEFAULT (arg omitted): use DEFAULT_PROJECT_FILE_RELATIVE_PATH
+                - None: clear the sticky default (get_project_file() will return None)
+                - Path/str: set that *relative* path (from the project root)
+            """
         if relpath is None:
             return replace(self, _project_file_relpath=None, _cached_project_file=None)
 
@@ -187,18 +190,23 @@ class ProjectFileLocator:
 
         Precedence:
           - per-call there is a `relpath` argument (absolute or relative, with ~ expansion)
-            NOTE: per-call args do NOT update sticky defaults. It's more useful to use this as
-            an override of the cache
-          - instance 'sticky' default `_project_file_relpath` (must be relative, no ~)
+          - instance 'sticky' default `_project_file_relpath`
+                (set via with_sticky_project_file, must be relative, no ~)
           - None (returns None)
 
         Args:
             relpath: If provided, expanded with ~, then:
                      - If absolute → used directly
                      - If relative → resolved under project root
-            must_exist: Raise FileNotFoundError if the path does not exist.
-            use_cache: Cache result when using sticky default.
-            restrict_to_root: Prevent relative paths from escaping the project root.
+            must_exist:
+                If True, a missing target normally raises FileNotFoundError.
+                Passing a path with ~ and must_exist=True is treated as a logical
+                error and raises ValueError instead.
+            use_cache:
+                Cache result when using sticky default.
+            restrict_to_root:
+                When True (default), prevent relative paths from escaping
+                    the resolved project root.
 
         Returns:
             Absolute resolved Path, or None.

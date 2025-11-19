@@ -121,7 +121,7 @@ class TestGetProjectRoot:
 
 
 @pytest.mark.integration
-class TestWithProjectFile:
+class TestWithStickyProjectFile:
 
     def test_relpath_default_is_none(self, sut):
         assert sut.project_file_relpath is None
@@ -130,40 +130,40 @@ class TestWithProjectFile:
         assert sut._cached_project_file is None
 
     def test_a_new_instance_is_created(self, sut):
-        sut_clone = sut.with_project_file()
+        sut_clone = sut.with_sticky_project_file()
         assert sut_clone is not sut
 
     def test_default_arg_is_known_default_path(self, sut):
-        result = sut.with_project_file()
+        result = sut.with_sticky_project_file()
         assert result.project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
     def test_arg_sets_the_relpath(self, sut):
-        result = sut.with_project_file("pyproject.toml")
+        result = sut.with_sticky_project_file("pyproject.toml")
         assert result.project_file_relpath == Path("pyproject.toml")
 
     def test_empty_str_is_error(self, sut):
         msg = re.escape("Arg 'relpath' cannot be an empty string")
 
         with pytest.raises(AssertionError, match=msg):
-            sut.with_project_file("")
+            sut.with_sticky_project_file("")
 
     def test_single_dot_is_not_allowed(self, sut):
         msg = re.escape("'.' is not allowed as a project file")
 
         with pytest.raises(ValueError, match=msg):
-            sut.with_project_file(".")
+            sut.with_sticky_project_file(".")
 
     def test_tilde_expanded_is_not_allowed(self, rooted_sut):
         msg = "~ expansion is not allowed in with_project_file."
 
         with pytest.raises(ValueError, match=msg):
-            rooted_sut.with_project_file("~/settings.yaml")
+            rooted_sut.with_sticky_project_file("~/settings.yaml")
 
     def test_none_arg_clears_the_relpath(self, sut):
-        result = sut.with_project_file()
+        result = sut.with_sticky_project_file()
         assert result.project_file_relpath == Path(result.DEFAULT_PROJECT_FILE_RELATIVE_PATH)
 
-        result = result.with_project_file(None)
+        result = result.with_sticky_project_file(None)
         assert result.project_file_relpath is None
 
     def test_absolute_project_file_path_is_not_allowed(self, sut, tmp_path):
@@ -171,13 +171,13 @@ class TestWithProjectFile:
 
         msg = re.escape("must be a *relative* path from the project root")
         with pytest.raises(ValueError, match=msg):
-            sut.with_project_file(tmp_path)
+            sut.with_sticky_project_file(tmp_path)
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows-only quirk")
     def test_drive_anchored_relative_is_not_allowed(self, sut):
         msg = re.escape("must be a *relative* path from the project root")
         with pytest.raises(ValueError, match=msg):
-            sut.with_project_file(Path("C:foo.txt"))
+            sut.with_sticky_project_file(Path("C:foo.txt"))
 
 
 @pytest.fixture
@@ -194,7 +194,7 @@ class TestGetProjectFile:
         assert path is None
 
     def test_whn_default_file_set_by_fluent_builder(self, rooted_sut):
-        pfl = rooted_sut.with_project_file() # this uses the default file
+        pfl = rooted_sut.with_sticky_project_file() # this uses the default file
 
         path = pfl.get_project_file()
         assert path.exists() and path.name == "config.yaml"
@@ -204,15 +204,15 @@ class TestGetProjectFile:
         msg = f"^{re.escape('Project file not found: ')}.*{nonexistent_filename}$"
 
         with (pytest.raises(FileNotFoundError, match=msg)):
-            rooted_sut.with_project_file("blah").get_project_file()
+            rooted_sut.with_sticky_project_file("blah").get_project_file()
 
     def test_can_override_existence_check(self, rooted_sut):
-        path = (rooted_sut.with_project_file("blah")
+        path = (rooted_sut.with_sticky_project_file("blah")
                 .get_project_file(must_exist=False))
         assert not path.exists() and path.name == "blah"
 
     def test_can_supply_relpath_per_call(self, rooted_sut):
-        pfl = rooted_sut.with_project_file()
+        pfl = rooted_sut.with_sticky_project_file()
         assert pfl.project_file_relpath.name == 'config.yaml'
 
         path = pfl.get_project_file("resources/settings.yaml", must_exist=True)
@@ -222,7 +222,7 @@ class TestGetProjectFile:
     @pytest.mark.skipif(os.name != "nt", reason="Windows-only")
     def test_relpath_can_be_absolute(self, rooted_sut):
         some_absolute_path = Path("C:/Windows/System32/notepad.exe").resolve()
-        pfl = rooted_sut.with_project_file()
+        pfl = rooted_sut.with_sticky_project_file()
 
         path = pfl.get_project_file(some_absolute_path)
         assert path == some_absolute_path
@@ -233,10 +233,10 @@ class TestGetProjectFile:
         msg = f"^{re.escape('Project file not found: ')}.*{re.escape(str(nonexistent_path))}"
 
         with (pytest.raises(FileNotFoundError, match=msg)):
-            rooted_sut.with_project_file().get_project_file(nonexistent_path)
+            rooted_sut.with_sticky_project_file().get_project_file(nonexistent_path)
 
         with does_not_raise():  # allow non-existent with param must_exist=False
-            rooted_sut.with_project_file().get_project_file(nonexistent_path, must_exist=False)
+            rooted_sut.with_sticky_project_file().get_project_file(nonexistent_path, must_exist=False)
 
 
 @pytest.mark.integration
@@ -274,7 +274,7 @@ class TestGetProjectFileCaching:
         return Path("resources/settings.yaml")
 
     def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog, path1):
-        instance = rooted_sut.with_project_file(path1)
+        instance = rooted_sut.with_sticky_project_file(path1)
 
         instance.get_project_file()  # 1st call to prime cache
         caplog.clear()
@@ -283,7 +283,7 @@ class TestGetProjectFileCaching:
         assert "cached project file" in caplog.text.lower()
 
     def test_cache_can_be_bypassed(self, rooted_sut, caplog, path1):
-        instance = rooted_sut.with_project_file(path1)
+        instance = rooted_sut.with_sticky_project_file(path1)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
@@ -293,7 +293,7 @@ class TestGetProjectFileCaching:
         assert "sticky project file"
 
     def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, path1, path2):
-        instance = rooted_sut.with_project_file(path1)
+        instance = rooted_sut.with_sticky_project_file(path1)
 
         instance.get_project_file()  # prime cache
         caplog.clear()
