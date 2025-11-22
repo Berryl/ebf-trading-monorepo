@@ -38,7 +38,7 @@ class _ShortcutCandidate:
         self.pattern = pattern
         self.root_rank = root_rank
         # Number of folder levels under the drive (shallower = better)
-        self.depth = len(path.parts) - 1  # -1 because parts[0] is drive like "C:"
+        self.depth = len(path.parts) - 1  # -1 because parts[0] is a drive (like C:)
 
     def score(self) -> tuple:
         p = self.pattern
@@ -49,7 +49,7 @@ class _ShortcutCandidate:
             has_wildcard,  # an exact match beats any wildcard
             -len(p),  # longer pattern = more specific
             wildcard_count,  # fewer wildcards = more specific
-            self.depth,  # prefer shortcuts closer to Programs root
+            self.depth,  # prefer shortcuts closer to the Programs root
             str(self.path).lower(),  # stable tie-breaker
         )
 
@@ -105,7 +105,7 @@ def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[s
 
     Ranking (strictly deterministic):
         1. User Start Menu (APPDATA) over All Users (PROGRAMDATA)
-        2. An exact filename match over any wildcard
+        2. An exact filename match without any wildcard
         3. Longer pattern wins
         4. Fewer wildcards wins
         5. Shallower folder depth wins
@@ -113,11 +113,11 @@ def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[s
 
     Args:
         vendor_folders: Subfolders under Programs to search (e.g. ["Fidelity Investments"]).
-                        Empty sequence → search entire Programs folder.
+                        Empty sequence → search the entire Programs folder.
         patterns: Filename patterns (case-insensitive fnmatch). Empty → any *.lnk
 
     Returns:
-        Resolved Path to the best matching .lnk file, or None.
+        Resolved Path to the best matching .lnk file (or None).
     """
     if not patterns:
         patterns = ["*.lnk"]
