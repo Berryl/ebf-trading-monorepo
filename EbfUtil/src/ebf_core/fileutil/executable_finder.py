@@ -105,7 +105,7 @@ def find_start_menu_shortcut(vendor_folders: Sequence[str], patterns: Sequence[s
 
     Ranking (strictly deterministic):
         1. User Start Menu (APPDATA) over All Users (PROGRAMDATA)
-        2. Exact filename match over any wildcard
+        2. An exact filename match over any wildcard
         3. Longer pattern wins
         4. Fewer wildcards wins
         5. Shallower folder depth wins
