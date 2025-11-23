@@ -1,10 +1,11 @@
 import logging
 import os
 import re
+from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 
 import pytest
-from contextlib import nullcontext as does_not_raise
+
 from ebf_core.fileutil.project_file_locator import ProjectFileLocator, logger
 
 
@@ -182,7 +183,9 @@ class TestWithStickyProjectFile:
 
 @pytest.fixture
 def rooted_sut() -> ProjectFileLocator:
-    return ProjectFileLocator().with_cwd_project_root()
+    root = ProjectFileLocator().get_project_root()
+    return ProjectFileLocator().with_project_root(root)
+
 
 @pytest.mark.integration
 class TestGetProjectFile:
@@ -194,7 +197,7 @@ class TestGetProjectFile:
         assert path is None
 
     def test_whn_default_file_set_by_fluent_builder(self, rooted_sut):
-        pfl = rooted_sut.with_sticky_project_file() # this uses the default file
+        pfl = rooted_sut.with_sticky_project_file()  # this uses the default file
 
         path = pfl.get_project_file()
         assert path.exists() and path.name == "config.yaml"

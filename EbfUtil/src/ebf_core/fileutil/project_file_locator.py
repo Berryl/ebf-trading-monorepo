@@ -58,7 +58,6 @@ class ProjectFileLocator:
 
     # endregion
 
-    # region Fluent "builder" methods (return NEW instances)
     def with_project_root(self, root: Optional[Path]) -> Self:
         """
         Return a new locator with an explicit project root (or cleared).

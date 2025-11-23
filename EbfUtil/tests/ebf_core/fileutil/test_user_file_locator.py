@@ -1,0 +1,94 @@
+from pathlib import Path
+
+import pytest
+
+from ebf_core.fileutil.user_file_locator import UserFileLocator
+
+
+@pytest.fixture
+def sut() -> UserFileLocator:
+    return UserFileLocator()
+
+@pytest.mark.integration
+class TestWithUserBaseDir:
+
+    def test_user_base_dir_default_is_none(self, sut):
+        assert sut.user_base_dir is None
+
+    def test_new_instance_is_created(self, sut, tmp_path):
+        clone = sut.with_user_base_dir(tmp_path)
+        assert clone is not sut
+
+    def test_sets_and_resolves_base_dir(self, sut, tmp_path):
+        expected = tmp_path.resolve()
+        clone = sut.with_user_base_dir(tmp_path)
+        assert clone.user_base_dir == expected
+
+    def test_arg_of_none_resets_the_base_dir_to_none(self, sut, tmp_path):
+        s2 = sut.with_user_base_dir(tmp_path)
+        assert s2.user_base_dir is not None
+
+        s3 = s2.with_user_base_dir(None)
+        assert s3.user_base_dir is None
+
+    @pytest.mark.integration
+    class TestGetUserBaseDir:
+
+        def test_falls_back_to_path_home_when_not_set(self, sut):
+            expected = Path.home().resolve()
+            actual = sut.get_user_base_dir()
+            assert actual == expected
+
+        def test_uses_explicit_base_dir_when_set(self, sut, tmp_path):
+            locator = sut.with_user_base_dir(tmp_path)
+            expected = tmp_path.resolve()
+            actual = locator.get_user_base_dir()
+            assert actual == expected
+
+    @pytest.mark.integration
+    class TestTryGetFileFromUserBaseDir:
+
+        def test_returns_none_when_file_missing(self, sut, tmp_path):
+            locator = sut.with_user_base_dir(tmp_path)
+            result = locator.try_get_file_from_user_base_dir("missing.yaml")
+            assert result is None
+
+        def test_can_find_file_in_base_dir(self, sut, tmp_path):
+            target = tmp_path / "settings.yaml"
+            target.write_text("x")
+
+            locator = sut.with_user_base_dir(tmp_path)
+            result = locator.try_get_file_from_user_base_dir("settings.yaml")
+
+            assert result == target.resolve()
+            assert result.is_absolute()
+
+        def test_can_find_file_in_subfolder_with_relative_parts(self, sut, tmp_path):
+            folder = tmp_path / "foo" / "bar"
+            folder.mkdir(parents=True)
+            target = folder / "settings.yaml"
+            target.write_text("x")
+
+            locator = sut.with_user_base_dir(tmp_path)
+
+            result = locator.try_get_file_from_user_base_dir(
+                "settings.yaml", "foo", "bar"
+            )
+
+            assert result == target.resolve()
+            assert result.is_absolute()
+
+        def test_accepts_path_objects_for_filename_and_subpaths(self, sut, tmp_path):
+            folder = tmp_path / "nested"
+            folder.mkdir()
+            target = folder / "config.json"
+            target.write_text("{}")
+
+            locator = sut.with_user_base_dir(tmp_path)
+
+            result = locator.try_get_file_from_user_base_dir(
+                Path("config.json"), Path("nested")
+            )
+
+            assert result == target.resolve()
+            assert result.is_absolute()
