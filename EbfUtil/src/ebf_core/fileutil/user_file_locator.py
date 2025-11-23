@@ -14,9 +14,9 @@ class UserFileLocator:
     """
 
     def __init__(self) -> None:
-        self._user_base_dir: Optional[Path] = None
+        self._base_dir: Optional[Path] = None
 
-    def with_user_base_dir(self, base: Optional[Path]) -> Self:
+    def with_base_dir(self, base: Optional[Path]) -> Self:
         """
         Return a new instance with an explicit user base directory.
 
@@ -25,13 +25,13 @@ class UserFileLocator:
             This isolates the filesystem and avoids touching the real HOME dir.
         """
         clone = UserFileLocator()
-        clone._user_base_dir = None if base is None else Path(base).resolve()
+        clone._base_dir = None if base is None else Path(base).resolve()
         return clone
 
     @property
-    def user_base_dir(self) -> Optional[Path]:
+    def base_dir(self) -> Optional[Path]:
         """Return the explicitly configured base dir, or None if not set."""
-        return self._user_base_dir
+        return self._base_dir
 
     def get_user_base_dir(self) -> Path:
         """
@@ -41,7 +41,7 @@ class UserFileLocator:
             If an explicit base is provided (tests), use it.
             Otherwise fall back to the actual user home directory.
         """
-        return (self._user_base_dir or Path.home()).resolve()
+        return (self._base_dir or Path.home()).resolve()
 
     def try_get_file_from_user_base_dir(self, filename: str | Path, *subpaths: str | Path) -> Optional[Path]:
         """
