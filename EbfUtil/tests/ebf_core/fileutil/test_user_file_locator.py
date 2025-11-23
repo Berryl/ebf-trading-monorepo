@@ -97,7 +97,7 @@ class TestHome:
             msg = "argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'NoneType'"
 
             with pytest.raises(TypeError, match=msg):
-                sut.file(None)
+                sut.try_file(None)
 
         def test_can_get_with__valid_path(self, sut, put_file):
             known_file = put_file("foo/bar.txt", "some_content")
