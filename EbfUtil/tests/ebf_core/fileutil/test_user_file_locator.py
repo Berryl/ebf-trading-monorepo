@@ -9,7 +9,6 @@ from ebf_core.fileutil.user_file_locator import UserFileLocator
 def sut() -> UserFileLocator:
     return UserFileLocator()
 
-@pytest.mark.integration
 class TestHome:
 
     def test_home_is_path_home_if_not_overridden(self):
@@ -21,13 +20,19 @@ class TestHome:
         sut = UserFileLocator.for_testing(tmp_path)
         expected = tmp_path.resolve()
         assert sut.home == expected
-    #
-    # def test_arg_of_none_resets_the_base_dir_to_none(self, sut, tmp_path):
-    #     c1 = sut.with_base_dir(tmp_path)
-    #     assert c1.base_dir is not None
-    #
-    #     s3 = c1.with_base_dir(None)
-    #     assert s3.base_dir is None
+
+        # THIS WORKS IN PRODUCTION BUT KEEP TESTING CLEAR
+        sut = UserFileLocator(tmp_path)
+        assert sut.home == expected
+
+    class TestFile:
+
+        def test_parts_cannot_be_none(self):
+            sut = UserFileLocator()
+            msg = "argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'NoneType'"
+
+            with pytest.raises(TypeError, match=msg):
+                sut.file(None)
 
     # @pytest.mark.integration
     # class TestGetUserBaseDir:
