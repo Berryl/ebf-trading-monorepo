@@ -12,74 +12,50 @@ from .handlers.cfg_format_handler import ConfigFormatHandler
 
 class ConfigService:
     """
-    Orchestrates config loading:
+    Orchestrates configuration management:
       • Finds candidate files (project root, user base).
       • Delegates parsing to format handlers.
       • Merges configs with user overrides taking precedence.
     """
-    DEFAULT_FILENAME = "config.yaml"
 
     def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
         self._handlers: list[ConfigFormatHandler] = handlers or [YamlHandler(), JsonHandler(), TomlHandler()]
 
-    def load(self, app_name: str, *,
-             project_search_path: str | Path | None = "config",
-             filename: str | Path | None = DEFAULT_FILENAME,
-             user_filename: str | Path | None = None,
-             return_sources: bool = False,
-             file_util: ProjectFileLocator | None = None
-             ) -> dict | tuple[dict, list[Path]]:
+    def load(self, *paths: Path, return_sources: bool = False) -> dict | tuple[dict, list[Path]]:
         """
-        Load configuration for the given application.
+        Load and merge configuration files from the given paths, in order.
 
-        Search order:
-          1. Project: <project_root>/<project_search_path>/<filename>
-          2. User: <user_base>/.config/<app_name>/<user_filename>
+        Missing paths are silently skipped.
+        Later files override earlier ones via deep-merge.
+        If return_sources=True, returns (cfg, sources) where `sources`
+        is the list of existing files actually applied, in order.
 
-        If both exist, the user config is merged over the project config
-        (dicts merged deeply, lists/scalars replaced). Missing files are
-        skipped without error.
-
-        Args:
-            app_name: Application name; used for user config path resolution.
-            project_search_path: Optional relative folder inside the project root
-                (default: "config").
-            filename: file name assumes the same for both project and user file names.
-                (default: "config.yaml").
-            user_filename: Optional override, i.e., "SallyConfig.yaml"
-            return_sources: If True, also return the list of source files loaded
-                in the order they were applied.
-            file_util: Optional FileUtil instance. In production this is usually
-                omitted (a new one will be created). In tests, you can supply a
-                preconfigured FileUtil bound to a temporary project root or
-                user base directory.
-
-        Returns:
-            dict: The merged configuration.
-            (dict, list[Path]): If return_sources=True, also return the sources
-                used in order.
+        Why:
+            Separates config *discovery* from config *loading*, letting
+            callers use ProjectFileLocator / UserFileLocator (or anything)
+            to decide which paths to provide.
         """
-        g.ensure_not_empty_str(app_name, "app_name")
-        g.ensure_usable_path(filename, "filename")
-        if user_filename is None:
-            user_filename = filename
 
-        fu = file_util or ProjectFileLocator()
+        merged: dict = {}
         sources: list[Path] = []
-        cfg: dict = {}
 
-        proj_path = fu.try_get_file_from_project_root(filename, project_search_path or "")
-        if proj_path:
-            cfg = self._load_any(proj_path)
-            sources.append(proj_path)
+        for path in paths:
+            if not isinstance(path, Path):
+                raise TypeError(f"Expected Path, got {type(path)}: {path!r}")
 
-        user_path = fu.try_get_file_from_user_base_dir(user_filename, Path(".config") / app_name)
-        if user_path:
-            user_cfg = self._load_any(user_path)
-            cfg = ConfigMerger.deep(cfg or {}, user_cfg)
-            sources.append(user_path)
+            if path.exists():
+                handler = self._get_handler_for(path)
+                if handler is None:
+                    # No loader for this file type: skip silently
+                    continue
 
-        return (cfg, sources) if return_sources else cfg
+                data = handler.load(path) or {}
+                merged = ConfigMerger.deep(merged, data)
+                sources.append(path)
+
+        if return_sources:
+            return merged, sources
+        return merged
 
     def store(
             self,
@@ -224,3 +200,11 @@ class ConfigService:
             raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
 
         return out_path, handler
+
+    def store_to_path(self, cfg: Mapping[str, Any], path: Path) -> Path:
+        """Serialize cfg to the given path using a handler chosen by suffix."""
+        pass
+
+    def update_path(self, patch: Mapping[str, Any], path: Path) -> Path:
+        """Load existing cfg (if any), deep-merge patch, and store back."""
+        pass
