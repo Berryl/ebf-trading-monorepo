@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Generator, Callable
 
 import pytest
 
@@ -7,8 +8,33 @@ from ebf_core.fileutil.user_file_locator import UserFileLocator
 
 
 @pytest.fixture
-def sut() -> UserFileLocator:
-    return UserFileLocator()
+def temp_user_home(tmp_path: Path) -> Generator[Path, None, None]:
+    """
+    Provides a temporary directory acting as the user's home.
+    All files created in tests go under this directory.
+    """
+    home = tmp_path / "home"
+    home.mkdir()
+    yield home
+
+@pytest.fixture
+def temp_file_setter(temp_user_home: Path) -> Callable:
+    """
+    Helper to easily create files under the fake home.
+
+    Returns a function: put_file("relative/path.txt", "content") -> Path
+    """
+    def _put(relative: str | Path, content: str = "") -> Path:
+        path = temp_user_home / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return path.resolve()
+
+    return _put
+
+@pytest.fixture
+def sut_with_home(temp_user_home: Path) -> UserFileLocator:
+    return UserFileLocator.for_testing(temp_user_home)
 
 class TestHome:
 
@@ -28,17 +54,24 @@ class TestHome:
 
     class TestFile:
 
-        def test_parts_cannot_be_none(self, sut):
+        def test_parts_cannot_be_none(self, sut_with_home):
             msg = "argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'NoneType'"
 
             with pytest.raises(TypeError, match=msg):
-                sut.file(None)
+                sut_with_home.file(None)
 
-        def test_can_set_with_str(self, sut, temp_path):
-            sut = UserFileLocator.for_testing(temp_path)
+        def test_can_set_with_str(self, sut_with_home, temp_file_setter):
+            known_str = "bar.txt"
+            temp_file_setter(known_str, "some_content")
 
-            path = sut.file(some_absolute_path)
-            assert path == some_absolute_path
+            path = sut_with_home.file(known_str)
+            assert path.name == known_str
+
+        def test_can_set_with_path(self, sut_with_home, temp_file_setter):
+            known_file = temp_file_setter("foo/bar.txt", "some_content")
+
+            path = sut_with_home.file(known_file)
+            assert path == known_file
 
     # @pytest.mark.integration
     # class TestGetUserBaseDir:
