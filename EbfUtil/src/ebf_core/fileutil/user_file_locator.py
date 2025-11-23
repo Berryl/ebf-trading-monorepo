@@ -12,13 +12,13 @@ class UserFileLocator:
     def for_testing(cls, fake_home: Path) -> "UserFileLocator":
         return cls(fake_home.resolve())
 
+    @property
     def home(self) -> Path:
         return (self._override_home or Path.home()).resolve()
 
     def file(self, *parts: str | Path) -> Path:
         """Absolute path to a file under the user's home directory."""
-        # This works everywhere (3.9+)
-        return self.home().joinpath(*(str(p) for p in parts)).expanduser().resolve()
+        return Path(self.home, *parts).expanduser().resolve()
 
     def try_file(self, *parts: str | Path) -> Path | None:
         """Return the file path if it exists, otherwise None."""

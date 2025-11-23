@@ -14,16 +14,13 @@ class TestHome:
 
     def test_home_is_path_home_if_not_overridden(self):
         sut = UserFileLocator()
-        assert sut.home() == Path.home()
-    #
-    # def test_new_instance_is_created(self, sut, tmp_path):
-    #     clone = sut.with_base_dir(tmp_path)
-    #     assert clone is not sut
-    #
-    # def test_sets_and_resolves_base_dir(self, sut, tmp_path):
-    #     expected = tmp_path.resolve()
-    #     clone = sut.with_base_dir(tmp_path)
-    #     assert clone.base_dir == expected
+        assert sut.home == Path.home()
+
+
+    def test_can_override_home(self, tmp_path):
+        sut = UserFileLocator.for_testing(tmp_path)
+        expected = tmp_path.resolve()
+        assert sut.home == expected
     #
     # def test_arg_of_none_resets_the_base_dir_to_none(self, sut, tmp_path):
     #     c1 = sut.with_base_dir(tmp_path)
