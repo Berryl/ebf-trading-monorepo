@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -27,12 +28,17 @@ class TestHome:
 
     class TestFile:
 
-        def test_parts_cannot_be_none(self):
-            sut = UserFileLocator()
+        def test_parts_cannot_be_none(self, sut):
             msg = "argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'NoneType'"
 
             with pytest.raises(TypeError, match=msg):
                 sut.file(None)
+
+        def test_can_set_with_str(self, sut, temp_path):
+            sut = UserFileLocator.for_testing(temp_path)
+
+            path = sut.file(some_absolute_path)
+            assert path == some_absolute_path
 
     # @pytest.mark.integration
     # class TestGetUserBaseDir:
