@@ -1,8 +1,7 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
-
-from ebf_core.guards.guards import ensure_not_none
 
 
 @dataclass(frozen=True)

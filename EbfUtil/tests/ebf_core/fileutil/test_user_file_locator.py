@@ -68,6 +68,12 @@ class TestHome:
             path = sut.file(known_str)
             assert path.name == known_str
 
+        def test_can_set_with_str_parts(self, sut, put_file):
+            put_file("foo/bar.txt", "some_content")
+
+            path = sut.file("foo", "bar.txt")
+            assert path.name == "bar.txt"
+
         def test_can_set_with_path(self, sut, put_file):
             known_file = put_file("foo/bar.txt", "some_content")
 
