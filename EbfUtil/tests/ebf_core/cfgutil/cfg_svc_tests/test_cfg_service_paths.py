@@ -19,6 +19,7 @@ def write_json(tmp_path: Path) -> Callable:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data), encoding="utf-8")
         return path
+
     return _write
 
 
@@ -65,3 +66,37 @@ class TestLoad:
 
         cfg = sut.load(p1, p2)
         assert cfg == {}
+
+
+class TestStore:
+
+    def test_store_creates_parent_dirs_and_writes_json(self, sut, tmp_path):
+        path = tmp_path / "nested" / "cfg.json"
+        cfg = {"a": 1, "b": 2}
+
+        out = sut.store(cfg, path)
+
+        assert out == path
+        assert path.exists()
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data == cfg
+
+    def test_store_overwrites_existing_file(self, sut, tmp_path):
+        path = tmp_path / "cfg.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"a": 1}), encoding="utf-8")
+
+        cfg = {"a": 2}
+
+        sut.store(cfg, path)
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data == {"a": 2}
+
+    def test_store_raises_for_unsupported_suffix(self, sut, tmp_path):
+        path = tmp_path / "config.unsupported"
+        cfg = {"a": 1}
+
+        with pytest.raises(RuntimeError, match="No handler available"):
+            sut.store(cfg, path)
