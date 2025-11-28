@@ -10,10 +10,7 @@ from .handlers.cfg_format_handler import ConfigFormatHandler
 
 class ConfigService:
     """
-    Orchestrates configuration management:
-      • Finds candidate files (project root, user base).
-      • Delegates parsing to format handlers.
-      • Merges configs with user overrides taking precedence.
+    Orchestrates config loading/merging via format handlers; callers provide concrete paths.
     """
 
     def __init__(self, handlers: Optional[list[ConfigFormatHandler]] = None) -> None:
@@ -38,8 +35,7 @@ class ConfigService:
         sources: list[Path] = []
 
         for path in paths:
-            if not isinstance(path, Path):
-                raise TypeError(f"Expected Path, got {type(path)}: {path!r}")
+            g.ensure_type(path, Path, "path")
 
             if path.exists():
                 handler = self._get_handler_for(path)
