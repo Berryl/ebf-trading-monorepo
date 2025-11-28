@@ -57,62 +57,27 @@ class ConfigService:
             return merged, sources
         return merged
 
-    def store(
-            self,
-            cfg: Mapping[str, Any],
-            app_name: str,
-            *,
-            project_search_path: str | Path = "config",
-            filename: str | Path = "config.yaml",
-            user_filename: str | Path | None = None,
-            target: Literal["project", "user"] = "user",
-            file_util: ProjectFileLocator | None = None,
-    ) -> Path:
+    def store(self, cfg: Mapping[str, Any], path: Path) -> Path:
         """
-        Store configuration for the given application by delegating to a format handler.
+        Store configuration to the given path using a format handler.
 
-        Destination selection:
-          - target="project": <project_root>/<project_search_path>/<filename>
-          - target="user":    <user_base>/.config/<app_name>/<user_filename or filename>
-
-        Handler delegation:
-          - The handler is selected based on the destination file's suffix.
-          - The selected handler performs the actual serialization and writes.
-
-        Behavior:
-          - Ensures the destination directory exists (created if necessary).
-          - Overwrites existing files.
-          - If no handler supports the destination suffix, a RuntimeError is raised.
-
-        Args:
-            cfg: Mapping of configuration values to persist.
-            app_name: Application name; used for user config path resolution.
-            project_search_path: Relative folder inside the project root for project-side configs
-                (default: "config").
-            filename: File name for the project-side config (default: "config.yaml").
-            user_filename: Optional override for the user-side file name. If None, uses filename.
-            target: Which destination to write: "project" or "user" (default: "user").
-            file_util: Optional FileUtil instance. In production this is usually omitted
-                (a new one will be created). In tests, you can supply a preconfigured
-                FileUtil bound to a temporary project root or user base directory.
-
-        Returns:
-            Path: The full path to the file that was written.
-
-        Raises:
-            AssertionError: If app_name is empty or filename is not provided.
-            RuntimeError: If no handler supports the destination suffix.
+        Why:
+            Callers decide *where* configs live (project/user/other).
+            ConfigService only needs to choose the right handler and
+            perform the serialization.
         """
-        out_path, handler = self._resolve_output_and_handler(
-            app_name=app_name,
-            project_search_path=project_search_path,
-            filename=filename,
-            user_filename=user_filename,
-            target=target,
-            file_util=file_util,
-        )
-        handler.store(out_path, cfg)
-        return out_path
+        if not isinstance(path, Path):
+            raise TypeError(f"Expected Path, got {type(path)}: {path!r}")
+
+        path = path.resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        handler = self._get_handler_for(path)
+        if handler is None:
+            raise RuntimeError(f"No handler available to store files with suffix '{path.suffix}'")
+
+        handler.store(path, cfg)
+        return path
 
     def update(
             self,

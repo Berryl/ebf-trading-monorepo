@@ -70,7 +70,7 @@ class TestLoad:
 
 class TestStore:
 
-    def test_store_creates_parent_dirs_and_writes_json(self, sut, tmp_path):
+    def test_can_create_parent_dirs_and_write_json(self, sut, tmp_path):
         path = tmp_path / "nested" / "cfg.json"
         cfg = {"a": 1, "b": 2}
 
@@ -82,7 +82,7 @@ class TestStore:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data == cfg
 
-    def test_store_overwrites_existing_file(self, sut, tmp_path):
+    def test_existing_file_is_overwritten(self, sut, tmp_path):
         path = tmp_path / "cfg.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"a": 1}), encoding="utf-8")
@@ -94,7 +94,7 @@ class TestStore:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data == {"a": 2}
 
-    def test_store_raises_for_unsupported_suffix(self, sut, tmp_path):
+    def test_unsupported_suffix_raises_error(self, sut, tmp_path):
         path = tmp_path / "config.unsupported"
         cfg = {"a": 1}
 
