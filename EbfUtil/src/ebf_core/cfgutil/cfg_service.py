@@ -1,10 +1,8 @@
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from ebf_core.guards import guards as g
-
-from ..fileutil import ProjectFileLocator
 from .cfg_merger import ConfigMerger
 from .handlers import JsonHandler, TomlHandler, YamlHandler
 from .handlers.cfg_format_handler import ConfigFormatHandler
@@ -66,8 +64,7 @@ class ConfigService:
             ConfigService only needs to choose the right handler and
             perform the serialization.
         """
-        if not isinstance(path, Path):
-            raise TypeError(f"Expected Path, got {type(path)}: {path!r}")
+        g.ensure_type(path, Path, "path")
 
         path = path.resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -79,48 +76,28 @@ class ConfigService:
         handler.store(path, cfg)
         return path
 
-    def update(
-            self,
-            patch: Mapping[str, Any],
-            app_name: str,
-            *,
-            project_search_path: str | Path = "config",
-            filename: str | Path = "config.yaml",
-            user_filename: str | Path | None = None,
-            target: Literal["project", "user"] = "user",
-            file_util: ProjectFileLocator | None = None,
-    ) -> Path:
+    def update(self, patch: Mapping[str, Any], path: Path) -> Path:
         """
-        Merge the given patch into the target config file and persist it.
+        Merge the patch into the config at the given path and persist it.
 
-        Behavior:
-          - Resolves the destination similarly to store().
-          - Loads existing config from the destination file only (does not combine sources).
-          - Deep-merges existing config with the patch (the patch wins).
-          - Writes the merged result back to the same destination.
+        Why:
+            Callers choose a single concrete destination; this method
+            lets them update that layer in place using deep-merge semantics.
         """
-        out_path, handler = self._resolve_output_and_handler(
-            app_name=app_name,
-            project_search_path=project_search_path,
-            filename=filename,
-            user_filename=user_filename,
-            target=target,
-            file_util=file_util,
-        )
+        g.ensure_type(path, Path, "path")
 
-        current_cfg: dict = handler.load(out_path) if out_path.exists() else {}
-        merged = ConfigMerger.deep(current_cfg or {}, dict(patch))
-        handler.store(out_path, merged)
-        return out_path
+        path = path.resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _load_any(self, path: Path) -> dict:
-        """
-        Use the first loader that supports the file path.
-        Only one loader is applied; loaders are not combined.
-        Returns {} if no loader supports the path.
-        """
-        handler: ConfigFormatHandler = self._get_handler_for(path)
-        return handler.load(path) if handler is not None else {}
+        handler = self._get_handler_for(path)
+        if handler is None:
+            raise RuntimeError(f"No handler available to store files with suffix '{path.suffix}'")
+
+        current: dict = handler.load(path) if path.exists() else {}
+        merged = ConfigMerger.deep(current or {}, dict(patch))
+
+        handler.store(path, merged)
+        return path
 
     def _get_handler_for(self, path: Path) -> ConfigFormatHandler | None:
         """return the first loader that supports the file path, else done."""
@@ -128,48 +105,3 @@ class ConfigService:
             if h.supports(path):
                 return h
         return None
-
-    def _resolve_output_and_handler(
-            self,
-            *,
-            app_name: str,
-            project_search_path: str | Path,
-            filename: str | Path,
-            user_filename: str | Path | None,
-            target: Literal["project", "user"],
-            file_util: ProjectFileLocator | None,
-    ) -> tuple[Path, ConfigFormatHandler]:
-        """
-        Common resolution for store() and update():
-        - validates inputs
-        - computes out_path based on target
-        - ensures that the parent directory exists
-        - selects and returns the handler
-        """
-        g.ensure_not_empty_str(app_name, "app_name")
-        g.ensure_usable_path(filename, "filename")
-
-        fu = file_util or ProjectFileLocator()
-        if target == "project":
-            base = fu.get_project_root()
-            out_path = base / Path(project_search_path or "") / Path(filename)
-        else:
-            f_name = Path(user_filename or filename)
-            base = fu.get_user_base_dir()
-            out_path = base / Path(".config") / app_name / f_name
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        handler = self._get_handler_for(out_path)
-        if handler is None:
-            raise RuntimeError(f"No handler available to store files with suffix '{out_path.suffix}'")
-
-        return out_path, handler
-
-    def store_to_path(self, cfg: Mapping[str, Any], path: Path) -> Path:
-        """Serialize cfg to the given path using a handler chosen by suffix."""
-        pass
-
-    def update_path(self, patch: Mapping[str, Any], path: Path) -> Path:
-        """Load existing cfg (if any), deep-merge patch, and store back."""
-        pass

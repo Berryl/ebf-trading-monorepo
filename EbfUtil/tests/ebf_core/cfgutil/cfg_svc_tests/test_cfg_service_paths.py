@@ -100,3 +100,38 @@ class TestStore:
 
         with pytest.raises(RuntimeError, match="No handler available"):
             sut.store(cfg, path)
+
+class TestUpdate:
+
+    def test_when_target_file_missing_creates_new_file(self, sut, tmp_path):
+        dest = tmp_path / "cfg.json"
+        patch = {"a": 1, "nested": {"x": 1}}
+
+        result = sut.update(patch, dest)
+
+        assert result == dest
+        assert dest.exists()
+        data = json.loads(dest.read_text(encoding="utf-8"))
+        assert data == {"a": 1, "nested": {"x": 1}}
+
+    def test_when_target_exists_deep_merges_patch(self, sut, write_json):
+        existing = {"a": 1, "nested": {"x": 1, "y": 2}}
+        dest = write_json("cfg.json", existing)
+
+        patch = {"nested": {"y": 99, "z": 3}}
+
+        sut.update(patch, dest)
+
+        data = json.loads(dest.read_text(encoding="utf-8"))
+        # original top-level key preserved
+        assert data["a"] == 1
+        # nested dict deep-merged, patch wins on conflicts
+        assert data["nested"] == {"x": 1, "y": 99, "z": 3}
+
+    def test_scalar_values_are_overwritten_by_patch(self, sut, write_json):
+        dest = write_json("cfg.json", {"a": 1, "b": 2})
+
+        sut.update({"b": 10}, dest)
+
+        data = json.loads(dest.read_text(encoding="utf-8"))
+        assert data == {"a": 1, "b": 10}
