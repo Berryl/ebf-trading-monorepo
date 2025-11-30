@@ -33,7 +33,7 @@ class ConfigFormatHandler(ABC):
         """
         Serialize and write cfg to the given path using this handler's format.
         Implementations should overwrite existing files and create parent
-        directories if needed (or expect caller to do so as agreed).
+        directories if needed (or expect the caller to do so as agreed).
 
         Implementations should handle errors gracefully.
         """

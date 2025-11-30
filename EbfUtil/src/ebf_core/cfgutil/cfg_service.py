@@ -38,6 +38,7 @@ class ConfigService:
             g.ensure_type(path, Path, "path")
 
             if not path.exists():
+                # Missing is fine: optional config layers are common (e.g., user override is not present).
                 continue
 
             handler = self._get_handler_for(path, "load")
@@ -90,7 +91,7 @@ class ConfigService:
         handler.store(path, merged)
         return path
 
-    def _get_handler_for(self, path: Path, action: str) -> ConfigFormatHandler | None:
+    def _get_handler_for(self, path: Path, action: str) -> ConfigFormatHandler:
         """return the first loader that supports the file path, else raise."""
         for h in self._handlers:
             if h.supports(path):
