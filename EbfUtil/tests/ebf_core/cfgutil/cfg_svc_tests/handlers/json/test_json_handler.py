@@ -15,7 +15,7 @@ class TestSupports:
     def test_supports_json_suffix(self, sut, tmp_path: Path, filename: str):
         assert sut.supports(tmp_path / filename)
 
-    @pytest.mark.parametrize("filename", ["cfg.yaml", "settings.txt", "CFG"])
+    @pytest.mark.parametrize("filename", ["cfg.yaml", "settings.txt", "CFG", "data.json.bak"])
     def test_does_not_support_other_suffixes(self, sut, tmp_path: Path, filename: str):
         assert not sut.supports(tmp_path / filename)
 
@@ -47,7 +47,5 @@ class TestStore:
 
         sut.store(path, cfg)
 
-        # round-trip through JsonHandler.load, not bare json.loads,
-        # so we exercise both directions of the handler
         loaded = sut.load(path)
         assert loaded == cfg
