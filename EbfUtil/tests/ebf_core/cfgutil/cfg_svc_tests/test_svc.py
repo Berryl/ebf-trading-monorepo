@@ -135,3 +135,21 @@ class TestUpdate:
 
         data = json.loads(dest.read_text(encoding="utf-8"))
         assert data == {"a": 1, "b": 10}
+
+class TestHandledFileTypes:
+
+    def test_unhandled_file_types_raise_error(self, tmp_path, sut):
+        path = tmp_path / "settings.unsupported"
+        path.touch()  # file must exist
+
+        config = {"debug": True}
+        msg = "No handler available.*\\.unsupported"
+
+        with pytest.raises(RuntimeError, match=msg):
+            sut.load(path)
+
+        with pytest.raises(RuntimeError, match=msg):
+            sut.store(config, path)
+
+        with pytest.raises(RuntimeError, match=msg):
+            sut.update(config, path)

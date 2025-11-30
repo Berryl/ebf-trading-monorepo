@@ -20,7 +20,7 @@ class ConfigService:
         """
         Load and merge configuration files from the given paths, in order.
 
-        Missing paths are silently skipped.
+        Missing paths are silently skipped (config paths may be layered and normal to not exist for some users).
         Later files override earlier ones via deep-merge.
         If return_sources=True, returns (cfg, sources) where `sources`
         is the list of existing files actually applied, in order.
@@ -37,15 +37,14 @@ class ConfigService:
         for path in paths:
             g.ensure_type(path, Path, "path")
 
-            if path.exists():
-                handler = self._get_handler_for(path)
-                if handler is None:
-                    # No loader for this file type: skip silently
-                    continue
+            if not path.exists():
+                continue
 
-                data = handler.load(path) or {}
-                merged = ConfigMerger.deep(merged, data)
-                sources.append(path)
+            handler = self._get_handler_for(path, "load")
+
+            data = handler.load(path) or {}
+            merged = ConfigMerger.deep(merged, data)
+            sources.append(path)
 
         if return_sources:
             return merged, sources
@@ -65,11 +64,9 @@ class ConfigService:
         path = path.resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        handler = self._get_handler_for(path)
-        if handler is None:
-            raise RuntimeError(f"No handler available to store files with suffix '{path.suffix}'")
-
+        handler = self._get_handler_for(path, 'store')
         handler.store(path, cfg)
+
         return path
 
     def update(self, patch: Mapping[str, Any], path: Path) -> Path:
@@ -85,9 +82,7 @@ class ConfigService:
         path = path.resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        handler = self._get_handler_for(path)
-        if handler is None:
-            raise RuntimeError(f"No handler available to store files with suffix '{path.suffix}'")
+        handler = self._get_handler_for(path, 'update')
 
         current: dict = handler.load(path) if path.exists() else {}
         merged = ConfigMerger.deep(current or {}, dict(patch))
@@ -95,9 +90,9 @@ class ConfigService:
         handler.store(path, merged)
         return path
 
-    def _get_handler_for(self, path: Path) -> ConfigFormatHandler | None:
-        """return the first loader that supports the file path, else done."""
+    def _get_handler_for(self, path: Path, action: str) -> ConfigFormatHandler | None:
+        """return the first loader that supports the file path, else raise."""
         for h in self._handlers:
             if h.supports(path):
                 return h
-        return None
+        raise RuntimeError(f"No handler available to {action} files with suffix '{path.suffix}'")
