@@ -49,7 +49,7 @@ class TestEnumFromStr:
     def test_raises_value_error_on_non_existent_enum_val(self):
         msg = f"'purple' is not a valid Color. Valid options: RED, BLUE, GREEN"
 
-        with pytest.raises(ValueError, match=msg) as exc:
+        with pytest.raises(ValueError, match=msg):
             enum_from_str("purple", Color)
 
     def test_raises_contract_error_on_none(self):
