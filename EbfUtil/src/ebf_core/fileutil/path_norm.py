@@ -26,7 +26,7 @@ def norm_path(value: str | os.PathLike[str] | None = None, *,
         Normalized Path object, or None if the value is None or empty
 
     Raises:
-        ValueError: If require_absolute=True and the path is relative
+        ValueError: If the path is relative but 'require_absolute=True'
 
     Examples:
         >>> norm_path("~/docs/file.txt")
