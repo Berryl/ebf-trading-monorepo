@@ -144,7 +144,8 @@ class CallableFormatter(TypeFormatter):
 
         return f"Callable[{', '.join(parts)}]"
 
-    def _format_params(self, params: Any, context: FormattingContext) -> str:
+    @staticmethod
+    def _format_params(params: Any, context: FormattingContext) -> str:
         """Format the parameter list for Callable."""
         if params is Ellipsis:
             return "[...]"
@@ -157,7 +158,8 @@ class CallableFormatter(TypeFormatter):
 
         return f"[{context.format_type(params)}]"
 
-    def _get_name(self, origin: Any) -> str:
+    @staticmethod
+    def _get_name(origin: Any) -> str:
         return getattr(origin, "__name__", "")
 
 
