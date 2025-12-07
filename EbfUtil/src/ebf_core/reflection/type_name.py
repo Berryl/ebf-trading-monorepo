@@ -1,86 +1,241 @@
-import types
-from typing import get_origin, get_args, Union, Callable, Literal, Any
+# type_name.py
+from __future__ import annotations
 
+import types
+from abc import ABC, abstractmethod
+from typing import Any, Union, get_args, get_origin, List, Callable
+
+
+# ============================================================================
+# Core Formatters (Strategy Pattern)
+# ============================================================================
+
+class TypeFormatter(ABC):
+    """Base class for type formatting strategies."""
+
+    @abstractmethod
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        """Check if this formatter can handle the given type."""
+        pass
+
+    @abstractmethod
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        """Format the type as a string."""
+        pass
+
+
+class FormattingContext:
+    """Context for type formatting with shared configuration and utilities."""
+
+    BUILTINS = {
+        int: "int",
+        str: "str",
+        bool: "bool",
+        float: "float",
+        type(None): "None",
+        list: "list",
+        dict: "dict",
+        tuple: "tuple",
+        set: "set",
+    }
+
+    def __init__(self, show_generic_args: bool = True):
+        self.show_generic_args = show_generic_args
+        self.formatters: list[TypeFormatter] = [
+            OptionalFormatter(),
+            UnionFormatter(),
+            CallableFormatter(),
+            GenericFormatter(),
+            PlainTypeFormatter(),
+        ]
+
+    def format_type(self, typ: Any) -> str:
+        """Main entry point for formatting a type."""
+        origin = get_origin(typ)
+        args = get_args(typ)
+
+        for formatter in self.formatters:
+            if formatter.can_handle(typ, origin, args):
+                return formatter.format(typ, origin, args, self)
+
+        # Fallback
+        return self.format_plain(typ)
+
+    def format_plain(self, obj: Any) -> str:
+        """Format a non-generic type or value."""
+        if obj is Ellipsis:
+            return "..."
+
+        if isinstance(obj, type):
+            return self.BUILTINS.get(obj, obj.__name__)
+
+        # Try to handle objects without __name__
+        try:
+            if obj in self.BUILTINS:
+                return self.BUILTINS[obj]
+        except TypeError:
+            pass
+
+        return repr(obj)
+
+    def format_args(self, args: tuple) -> list[str]:
+        """Format a tuple of type arguments."""
+        result = []
+        for arg in args:
+            # Handle Ellipsis especially to avoid it becoming "Ellipsis"
+            if arg is Ellipsis:
+                result.append("...")
+            else:
+                result.append(self.format_type(arg))
+        return result
+
+
+# ============================================================================
+# Concrete Formatters
+# ============================================================================
+
+class OptionalFormatter(TypeFormatter):
+    """Handles Optional[T] - Union[T, None] or T | None."""
+
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        return (
+                origin in (Union, types.UnionType)
+                and len(args) == 2
+                and type(None) in args
+        )
+
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        non_none = next(a for a in args if a is not type(None))
+        inner = context.format_type(non_none)
+        return f"Optional[{inner}]"
+
+
+class UnionFormatter(TypeFormatter):
+    """Handles Union types with 3+ args or without None."""
+
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        return origin in (Union, types.UnionType)
+
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        parts = context.format_args(args)
+        return " | ".join(parts)
+
+
+class CallableFormatter(TypeFormatter):
+    """Handles Callable types with special parameter list formatting."""
+
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        return origin is not None and self._get_name(origin) == "Callable"
+
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        if not context.show_generic_args:
+            return "Callable"
+
+        if not args:
+            return "Callable[]"
+
+        # Callable has a special structure: (param_list, return_type)
+        parts = []
+        for i, arg in enumerate(args):
+            if i == 0:  # Parameter list
+                parts.append(self._format_params(arg, context))
+            else:  # Return type
+                parts.append(context.format_type(arg))
+
+        return f"Callable[{', '.join(parts)}]"
+
+    def _format_params(self, params: Any, context: FormattingContext) -> str:
+        """Format the parameter list for Callable."""
+        if params is Ellipsis:
+            return "[...]"
+
+        if isinstance(params, (list, tuple)):
+            if not params:
+                return "[]"
+            param_strs = [context.format_type(p) for p in params]
+            return f"[{', '.join(param_strs)}]"
+
+        return f"[{context.format_type(params)}]"
+
+    def _get_name(self, origin: Any) -> str:
+        return getattr(origin, "__name__", "")
+
+
+class GenericFormatter(TypeFormatter):
+    """Handles generic types like List[T], Dict[K, V], etc."""
+
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        return origin is not None
+
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        base = getattr(origin, "__name__", str(origin))
+
+        if not context.show_generic_args:
+            return base
+
+        if not args:
+            return f"{base}[]"
+
+        # Check for empty container markers
+        if len(args) == 1 and args[0] == ():
+            return f"{base}[]"
+
+        parts = context.format_args(args)
+        return f"{base}[{', '.join(parts)}]"
+
+
+class PlainTypeFormatter(TypeFormatter):
+    """Handles plain types without generic parameters."""
+
+    def can_handle(self, typ: Any, origin: Any, args: tuple) -> bool:
+        return True  # Always matches as fallback
+
+    def format(self, typ: Any, origin: Any, args: tuple, context: FormattingContext) -> str:
+        if typ in context.BUILTINS:
+            return context.BUILTINS[typ]
+
+        # Try to get __name__, but fall back to repr if it's None or missing
+        if isinstance(typ, type):
+            name = getattr(typ, "__name__", None)
+            if name is not None:
+                return name
+
+        return repr(typ)
+
+
+# ============================================================================
+# Public API
+# ============================================================================
 
 def get_descriptive_type_name(
-        type_: Any = None,
+        typ: Any | None = None,
         *,
         default_if_none: str = "Type",
         show_generic_args: bool = True,
 ) -> str:
     """
-    Return a clean, human-readable name for a type.
+    Generate a human-readable string representation of a type.
+
+    Args:
+        typ: The type to describe. If None, returns default_if_none.
+        default_if_none: String to return when typ is None.
+        show_generic_args: Whether to show generic type arguments.
+
+    Returns:
+        A string representation of the type.
+
+    Examples:
+        >>> get_descriptive_type_name(int)
+        'int'
+        >>> get_descriptive_type_name(List[str])
+        'list[str]'
+        >>> get_descriptive_type_name(Union[str, None])
+        'Optional[str]'
+        >>> get_descriptive_type_name(Callable[[int, str], bool])
+        'Callable[[int, str], bool]'
     """
-    if type_ is None:
+    if typ is None:
         return default_if_none
 
-    # ── Special case: Optional[T] ──────────────────────────────────────
-    origin = get_origin(type_)
-    # Handle both typing.Union and Python 3.10+ "|" operator (types.UnionType)
-    if origin is Union or origin is types.UnionType:
-        args = get_args(type_)
-        if len(args) == 2:
-            arg_set = set(args)
-            if type(None) in arg_set or None in arg_set:
-                # Identify the non-None argument
-                non_none = next((a for a in args if a is not type(None) and a is not None), None)
-                if non_none:
-                    inner = get_descriptive_type_name(non_none, show_generic_args=True)
-                    return f"Optional[{inner}]"
-
-        # If it's a Union but not Optional (or Optional with >2 args),
-        # let's format it as Union[A, B] or A | B depending on preference.
-        # Here we stick to the class name logic below, but we must handle
-        # UnionType having no __name__.
-        if origin is types.UnionType:
-            # UnionType doesn't have __name__, so we treat it manually
-            if show_generic_args:
-                formatted_args = [get_descriptive_type_name(a) for a in args]
-                return " | ".join(formatted_args)
-            return "Union"
-
-    # ── Handle Generic Origins ─────────────────────────────────────────
-    if origin is not None:
-        if not show_generic_args:
-            return getattr(origin, "__name__", str(origin))
-
-        raw_args = get_args(type_)
-        arg_strings = []
-
-        # Special handling for Literal: args are values, not types
-        if origin is Literal:
-            arg_strings = [repr(a) for a in raw_args]
-        else:
-            for arg in raw_args:
-                if arg is Ellipsis:
-                    arg_strings.append("...")
-                # Special handling for Callable arguments which can be a list: Callable[[A, B], R]
-                elif isinstance(arg, list):
-                    fn_args = [get_descriptive_type_name(a) for a in arg]
-                    arg_strings.append(f"[{', '.join(fn_args)}]")
-                else:
-                    arg_strings.append(get_descriptive_type_name(arg))
-
-        args_part = ", ".join(arg_strings)
-        base_name = getattr(origin, "__name__", str(origin))
-
-        # Tuple prettification
-        if origin is tuple:
-            if not raw_args:
-                return "tuple[]"
-            if raw_args == (Ellipsis,):
-                return "tuple[...]"
-
-        if args_part:
-            return f"{base_name}[{args_part}]"
-        return f"{base_name}[]"
-
-    # ── Plain built-in types & Fallbacks ───────────────────────────────
-    if type_ is type(None):
-        return "None"
-
-    if hasattr(type_, "__name__"):
-        return type_.__name__
-
-    # Fallback
-    return repr(type_)
+    context = FormattingContext(show_generic_args=show_generic_args)
+    return context.format_type(typ)
