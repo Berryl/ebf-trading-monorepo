@@ -60,17 +60,14 @@ class TestCleanString:
 
 
 class TestIsStrValued:
-    @pytest.mark.parametrize(
-        "value",
-        [None, "", "   ", "\t\n", " \r\n "],
-    )
+    @pytest.mark.parametrize("value", [None, "", "   ", "\t\n", " \r\n "],)
     def test_returns_false_for_non_valued(self, value: str | None) -> None:
         assert is_str_valued(value) is False
 
-    @pytest.mark.parametrize(
-        "value",
-        ["hello", "  hi  ", "0", "false", " None "],
-    )
+    def test_returns_false_for_empty_string(self) -> None:
+        assert is_str_valued(self) is False
+
+    @pytest.mark.parametrize("value", ["hello", "  hi  ", "0", "false", " None "],)
     def test_returns_true_for_valued_strings(self, value: str) -> None:
         assert is_str_valued(value) is True
 

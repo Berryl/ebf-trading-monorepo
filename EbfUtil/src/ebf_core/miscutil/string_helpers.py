@@ -23,6 +23,8 @@ def clean_string(s: str | None) -> str:
 
 def is_str_valued(s: str | None) -> bool:
     """True if ``s`` is non-None and has non-whitespace characters."""
+    if not isinstance(s, str):
+        return False
     return bool(s and s.strip())
 
 
