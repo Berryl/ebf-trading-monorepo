@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 from ebf_core.miscutil.string_helpers import is_str_valued
 
 
-def norm_path(value: Any, *,
+def norm_path(value: str | os.PathLike[str] | None = None, *,
               base: Path | None = None,
               expand_env: bool = True,
               expand_user: bool = True,
@@ -16,10 +15,25 @@ def norm_path(value: Any, *,
     """
     Normalize a path.
 
-    - Accepts None/"" → None
-    - Expands env vars and ~
-    - Resolves relative paths against `base` (if provided)
-    - Optionally enforces an absolute result (require_absolute)
+    Args:
+        value: Path-like value to normalize (str, Path, or None)
+        base: Base directory for resolving relative paths
+        expand_env: Whether to expand environment variables like $HOME
+        expand_user: Whether to expand ~ to user's home directory
+        require_absolute: If True, raises ValueError for relative paths
+
+    Returns:
+        Normalized Path object, or None if the value is None or empty
+
+    Raises:
+        ValueError: If require_absolute=True and the path is relative
+
+    Examples:
+        >>> norm_path("~/docs/file.txt")
+        PosixPath('/home/user/docs/file.txt')
+
+        >>> norm_path("config.yml", base=Path("/app"))
+        PosixPath('/app/config.yml')
     """
     if value is None:
         return None
@@ -39,6 +53,6 @@ def norm_path(value: Any, *,
         p = (base / p).resolve()
 
     if require_absolute and not p.is_absolute():
-        raise ValueError(f"Path is not absolute: {p!s}")
+        raise ValueError(f"Path is not absolute: {p}")
 
     return p
