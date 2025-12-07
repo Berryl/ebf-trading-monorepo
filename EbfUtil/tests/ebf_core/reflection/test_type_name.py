@@ -1,10 +1,11 @@
 # test_type_name.py
 from __future__ import annotations
 
-import pytest
 from typing import Any, Callable, Literal, TypeVar, Union, Tuple, List, Dict, Sequence, Set
 
 from ebf_core.reflection.type_name import get_descriptive_type_name
+
+T = TypeVar("T")
 
 
 class TestGetDescriptiveTypeName:
@@ -127,11 +128,10 @@ class TestGetDescriptiveTypeName:
     # TypeVar and Special Cases
     # ========================================================================
 
-    def test_typevar(self) -> None:
+    def test_type_var(self) -> None:
         """Test TypeVar formatting."""
-        T = TypeVar("T")
-        assert get_descriptive_type_name(List[T]) == "list[~T]"
-        assert get_descriptive_type_name(Dict[str, T]) == "dict[str, ~T]"
+        assert get_descriptive_type_name(List[T]) == "list[~T]"  # type: ignore[valid-type]
+        assert get_descriptive_type_name(Dict[str, T]) == "dict[str, ~T]"  # type: ignore[valid-type]
 
     def test_show_generic_args_false(self) -> None:
         """Test that show_generic_args=False hides type parameters."""
