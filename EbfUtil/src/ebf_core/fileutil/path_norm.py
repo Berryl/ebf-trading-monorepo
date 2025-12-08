@@ -6,7 +6,7 @@ from pathlib import Path
 from ebf_core.miscutil.string_helpers import is_str_valued
 
 
-def norm_path(value: str | os.PathLike[str] | None = None, *,
+def norm_path(value: str | os.PathLike[str] | None, *,
               base: Path | None = None,
               expand_env: bool = True,
               expand_user: bool = True,
