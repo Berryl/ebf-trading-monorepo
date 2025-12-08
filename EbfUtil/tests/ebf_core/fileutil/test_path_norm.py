@@ -10,11 +10,11 @@ class TestNormPath:
 
         @pytest.mark.parametrize("value", ["icons/a.ico", Path("icons/a.ico")])
         def test_pathlike_input(self, value):
-            p = norm_path(value)
-            assert p.name == "a.ico"
+            p = norm_path(value, expand_user=False)
+            assert p == Path("icons/a.ico")
 
         @pytest.mark.parametrize("value", [None, "", "     "])
-        def test_none_or_empty_str_returns_none(self, value):
+        def test_none_or_empty_returns_none(self, value):
             assert norm_path(value) is None
 
     class TestBaseResolution:
