@@ -85,7 +85,7 @@ class TestNormPath:
             monkeypatch.setenv("HOME", str(home))
             monkeypatch.setenv("USERPROFILE", str(home))
             p = norm_path("~/x.txt", expand_user=False)
-            assert str(p) == "~/x.txt"
+            assert p.as_posix() == "~/x.txt"
             assert not p.is_absolute()
 
         def test_env_var_with_tilde(self, tmp_path, monkeypatch):
