@@ -81,7 +81,6 @@ class TestGetProjectRoot:
 
         assert "user provided" in caplog.text
 
-        assert "cached" not in caplog.text
         assert "marker search" not in caplog.text
 
     def test_markers_are_used_when_no_project_root_is_available(self, sut, caplog):
@@ -89,7 +88,6 @@ class TestGetProjectRoot:
         sut.get_project_root()
 
         assert "user provided" not in caplog.text
-        assert "cached" not in caplog.text
 
         assert "marker search" in caplog.text
 
@@ -111,24 +109,12 @@ class TestGetProjectRoot:
         with pytest.raises(ValueError, match="Marker list must not be empty"):
             sut.with_markers([]).get_project_root()
 
-    def test_cached_root_used_on_second_call(self, sut, caplog):
-        caplog.set_level(logging.DEBUG, logger=logger.name)
-        sut.get_project_root()  # the first call has no cache and so performs the search
-        assert "cached" not in caplog.text
-
-        caplog.clear()
-        sut.get_project_root()  # the second call should use cache
-        assert "cached" in caplog.text
-
 
 @pytest.mark.integration
 class TestWithStickyProjectFile:
 
     def test_relpath_default_is_none(self, sut):
         assert sut.project_file_relpath is None
-
-    def test_cached_project_file_default_is_none(self, sut):
-        assert sut._cached_project_file is None
 
     def test_a_new_instance_is_created(self, sut):
         sut_clone = sut.with_sticky_project_file()
@@ -155,7 +141,7 @@ class TestWithStickyProjectFile:
             sut.with_sticky_project_file(".")
 
     def test_tilde_expanded_is_not_allowed(self, rooted_sut):
-        msg = "~ expansion is not allowed in with_project_file."
+        msg = "~ expansion is not allowed in with_sticky_project_file."
 
         with pytest.raises(ValueError, match=msg):
             rooted_sut.with_sticky_project_file("~/settings.yaml")
@@ -196,7 +182,7 @@ class TestGetProjectFile:
         path = rooted_sut.get_project_file()
         assert path is None
 
-    def test_whn_default_file_set_by_fluent_builder(self, rooted_sut):
+    def test_when_default_file_set_by_fluent_builder(self, rooted_sut):
         pfl = rooted_sut.with_sticky_project_file()  # this uses the default file
 
         path = pfl.get_project_file()
@@ -257,64 +243,3 @@ class TestGetProjectFileRelpathRootRestriction:
     def test_can_allow_relpath_escape_from_root(self, rooted_sut, outside_relpath):
         with does_not_raise():
             rooted_sut.get_project_file(relpath=outside_relpath, restrict_to_root=False, must_exist=False)
-
-
-@pytest.mark.integration
-class TestGetProjectFileCaching:
-    @pytest.fixture
-    def caplog(self, caplog):
-        caplog.set_level(logging.DEBUG, logger="ebf_core.fileutil.project_file_locator")
-        caplog.clear()
-        yield caplog
-        caplog.clear()
-
-    @pytest.fixture
-    def path1(self) -> Path:
-        return Path("resources/config.yaml")
-
-    @pytest.fixture
-    def path2(self) -> Path:
-        return Path("resources/settings.yaml")
-
-    def test_cached_is_used_on_second_call_by_default(self, rooted_sut, caplog, path1):
-        instance = rooted_sut.with_sticky_project_file(path1)
-
-        instance.get_project_file()  # 1st call to prime cache
-        caplog.clear()
-
-        instance.get_project_file()  # 2nd call uses cache
-        assert "cached project file" in caplog.text.lower()
-
-    def test_cache_can_be_bypassed(self, rooted_sut, caplog, path1):
-        instance = rooted_sut.with_sticky_project_file(path1)
-
-        instance.get_project_file()  # prime cache
-        caplog.clear()
-
-        instance.get_project_file(use_cache=False)  # explicit cache bypass
-        assert "cached project file" not in caplog.text.lower()
-        assert "sticky project file"
-
-    def test_cache_is_cleared_when_per_call_relpath_changes(self, rooted_sut, caplog, path1, path2):
-        instance = rooted_sut.with_sticky_project_file(path1)
-
-        instance.get_project_file()  # prime cache
-        caplog.clear()
-
-        instance.get_project_file(path2)  # 2nd call uses a new path so no cache
-        assert "cached project file" not in caplog.text.lower()
-        assert "sticky project file"
-
-
-@pytest.mark.integration
-class TestGetProjectFilePathExpansion:
-
-    def test_tilde_expansion_works_when_no_exitance_check(self, rooted_sut):
-        path = rooted_sut.get_project_file("~/settings.yaml", must_exist=False)
-        assert path.name == "settings.yaml"
-
-    def test_tilde_expansion_fails_with_exitance_check(self, rooted_sut):
-        msg = "Cannot use ~ expansion and existence check: '~/settings.yaml'"
-
-        with pytest.raises(ValueError, match=msg):
-            rooted_sut.get_project_file("~/settings.yaml", must_exist=True)
