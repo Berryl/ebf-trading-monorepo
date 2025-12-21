@@ -98,3 +98,59 @@ class TestNormPath:
 
             p = norm_path("~/$SUBDIR/file.txt")
             assert p == home / "docs" / "file.txt"
+
+        def test_tilde_expands_to_custom_home(self, tmp_path):
+            """Tilde should expand to the custom home when provided."""
+            custom_home = tmp_path / "custom-home"
+            custom_home.mkdir()
+
+            p = norm_path("~/config.yml", home=custom_home)
+
+            assert p == custom_home / "config.yml"
+            assert p.is_absolute()
+
+        def test_tilde_with_subdir_expands_to_custom_home(self, tmp_path):
+            """Tilde with a nested path should expand to the custom home."""
+            custom_home = tmp_path / "custom-home"
+            custom_home.mkdir()
+
+            p = norm_path("~/.config/app/settings.yml", home=custom_home)
+
+            assert p == custom_home / ".config" / "app" / "settings.yml"
+            assert p.parent.parent == custom_home / ".config"
+
+        def test_custom_home_ignored_when_expand_user_false(self, tmp_path):
+            """Custom home should be ignored if expand_user=False."""
+            custom_home = tmp_path / "custom-home"
+            custom_home.mkdir()
+
+            p = norm_path("~/config.yml", home=custom_home, expand_user=False)
+
+            assert p == Path("~/config.yml")
+            assert not p.is_absolute()
+
+        def test_tilde_user_falls_back_to_standard_expansion(self, tmp_path):
+            """~username should fall back to system expansion (can't override other users)."""
+            custom_home = tmp_path / "custom-home"
+            custom_home.mkdir()
+
+            # ~other-user should use standard Path.expanduser(), not custom home
+            p = norm_path("~root/file.txt", home=custom_home)
+
+            # This will expand to the real root user's home (or fail)
+            # We can't easily control ~other-user expansion
+            assert p != custom_home / "root" / "file.txt"
+
+        def test_custom_home_with_base_resolution(self, tmp_path):
+            """Custom home expansion should work before base resolution."""
+            custom_home = tmp_path / "custom-home"
+            custom_home.mkdir()
+            base = tmp_path / "project"
+            base.mkdir()
+
+            # ~ expands first, then if still relative, the base applies.
+            # But ~ always makes it absolute, so base won't apply
+            p = norm_path("~/config.yml", home=custom_home, base=base)
+
+            assert p == custom_home / "config.yml"
+            # base is ignored because ~ made it absolute

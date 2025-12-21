@@ -172,6 +172,27 @@ class TestUserFileLocator:
 
             assert result == expected
 
+    class TestFileExpansion:
+        """Tests for environment variable and tilde expansion."""
+
+        def test_expands_env_vars(self, sut, put_file, monkeypatch):
+            """Should expand environment variables in paths."""
+            monkeypatch.setenv("CONFIG_DIR", ".config")
+            put_file(".config/app.yml", "content")
+
+            path = sut.file("$CONFIG_DIR/app.yml")
+
+            assert path.exists()
+            assert path.name == "app.yml"
+
+        def test_tilde_in_parts_expands_to_home(self, sut):
+            """Tilde should expand to the locator's home, not system home."""
+            # This is a design decision: should ~ expand to sut.home or Path.home()?
+            path = sut.file("~/subdir/file.txt")
+
+            # TBD: What should this do?
+            # Option A: Expand to sut.home (test home)
+            # Option B: Expand to Path.home() (system home)
 
 class TestUserFilesGlobalSingleton:
     """Tests for the USER_FILES global singleton."""

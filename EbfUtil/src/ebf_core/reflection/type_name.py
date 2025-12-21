@@ -1,4 +1,6 @@
-# type_name.py
+"""
+    Produces formatted strings for a wide variety of types including generics.
+"""
 from __future__ import annotations
 
 import types
@@ -6,10 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Union, get_args, get_origin, List, Callable
 
 
-# ============================================================================
-# Core Formatters (Strategy Pattern)
-# ============================================================================
-
+# region Core Formatters
 class TypeFormatter(ABC):
     """Base class for type formatting strategies."""
 
@@ -90,10 +89,10 @@ class FormattingContext:
         return result
 
 
-# ============================================================================
-# Concrete Formatters
-# ============================================================================
+# endregion
 
+
+# region Concrete Formatters
 class OptionalFormatter(TypeFormatter):
     """Handles Optional[T] - Union[T, None] or T | None."""
 
@@ -205,10 +204,9 @@ class PlainTypeFormatter(TypeFormatter):
         return repr(typ)
 
 
-# ============================================================================
-# Public API
-# ============================================================================
+# endregion
 
+# region API
 def get_descriptive_type_name(
         typ: Any | None = None,
         *,
@@ -241,3 +239,4 @@ def get_descriptive_type_name(
 
     context = FormattingContext(show_generic_args=show_generic_args)
     return context.format_type(typ)
+# endregion
