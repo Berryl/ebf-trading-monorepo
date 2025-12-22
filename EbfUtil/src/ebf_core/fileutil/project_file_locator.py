@@ -20,67 +20,35 @@ class ProjectFileLocator:
     Fluent, immutable locator for project roots and project files.
 
     This class helps locate the root of a project (e.g., where .git lives) and
-    construct paths to project files (e.g., config.yaml, pyproject.toml). It's
-    designed for applications that need to:
+    construct paths to project files (e.g., config.yaml, pyproject.toml).
 
-    1. Auto-detect project roots via marker files (.git, pyproject.toml, etc.)
-    2. Resolve configuration files relative to the project root
-    3. Work consistently in both development and installed package contexts
+    Examples
 
-    Architecture:
-        - **Immutable value object**: All `with_*` methods return new instances
-        - **Fluent builder pattern**: Chain configuration calls for readability
-        - **Automatic fallbacks**: Smart defaults with explicit override options
-
-    Project Root Resolution:
-        1. Explicit root (set via with_project_root) if provided
-        2. Otherwise, marker search starting from:
-           - CWD if running from installed package (site-packages)
-           - Module directory if running from source
-        3. Falls back to start path if no markers found
-
-    Project File Resolution:
-        - Per-call argument takes precedence
-        - Falls back to sticky default (set via with_sticky_project_file)
-        - Supports both relative (to project root) and absolute paths
-        - Tilde expansion and env vars supported in per-call arguments
-
-    Examples:
-        Basic usage - auto-detect project root:
+        Basic usage – auto-detect project root from CWD:
             >>> locator = ProjectFileLocator()
             >>> root = locator.get_project_root()
-            >>> # Searches upward for .git, pyproject.toml, etc.
+            >>> # Searches upward from CWD for .git, pyproject.toml, etc.
+
 
         Explicit project root:
-            >>> locator = ProjectFileLocator().with_project_root(Path('/app'))
-            >>> config = locator.get_project_file('config/settings.yaml')
+            >>> locator = ProjectFileLocator().with_project_root(Path("/app"))
+            >>> config = locator.get_project_file("config/settings.yaml")
             >>> # Returns: /app/config/settings.yaml
 
         Sticky project file (for repeated access):
-            >>> locator = (ProjectFileLocator()
-            ...            .with_project_root(Path('/app'))
-            ...            .with_sticky_project_file('config.yaml'))
-            >>> config = locator.get_project_file()  # Uses sticky default
+            >>> locator = (ProjectFileLocator().with_project_root(Path("/app")).with_sticky_project_file("config.yaml"))
+            >>> config = locator.get_project_file()
             >>> # Returns: /app/config.yaml
 
         Custom markers for project detection:
-            >>> locator = ProjectFileLocator().with_markers(
-            ...     ['Cargo.toml', '.git'],
-            ...     priority='.git'
-            ... )
+            >>> locator = ProjectFileLocator().with_markers(["Cargo.toml", ".git"], priority=".git")
             >>> root = locator.get_project_root()
             >>> # Prefers directories with .git over Cargo.toml
 
-        Per-call override with absolute path:
-            >>> locator = ProjectFileLocator().with_project_root(Path('/app'))
-            >>> config = locator.get_project_file('~/shared/config.yaml')
-            >>> # Returns: /home/user/shared/config.yaml (not under /app)
-
-    Class-level Configuration:
-        DEFAULT_MARKERS: Marker files used for project root detection
-        DEFAULT_PROJECT_FILE_RELATIVE_PATH: Default path for sticky project file
-        MAX_SEARCH_DEPTH_DEFAULT: How many parent directories to search
-        UNLIMITED_DEPTH: Sentinel value (-1) for unlimited upward search
+        Per-call override with an absolute path:
+            >>> locator = ProjectFileLocator().with_project_root(Path("/app"))
+            >>> config = locator.get_project_file("~/shared/config.yaml")
+            >>> # Returns: /home/user/shared/config.yaml
     """
 
     # region Class-level configuration (customize via subclassing or patching)
@@ -110,7 +78,7 @@ class ProjectFileLocator:
         will return this path instead of performing marker-based auto-detection.
 
         Args:
-            root: Absolute or relative path to use as project root, or None to clear.
+            root: Absolute or relative path to use as the project root, or None to clear.
                   Relative paths are resolved against CWD.
 
         Returns:
@@ -134,7 +102,7 @@ class ProjectFileLocator:
 
     def with_cwd_project_root(self) -> Self:
         """
-        Return a new locator with the current working directory as project root.
+        Return a new locator with the current working directory as the project root.
 
         Convenience method equivalent to with_project_root(Path.cwd()).
 
@@ -172,17 +140,14 @@ class ProjectFileLocator:
             New ProjectFileLocator instance with updated markers
 
         Raises:
-            ValueError: If markers is an empty iterable
+            ValueError: If markers arg is an empty iterable
 
         Examples:
             >>> # Rust project detection
             >>> locator = ProjectFileLocator().with_markers(['Cargo.toml', '.git'])
 
             >>> # Prefer .git over other markers
-            >>> locator = ProjectFileLocator().with_markers(
-            ...     ['.git', 'package.json', 'tsconfig.json'],
-            ...     priority='.git'
-            ... )
+            >>> locator = ProjectFileLocator().with_markers(['.git', 'package.json', 'tsconfig.json'],priority='.git')
 
             >>> # Reset to defaults
             >>> locator = ProjectFileLocator().with_markers(None)
@@ -215,7 +180,7 @@ class ProjectFileLocator:
                 - str/Path: Set this relative path (from project root)
 
         Returns:
-            New ProjectFileLocator instance with updated sticky file path
+            New ProjectFileLocator instance with an updated sticky file path
 
         Raises:
             AssertionError: If relpath is an empty string
@@ -227,13 +192,13 @@ class ProjectFileLocator:
             >>> locator.project_file_relpath
             PosixPath('resources/config.yaml')
 
-            >>> # Set custom sticky file
+            >>> # Set the custom sticky file
             >>> locator = ProjectFileLocator().with_sticky_project_file('config.toml')
-            >>> config = locator.get_project_file()  # Uses config.toml
+            >>> config = locator.get_project_file() # Uses config.toml
 
             >>> # Clear sticky file
             >>> locator = locator.with_sticky_project_file(None)
-            >>> locator.get_project_file()  # Returns None
+            >>> locator.get_project_file() # Returns None
 
         Design Note:
             Sticky paths are restricted to relative-only to prevent confusion.
@@ -268,11 +233,13 @@ class ProjectFileLocator:
 
         Resolution strategy:
           1. If an explicit root is set (via with_project_root), return it
-          2. Otherwise, perform upward marker search from a smart start location:
-             - If running from site/dist-packages → start at CWD
-             - Otherwise → start at this module's directory
+          2. Otherwise, perform upward marker search starting from CWD
           3. Return the first directory containing the priority marker or any marker
-          4. If no markers found, fall back to the start location
+          4. If no markers are found, fall back to CWD
+
+        The search always starts from the current working directory. This ensures
+        that when this library is used as a dependency (e.g., EbfUtil imported by
+        EbfLauncher), it finds the calling project's root, not the library's root.
 
         Args:
             max_search_depth: Maximum parent levels to ascend during marker search.
@@ -282,14 +249,14 @@ class ProjectFileLocator:
             Absolute resolved Path to the project root
 
         Examples:
-            >>> # Auto-detection from current location
+            >>> # Auto-detection from CWD
             >>> locator = ProjectFileLocator()
             >>> root = locator.get_project_root()
-            >>> # Searches upward for .git, pyproject.toml, etc.
+            >>> # Searches upward from CWD for .git, pyproject.toml, etc.
 
             >>> # Limited search depth
             >>> root = locator.get_project_root(max_search_depth=3)
-            >>> # Only searches 3 levels up
+            >>> # Only searches 3 levels up from CWD
 
             >>> # With explicit root, search is skipped
             >>> locator = locator.with_project_root(Path('/app'))
@@ -370,27 +337,24 @@ class ProjectFileLocator:
                     - Relative: resolved under project root
                     - Absolute: used directly (e.g., ~/config.yaml)
                     - None: use sticky default (if set)
-            must_exist: If True, raise FileNotFoundError if file doesn't exist
-            restrict_to_root: If True, prevent relative paths from escaping
-                             project root via .. navigation
+            must_exist: If True, raise FileNotFoundError if the file doesn't exist
+            restrict_to_root: If True, prevent relative paths from escaping the project root via navigation using '..'
 
         Returns:
-            Absolute resolved Path to the project file, or None if no path configured
+            Absolute resolved Path to the project file, or None if no path is configured
 
         Raises:
-            FileNotFoundError: If must_exist=True and file doesn't exist
-            ValueError: If restrict_to_root=True and path escapes project root
+            FileNotFoundError: If must_exist=True and the file doesn't exist
+            ValueError: If restrict_to_root=True and the path escapes the project root
 
         Examples:
-            >>> locator = (ProjectFileLocator()
-            ...            .with_project_root(Path('/app'))
-            ...            .with_sticky_project_file('config.yaml'))
+            >>> locator = (ProjectFileLocator().with_project_root(Path('/app')).with_sticky_project_file('config.yaml'))
 
             >>> # Use sticky default
             >>> locator.get_project_file()
             PosixPath('/app/config.yaml')
 
-            >>> # Override with per-call relative path
+            >>> # Override with the per-call relative path
             >>> locator.get_project_file('settings/dev.yaml')
             PosixPath('/app/settings/dev.yaml')
 
@@ -428,7 +392,7 @@ class ProjectFileLocator:
         # Get project root
         root = self.get_project_root()
 
-        # Check if source is already absolute (before norm_path processing)
+        # Check if the source is already absolute (before norm_path processing)
         # This matters for restrict_to_root logic
         source_is_absolute = Path(source_path).expanduser().is_absolute()
 
@@ -442,7 +406,7 @@ class ProjectFileLocator:
             expand_env=True,
         )
 
-        # Validate path is under root if required
+        # Validate that the path is under root if required
         # Note: restrict_to_root only applies to relative paths that were resolved
         # under the project root. Absolute paths (including ~ expansion) bypass this.
         if restrict_to_root and not source_is_absolute:
@@ -480,7 +444,7 @@ class ProjectFileLocator:
     @property
     def project_file_relpath(self) -> Optional[Path]:
         """
-        The sticky default project file path (relative to project root).
+        The sticky default project file path (relative to the project root).
 
         Returns the configured default file path set via with_sticky_project_file(),
         or None if no default is configured.
@@ -504,7 +468,7 @@ class ProjectFileLocator:
         Validate that markers list is non-empty and contains valid strings.
 
         Raises:
-            ValueError: If markers is empty or contains empty strings
+            ValueError: If markers arg is empty or contains empty strings
         """
         found_any = False
         for m in markers:
@@ -519,39 +483,34 @@ class ProjectFileLocator:
         """
         Determine the starting point for upward marker search.
 
-        Strategy:
-          - If this module is in site-packages or dist-packages (installed package),
-            start from CWD (so calling code's context is used)
-          - Otherwise, start from this module's directory (development context)
+        Always starts from the current working directory (CWD). This ensures that
+        when EbfUtil is used as a dependency by other projects (e.g., EbfLauncher),
+        the marker search finds the *calling project's* root, not EbfUtil's root.
+
+        This design assumes that applications are run from within their project
+        directory, which is the standard convention.
 
         Returns:
-            Absolute path to start the search from
+            Absolute path to CWD
+
+        Example:
+            If EbfLauncher imports ProjectFileLocator from EbfUtil and runs from
+            /app/EbfLauncher/, the search starts at /app/EbfLauncher/ and finds
+            EbfLauncher's .git, not EbfUtil's .git.
         """
-        try:
-            here = Path(__file__).resolve()
-        except NameError:
-            # Fallback if __file__ not available (unusual contexts)
-            here = Path.cwd().resolve()
-
-        parts_lower = {p.lower() for p in here.parts}
-        if "site-packages" in parts_lower or "dist-packages" in parts_lower:
-            # Running from installed package - use caller's context
-            return Path.cwd().resolve()
-
-        # Running from source - use module's context
-        return here.parent
+        return Path.cwd().resolve()
 
     @staticmethod
     def _is_within(path: Path, root: Path) -> bool:
         """
-        Check if path is within root directory.
+        Check if the path is within the root directory.
 
         Args:
             path: Path to check
             root: Root directory to check against
 
         Returns:
-            True if path is under root, False otherwise
+            True if the path is under root, False otherwise
         """
         try:
             # Python 3.9+: Path.is_relative_to
@@ -567,11 +526,11 @@ class ProjectFileLocator:
     @staticmethod
     def _validate_string_path(str_path: str) -> None:
         """
-        Validate a string path for use as sticky project file.
+        Validate a string path for use as the sticky project file.
 
         Raises:
-            AssertionError: If path is empty
-            ValueError: If path is '.' or starts with ~
+            AssertionError: If the path is empty
+            ValueError: If the path is '.' or starts with ~
         """
         ensure_not_empty_str(str_path, "relpath")
         if str_path == ".":
@@ -584,10 +543,10 @@ class ProjectFileLocator:
     @staticmethod
     def _ensure_relative_path(path: Path) -> None:
         """
-        Validate that path is relative (not absolute or drive-anchored).
+        Validate that the path is relative (not absolute or drive-anchored).
 
         Raises:
-            ValueError: If path is absolute or has a drive/root anchor
+            ValueError: If the path is absolute or has a drive/root anchor
         """
         err = "The path must be a *relative* path from the project root."
         if getattr(path, "drive", "") or getattr(path, "root", ""):
