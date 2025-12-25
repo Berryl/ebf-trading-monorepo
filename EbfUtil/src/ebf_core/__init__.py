@@ -1,5 +1,4 @@
-from . import fileutil as fileutil
-from . import guards as guards
-from . import cfgutil as cfgutil
+"""EBF core utilities — cfgutil, fileutil, guards."""
 
-__all__ = ["fileutil", "guards", "cfgutil"]
+# No imports or __all__ needed here.
+# Subpackages are accessed directly: from ebf_core.fileutil import ...
