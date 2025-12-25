@@ -4,7 +4,6 @@ charset-normalizer
 colorama
 coverage
 docutils
--e git+https://github.com/Berryl/EbfUtil.git@8df888d8d4d6b2ee5c84820840d3ab5709ec145e#egg=ebf_core
 id
 idna
 iniconfig
