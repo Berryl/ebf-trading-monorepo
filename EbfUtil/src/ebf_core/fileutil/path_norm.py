@@ -15,6 +15,7 @@ def norm_path(
         expand_user: bool = True,
         require_absolute: bool = False,
 ) -> Path | None:
+    # noinspection GrazieInspection
     """
     Normalize a path with configurable expansion and resolution.
 
@@ -23,26 +24,26 @@ def norm_path(
     path validation in a single, consistent interface.
 
     Processing Order:
-        1. Return None if value is None or empty/whitespace
+        1. Return None if the value is None or empty/whitespace
         2. Expand environment variables (if expand_env=True)
-        3. Expand tilde to home directory (if expand_user=True)
-        4. Resolve relative paths against base (if base provided and path is relative)
+        3. Expand tilde to the home directory (if expand_user=True)
+        4. Resolve relative paths against the base (if the base is provided and the path is relative)
         5. Validate absoluteness (if arg require_absolute=True)
 
     Args:
         value: Path to normalize. Can be:
                - None → returns None
                - Empty/whitespace string → returns None
-               - str or os.PathLike → normalized according to options
+               - A str or os.PathLike → normalized according to options
         base: Base directory for resolving relative paths. If provided and the path
               is relative (after expansion), it will be resolved as (base / path).resolve().
               Absolute paths ignore this parameter.
         home: Custom home directory for tilde expansion. If provided, ~ expands to this
               path instead of Path.home(). Useful for testing or sandboxed environments.
-              Note: Only simple ~ is affected; ~username still uses system expansion.
+              Note: Only the simple ~ is affected; ~username still uses system expansion.
         expand_env: If True, expand environment variables like $HOME, ${USER}, etc.
                     using os.path.expandvars(). Happens before tilde expansion.
-        expand_user: If True, expand ~ to home directory. Uses custom home if provided,
+        expand_user: If True, expand ~ to the home directory. Uses custom home if provided,
                      otherwise uses Path.home().
         require_absolute: If True, raise ValueError if the final path is relative.
                          Useful for enforcing absolute paths in configuration.
@@ -120,7 +121,7 @@ def norm_path(
 
     p = Path(s)
 
-    # Step 2: Expand tilde to home directory
+    # Step 2: Expand tilde to the home directory
     if expand_user:
         if home is not None:
             # Custom home: manually replace ~ (but not ~username)

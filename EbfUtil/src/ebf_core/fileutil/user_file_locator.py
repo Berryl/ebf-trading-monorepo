@@ -107,10 +107,10 @@ class UserFileLocator:
             >>> locator.file('.config', 'app', 'settings.yml')
             PosixPath('/home/user/.config/app/settings.yml')
 
-            >>> locator.file('~/documents/notes.txt')  # ~ expands to home
+            >>> locator.file('~/documents/notes.txt') # ~ expands to home
             PosixPath('/home/user/documents/notes.txt')
 
-            >>> locator.file('$CONFIG_DIR/settings.yml')  # env var expansion
+            >>> locator.file('$CONFIG_DIR/settings.yml') # env var expansion
             PosixPath('/home/user/.config/settings.yml')
 
         Note:
@@ -124,8 +124,9 @@ class UserFileLocator:
         return norm_path(path, base=self.home, home=self.home)
 
     def try_file(self, *parts: str | Path) -> Path | None:
+        # noinspection GrazieInspection
         """
-        Construct a path under home directory, returning None if it doesn't exist.
+        Construct a path under the home directory, returning None if it doesn't exist.
 
         Similar to file(), but performs an existence check. Returns the resolved
         path if the file exists, otherwise returns None.
