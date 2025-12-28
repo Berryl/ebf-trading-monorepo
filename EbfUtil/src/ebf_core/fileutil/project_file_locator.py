@@ -116,12 +116,7 @@ class ProjectFileLocator:
         """
         return self.with_project_root(Path.cwd())
 
-    def with_markers(
-            self,
-            markers: Optional[Iterable[str]],
-            *,
-            priority: Optional[str] = None,
-    ) -> Self:
+    def with_markers(self, markers: Optional[Iterable[str]], *, priority: Optional[str] = None,) -> Self:
         """
         Return a new locator with custom project root markers.
 
@@ -159,10 +154,7 @@ class ProjectFileLocator:
             _priority_marker=priority,
         )
 
-    def with_sticky_project_file(
-            self,
-            relpath: Path | str | object = _USE_CLASS_DEFAULT
-    ) -> Self:
+    def with_sticky_project_file(self, relpath: Path | str | object = _USE_CLASS_DEFAULT) -> Self:
         """
         Configure the default project file for this locator.
 
@@ -223,11 +215,7 @@ class ProjectFileLocator:
 
     # region Query methods
 
-    def get_project_root(
-            self,
-            *,
-            max_search_depth: int = MAX_SEARCH_DEPTH_DEFAULT,
-    ) -> Path:
+    def get_project_root(self, *, max_search_depth: int = MAX_SEARCH_DEPTH_DEFAULT,) -> Path:
         """
         Get the project root directory.
 
