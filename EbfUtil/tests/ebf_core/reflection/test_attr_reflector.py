@@ -135,6 +135,7 @@ class TestDictionaryAttr:
 
         sut.set_value("dict_attr.key1", 44)
         assert sut.get_value("dict_attr.key1") == 44
+        assert sut.get_value("dict_attr") == {'key1': 44, 'key2': 33}
 
 
 class TestListAttr:
@@ -166,67 +167,67 @@ class TestListAttr:
 
         sut.set_value("list_attr.1", 99)
         assert sut.get_value("list_attr.1") == 99
+        assert sut.get_value("list_attr") == [1, 99, 3]
 
 
 class TestWeakMethodReferences:
     """Tests for handling weak method references."""
 
-    def test_get_value(self):
+    class MyClass:
+        def __init__(self):
+            self.weak_method = None
+
+        def my_method(self):
+            pass
+
+    class DeepCopyClass:
+        def __init__(self):
+            self.weak_method = None
+
+        def test_method(self):
+            pass
+
+        def __deepcopy__(self, memo):
+            new_instance = TestWeakMethodReferences.DeepCopyClass()
+            for k, v in self.__dict__.items():
+                if k != 'weak_method':
+                    setattr(new_instance, k, copy.deepcopy(v, memo))
+            if self.weak_method is not None:
+                new_instance.weak_method = weakref.WeakMethod(new_instance.test_method)
+            return new_instance
+
+    @pytest.fixture
+    def obj(self) -> object:
+        return TestWeakMethodReferences.MyClass()
+
+    @pytest.fixture
+    def sut(self, obj) -> AttributeReflector:
+        return AttributeReflector(obj)
+
+    def test_get_value(self, sut, obj):
         """Test that weak method references are resolved to tuple format on get."""
+        weak_method_ref = weakref.WeakMethod(obj.my_method)  # noqa
+        sut.set_value('weak_method', weak_method_ref)
 
-        class MyClass:
-            def __init__(self):
-                self.weak_method = None
-
-            def my_method(self):
-                pass
-
-        obj = MyClass()
-        reflector = AttributeReflector(obj)
-
-        # Create and set a weak method reference
-        weak_method_ref = weakref.WeakMethod(obj.my_method)
-        reflector.set_value('weak_method', weak_method_ref)
-
-        # Get the weak method and verify the tuple format
-        result = reflector.get_value('weak_method')
+        result = sut.get_value('weak_method')
 
         assert isinstance(result, tuple)
         assert result[0] == '__weakmethod__'
         assert result[1] == 'my_method'
-        assert isinstance(result[2], int)  # id of the instance
+        assert isinstance(result[2], int)
 
     def test_when_deepcopy(self):
         """Test that weak methods are handled correctly during deep copy operations."""
-
-        class TestClass:
-            def __init__(self):
-                self.weak_method = None
-
-            def test_method(self):
-                pass
-
-            def __deepcopy__(self, memo):
-                new_instance = TestClass()
-                for k, v in self.__dict__.items():
-                    if k != 'weak_method':
-                        setattr(new_instance, k, copy.deepcopy(v, memo))
-                if self.weak_method is not None:
-                    new_instance.weak_method = weakref.WeakMethod(new_instance.test_method)
-                return new_instance
-
-        obj = TestClass()
+        obj = TestWeakMethodReferences.DeepCopyClass()
         obj.weak_method = weakref.WeakMethod(obj.test_method)
 
-        reflector = AttributeReflector(obj)
-        reflector.set_value('weak_method', obj.weak_method)
+        sut = AttributeReflector(obj)
+        sut.set_value('weak_method', obj.weak_method)
 
-        # Verify the weak method format
-        result = reflector.get_value('weak_method')
+        result = sut.get_value('weak_method')
         assert isinstance(result, tuple)
         assert result[0] == '__weakmethod__'
 
-        # Test deep copy behavior
         copied = copy.deepcopy(obj)
         assert hasattr(copied, 'weak_method')
         assert isinstance(copied.weak_method, weakref.WeakMethod)
@@ -275,10 +276,9 @@ class TestMixedComplexObjects:
             }
         }
 
-        reflector = AttributeReflector(obj)
+        sut = AttributeReflector(obj)
 
-        # Test getting through a complex path
-        result = reflector.get_value("level1.level2.0.item.value")
+        result = sut.get_value("level1.level2.0.item.value")
         assert result == "deep_value"
 
     def test_list_of_objects_access(self):
@@ -293,11 +293,11 @@ class TestMixedComplexObjects:
                 self.items = [Item("first"), Item("second"), Item("third")]
 
         obj = Container()
-        reflector = AttributeReflector(obj)
+        sut = AttributeReflector(obj)
 
-        assert reflector.get_value("items.0.name") == "first"
-        assert reflector.get_value("items.1.name") == "second"
-        assert reflector.get_value("items.2.name") == "third"
+        assert sut.get_value("items.0.name") == "first"
+        assert sut.get_value("items.1.name") == "second"
+        assert sut.get_value("items.2.name") == "third"
 
-        reflector.set_value("items.1.name", "modified")
+        sut.set_value("items.1.name", "modified")
         assert obj.items[1].name == "modified"
