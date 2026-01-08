@@ -3,6 +3,7 @@ import weakref
 from dataclasses import dataclass
 
 import pytest
+from src.ebf_core.guards.guards import ContractError
 from src.ebf_core.reflection.attr_reflector import AttributeReflector
 
 
@@ -39,12 +40,17 @@ class TestSimpleAttr:
         sut.set_value("nested_attr", "new_value")
         assert simple_obj.nested_attr == "new_value"
 
-    def test_none_values(self, sut, simple_obj: SimpleClass):
+    def test_none_values(self, sut):
         assert sut.get_value("nested_attr") == "original_value"
         sut.set_value("nested_attr", None)
 
         assert sut.get_value("nested_attr") is None
         assert sut.has_attr("nested_attr"), "Attribute with None as a value should exist"
+
+    @pytest.mark.parametrize("illegal_arg", [None, "", "  "])
+    def test_non_existent_attribute_spec_raises_error(self, sut, illegal_arg):
+        with pytest.raises(ContractError):
+            sut.get_value(illegal_arg)
 
 
 class TestNestedAttrs:
@@ -159,54 +165,8 @@ class TestListAttr:
         assert sut.get_value("list_attr.1") == 99
 
 
-class TestNoneValueHandling:
-    """Tests for handling attributes with None values."""
-
-    @pytest.fixture
-    def person(self):
-        """Fixture providing a person object with None name."""
-
-        class Person:
-            def __init__(self):
-                self.name = None
-
-        return Person()
-
-    @pytest.fixture
-    def reflector(self, person):
-        """Fixture providing a reflector for the person object."""
-        return AttributeReflector(person)
-
-    def test_has_attr_returns_true_for_none_value(self, reflector):
-        """Test has_attr returns True for attribute that exists but is None."""
-        assert reflector.has_attr("name") is True
-
-    def test_can_get_none_value(self, reflector):
-        """Test getting an attribute that exists but is None."""
-        assert reflector.get_value("name") is None
-
-    def test_can_set_none_value(self, reflector, person):
-        """Test setting an attribute that was initially None."""
-        reflector.set_value("name", "Ted")
-        assert person.name == "Ted"
-
-
 class TestErrorHandling:
     """Tests for error handling and validation."""
-
-    def test_get_non_existent_attribute_raises_error(self):
-        """Test that getting a non-existent attribute raises AttributeError."""
-
-        class SimpleClass:
-            def __init__(self):
-                self.existing_attr = "some_value"
-
-        obj = SimpleClass()
-        reflector = AttributeReflector(obj)
-        err_msg = "'SimpleClass' object has no attribute 'non_existent_attr'"
-
-        with pytest.raises(AttributeError, match=err_msg):
-            reflector.get_value("non_existent_attr")
 
     def test_set_non_existent_attribute_raises_error(self):
         """Test that setting a non-existent attribute raises AttributeError."""

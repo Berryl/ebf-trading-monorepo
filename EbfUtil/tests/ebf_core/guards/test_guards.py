@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from ebf_core.guards import guards as g
 from ebf_core.guards.guards import ContractError
 
 
