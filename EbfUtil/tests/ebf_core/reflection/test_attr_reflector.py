@@ -10,7 +10,7 @@ from src.ebf_core.reflection.attr_reflector import AttributeReflector
 class TestSimpleAttr:
     """Tests for basic get/set operations on simple attributes."""
 
-    class SimpleClass:  # ← Defined here, inside the test class
+    class SimpleClass:
         def __init__(self):
             self.attr = "original_value"
             self.nested_attr = "original_value"  # for the combined test
@@ -51,6 +51,9 @@ class TestSimpleAttr:
     def test_non_existent_attribute_spec_raises_error(self, sut, illegal_arg):
         with pytest.raises(ContractError):
             sut.get_value(illegal_arg)
+
+        with pytest.raises(ContractError):
+            sut.set_value(illegal_arg, "blah")
 
 
 class TestNestedAttrs:
@@ -165,69 +168,10 @@ class TestListAttr:
         assert sut.get_value("list_attr.1") == 99
 
 
-class TestErrorHandling:
-    """Tests for error handling and validation."""
-
-    def test_set_non_existent_attribute_raises_error(self):
-        """Test that setting a non-existent attribute raises AttributeError."""
-
-        class SimpleClass:
-            def __init__(self):
-                self.existing_attr = "some_value"
-
-        obj = SimpleClass()
-        reflector = AttributeReflector(obj)
-
-        with pytest.raises(AttributeError):
-            reflector.set_value("non_existent_attr", "new_value")
-
-    def test_get_with_none_path_raises_error(self):
-        """Test that passing None as attr_path raises AssertionError."""
-
-        class SimpleClass:
-            def __init__(self):
-                self.existing_attr = "some_value"
-
-        obj = SimpleClass()
-        reflector = AttributeReflector(obj)
-        err_msg = "Parameter 'attr_path' must be valued"
-
-        with pytest.raises(AssertionError, match=err_msg):
-            reflector.get_value(None)
-
-    def test_set_with_none_path_raises_error(self):
-        """Test that passing None as attr_path to set_value raises AssertionError."""
-
-        class SimpleClass:
-            def __init__(self):
-                self.existing_attr = "some_value"
-
-        obj = SimpleClass()
-        reflector = AttributeReflector(obj)
-        err_msg = "Parameter 'attr_path' must be valued"
-
-        with pytest.raises(AssertionError, match=err_msg):
-            reflector.set_value(None, "blah")
-
-    def test_has_attr_with_none_path_raises_error(self):
-        """Test that passing None as attr_path to has_attr raises AssertionError."""
-
-        class SimpleClass:
-            def __init__(self):
-                self.existing_attr = "some_value"
-
-        obj = SimpleClass()
-        reflector = AttributeReflector(obj)
-        err_msg = "Parameter 'attr_path' must be valued"
-
-        with pytest.raises(AssertionError, match=err_msg):
-            reflector.has_attr(None)
-
-
 class TestWeakMethodReferences:
     """Tests for handling weak method references."""
 
-    def test_reflector_handles_weak_method_get(self):
+    def test_get_value(self):
         """Test that weak method references are resolved to tuple format on get."""
 
         class MyClass:
@@ -244,7 +188,7 @@ class TestWeakMethodReferences:
         weak_method_ref = weakref.WeakMethod(obj.my_method)
         reflector.set_value('weak_method', weak_method_ref)
 
-        # Get the weak method and verify tuple format
+        # Get the weak method and verify the tuple format
         result = reflector.get_value('weak_method')
 
         assert isinstance(result, tuple)
@@ -252,7 +196,7 @@ class TestWeakMethodReferences:
         assert result[1] == 'my_method'
         assert isinstance(result[2], int)  # id of the instance
 
-    def test_weak_method_with_deepcopy(self):
+    def test_when_deepcopy(self):
         """Test that weak methods are handled correctly during deep copy operations."""
 
         class TestClass:
@@ -277,7 +221,7 @@ class TestWeakMethodReferences:
         reflector = AttributeReflector(obj)
         reflector.set_value('weak_method', obj.weak_method)
 
-        # Verify weak method format
+        # Verify the weak method format
         result = reflector.get_value('weak_method')
         assert isinstance(result, tuple)
         assert result[0] == '__weakmethod__'
@@ -291,61 +235,29 @@ class TestWeakMethodReferences:
 class TestDataclassSupport:
     """Tests for working with dataclass instances."""
 
-    def test_dataclass_attribute_access(self):
-        """Test accessing attributes of a dataclass instance."""
+    @dataclass
+    class SimpleClass:
+        attr: str
 
-        @dataclass
-        class NestedClass:
-            inner_attr: str = "inner_value"
+    @pytest.fixture
+    def dataclass_obj(self) -> object:
+        return TestDataclassSupport.SimpleClass("original value")
 
-        class MyClass:
-            def __init__(self):
-                self.nested_instance = NestedClass()
+    @pytest.fixture
+    def sut(self, dataclass_obj) -> AttributeReflector:
+        return AttributeReflector(dataclass_obj)
 
-        obj = MyClass()
-        reflector = AttributeReflector(obj)
+    def test_attr_usage_is_same_as_regular_class(self, sut):
+        assert sut.has_attr("attr")
+        assert not sut.has_attr("not_an_attr")
 
-        # Get the value directly through dot notation
-        result = reflector.get_value("nested_instance.inner_attr")
-        assert result == "inner_value"
+        assert sut.get_value("attr") == "original value"
 
-    def test_dataclass_attribute_modification(self):
-        """Test modifying attributes of a dataclass instance."""
-
-        @dataclass
-        class NestedClass:
-            inner_attr: str = "inner_value"
-
-        class MyClass:
-            def __init__(self):
-                self.nested_instance = NestedClass()
-
-        obj = MyClass()
-        reflector = AttributeReflector(obj)
-
-        # Set the value through dot notation
-        reflector.set_value("nested_instance.inner_attr", "new_value")
-        assert obj.nested_instance.inner_attr == "new_value"
-
-    def test_dataclass_has_attr(self):
-        """Test checking attribute existence in a dataclass instance."""
-
-        @dataclass
-        class NestedClass:
-            inner_attr: str = "inner_value"
-
-        class MyClass:
-            def __init__(self):
-                self.nested_instance = NestedClass()
-
-        obj = MyClass()
-        reflector = AttributeReflector(obj)
-
-        assert reflector.has_attr("nested_instance.inner_attr") is True
-        assert reflector.has_attr("nested_instance.non_existent") is False
+        sut.set_value("attr", "new value")
+        assert sut.get_value("attr") == "new value"
 
 
-class TestComplexScenarios:
+class TestMixedComplexObjects:
     """Tests for complex nested scenarios mixing different types."""
 
     def test_mixed_dict_list_object_nesting(self):
@@ -365,7 +277,7 @@ class TestComplexScenarios:
 
         reflector = AttributeReflector(obj)
 
-        # Test getting through complex path
+        # Test getting through a complex path
         result = reflector.get_value("level1.level2.0.item.value")
         assert result == "deep_value"
 
