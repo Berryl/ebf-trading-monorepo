@@ -8,18 +8,21 @@ import src.ebf_domain.rules.common_rules as cr
 
 class TestRuleCollection:
     """Tests for RuleCollection."""
-    
-    def test_create_empty_collection(self):
-        """Can create an empty rule collection."""
-        collection = RuleCollection()
-        assert len(collection) == 0
-    
-    def test_add_single_rule(self):
-        """Can add a single rule to collection."""
-        collection = RuleCollection()
-        collection.add(cr.ValueRequiredRule())
-        
-        assert len(collection) == 1
+    class TestAdd:
+        @pytest.fixture
+        def sut(self):
+            return RuleCollection()
+
+        def test_single_rule(self, sut):
+            assert len(sut) == 0
+            sut.add(cr.ValueRequiredRule())
+            assert len(sut) == 1
+
+        def test_add_single_rule(self):
+            """Can add a single rule to collection."""
+            collection = RuleCollection()
+
+            assert len(collection) == 1
     
     def test_add_multiple_rules(self):
         """Can add multiple rules to the collection."""

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Self
 
-from rule import Rule, RuleViolation
+from src.ebf_domain.rules.rule import Rule, RuleViolation
 
 
 @dataclass

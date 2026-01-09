@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Self
 
-from rule import RuleViolation
-from rule_collection import RuleCollection
+from src.ebf_domain.rules.rule import RuleViolation
+from src.ebf_domain.rules.rule_collection import RuleCollection
 
 
 @dataclass
