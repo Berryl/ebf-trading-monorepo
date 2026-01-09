@@ -71,3 +71,5 @@ class TestRuleCollection:
             def test_can_iterate(self, sut):
                 for rule in list(sut):
                     assert isinstance(rule, Rule)
+
+
