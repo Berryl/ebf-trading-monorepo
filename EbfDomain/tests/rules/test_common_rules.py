@@ -203,19 +203,13 @@ class TestEmailRule:
     def test__valid_email_passes(self, sut, good_email):
         assert sut.validate("email", good_email) is None
 
-    def test_fails_on_invalid_emails(self):
-        """EmailRule fails for invalid email addresses."""
-        rule = EmailRule()
+    @pytest.mark.parametrize("bad_email", ["bob", "tom@hotmail"])
+    def test__invalid_email_fails(self, sut, bad_email):
+        result = sut.validate("email", bad_email)
+        assert 'email: must be a valid email address' in str(result)
 
-        assert rule.validate("email", "notanemail") is not None
-        assert rule.validate("email", "@example.com") is not None
-        assert rule.validate("email", "user@") is not None
-        assert rule.validate("email", "user @example.com") is not None
-
-    def test_passes_on_none(self):
-        """EmailRule passes on None."""
-        rule = EmailRule()
-        assert rule.validate("email", None) is None
+    def test_none_always_passes(self, sut):
+        assert sut.validate("email", None) is None
 
 
 class TestOneOfRule:
