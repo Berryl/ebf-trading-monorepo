@@ -179,7 +179,7 @@ class CallableMustBeTrueRule(Rule[Any]):
         ```python
         def is_even(value: int) -> bool:
             return value % 2 == 0
-        
+        # noinspection GrazieInspection
         rule = CallableRule(
             validation_func=is_even,
             message="must be an even number"
