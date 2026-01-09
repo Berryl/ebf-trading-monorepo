@@ -4,6 +4,7 @@ from src.ebf_domain.rules.common_rules import (
     ValueRequiredRule, RegexRule, MinLengthRule, MaxLengthRule,
     RangeRule, CallableRule, EmailRule, OneOfRule
 )
+from src.ebf_domain.rules.rule import Rule
 
 
 class TestValueRequiredRule:
@@ -94,13 +95,24 @@ class TestMaxLengthRule:
 class TestRangeRule:
     """Tests for RangeRule."""
 
-    def test_passes_within_range(self):
-        """RangeRule passes for values within range."""
-        rule = RangeRule(min_value=0, max_value=100)
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return RangeRule(min_value=0, max_value=100)
 
-        assert rule.validate("age", 0) is None
-        assert rule.validate("age", 50) is None
-        assert rule.validate("age", 100) is None
+    # @pytest.mark.parametrize("value", [-1, -99])
+    # def test_below_range_fails(self, value):
+    #     rule = RangeRule(min_value=0, max_value=100)
+    #     v = rule.validate("field", value) is None
+    #
+    #     assert "field: must be at least 0" in str(v)
+
+    @pytest.mark.parametrize("value", [1, 99, .01, 99.999])
+    def test_value_within_range_passes(self, sut, value):
+        assert sut.validate("age", value) is None
+
+    @pytest.mark.parametrize("value", [100, 0])
+    def test_value_at_range_boundary_passes(self, sut, value):
+        assert sut.validate("age", value) is None
 
     def test_fails_below_minimum(self):
         """RangeRule fails when value is below minimum."""

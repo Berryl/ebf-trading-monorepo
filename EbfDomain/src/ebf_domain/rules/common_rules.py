@@ -135,7 +135,7 @@ class RangeRule(Rule[int | float]):
     Usage:
         ```python
         age_rule = RangeRule(min_value=0, max_value=150)
-        violation = age_rule.validate("age", -5)  # Returns violation
+        violation = age_rule.validate("age", -5) # Returns violation
         ```
     """
     min_value: int | float | None = None
