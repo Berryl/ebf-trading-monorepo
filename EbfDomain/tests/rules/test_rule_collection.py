@@ -26,36 +26,34 @@ class TestRuleCollection:
             assert isinstance(result, RuleCollection)
             assert len(sut) == 2
 
-    def test_from_rules_class_method(self):
-        """Can create collection from rules using class method."""
-        collection = RuleCollection.from_rules(
-            cr.ValueRequiredRule(),
-            cr.MinStrSizeRule(min_length=5),
-            cr.MaxStrSizeRule(max_length=20)
-        )
+        class TestFactoryCreate:
 
-        assert len(collection) == 3
+            def test_can_add_variable_number_of_args(self):
+                sut = RuleCollection.from_rules(
+                    cr.ValueRequiredRule(),
+                    cr.MinStrSizeRule(min_length=5),
+                    cr.MaxStrSizeRule(max_length=20))
 
-    def test_validate_with_no_violations(self):
-        """validate() returns empty list when all rules pass."""
-        collection = RuleCollection.from_rules(
-            cr.ValueRequiredRule(),
-            cr.MinStrSizeRule(min_length=5)
-        )
+                assert len(sut) == 3
 
-        violations = collection.validate("username", "alice123")
-        assert violations == []
+    class TestValidate:
 
-    def test_validate_with_single_violation(self):
-        """validate() returns list with one violation."""
-        collection = RuleCollection.from_rules(
-            cr.ValueRequiredRule(),
-            cr.MinStrSizeRule(min_length=5)
-        )
+        @pytest.fixture
+        def sut(self):
+            return RuleCollection.from_rules(
+                cr.ValueRequiredRule(),
+                cr.MinStrSizeRule(min_length=5)
+            )
 
-        violations = collection.validate("username", "bob")  # Too short
-        assert len(violations) == 1
-        assert "at least 5" in violations[0].message
+        def test_when_no_violations(self, sut):
+            """validate() returns empty list when all rules pass."""
+            violations = sut.validate("username", "alice123")
+            assert violations == []
+
+        def test_when_single_violation(self, sut):
+            violations = sut.validate("username", "bob")  # Too short
+            assert len(violations) == 1
+            assert "at least 5" in violations[0].message
 
     def test_validate_with_multiple_violations(self):
         """validate() returns all violations found."""
