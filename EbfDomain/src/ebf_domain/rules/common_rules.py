@@ -70,7 +70,7 @@ class RegexRule(Rule[str]):
 
 
 @dataclass
-class MinLengthRule(Rule[str]):
+class MinStrSizeRule(Rule[str]):
     """
     Rule that validates minimum string length.
     
@@ -97,7 +97,7 @@ class MinLengthRule(Rule[str]):
 
 
 @dataclass
-class MaxLengthRule(Rule[str]):
+class MaxStrSizeRule(Rule[str]):
     """
     Rule that validates maximum string length.
     

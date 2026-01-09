@@ -3,7 +3,7 @@ import sys
 import pytest
 
 from src.ebf_domain.rules.common_rules import (
-    ValueRequiredRule, RegexRule, MinLengthRule, MaxLengthRule,
+    ValueRequiredRule, RegexRule, MinStrSizeRule, MaxStrSizeRule,
     NumericRangeRule, CallableRule, EmailRule, OneOfRule
 )
 from src.ebf_domain.rules.rule import Rule
@@ -57,41 +57,43 @@ class TestRegexRule:
 class TestMinLengthRule:
     """Tests for MinLengthRule."""
 
-    def test_below_minimum_length_fails(self):
-        rule = MinLengthRule(min_length=5)
-        v = rule.validate("password", "x")
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return MinStrSizeRule(min_length=3)
 
-        assert f'password: must be at least 5 characters' in str(v)
+    @pytest.mark.parametrize("value", ["1", "12"])
+    def test_below_minimum_length_fails(self, sut, value):
+        result = sut.validate("password", "x")
+
+        assert f'password: must be at least 3 characters' in str(result)
 
     @pytest.mark.parametrize("length", ["123", "1234678"])
-    def test_minimum_or_exceeded_length_passes(self, length):
-        rule = MinLengthRule(min_length=3)
+    def test_at_or_above_minimum_length_passes(self, length):
+        rule = MinStrSizeRule(min_length=3)
         assert rule.validate("field", length) is None
 
-    def test_none_passes(self):
-        """MinLengthRule passes on None."""
-        rule = MinLengthRule(min_length=5)
-        assert rule.validate("field", None) is None
+    def test_none__always_passes(self, sut):
+        assert sut.validate("field", None) is None
 
 
 class TestMaxLengthRule:
     """Tests for MaxLengthRule."""
 
-    def test_above_maximum_length_fails(self):
-        rule = MaxLengthRule(max_length=3)
-        v = rule.validate("password", "123456")
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return MaxStrSizeRule(max_length=3)
 
-        assert f'password: must be at most 3 characters' in str(v)
+    @pytest.mark.parametrize("value", ["1234", "123456"])
+    def test_above_maximum_length_fails(self, sut, value):
+        result = sut.validate("password", value)
+        assert f'password: must be at most 3 characters' in str(result)
 
-    @pytest.mark.parametrize("length", ["123", "2"])
-    def test_maximum_or_below_length_passes(self, length):
-        rule = MaxLengthRule(max_length=3)
-        assert rule.validate("field", length) is None
+    @pytest.mark.parametrize("value", ["123", "2"])
+    def test_at_or_below_maximum_length_passes(self, sut, value):
+        assert sut.validate("field", value) is None
 
-    def test_none_passes(self):
-        """MaxLengthRule passes on None."""
-        rule = MaxLengthRule(max_length=5)
-        assert rule.validate("field", None) is None
+    def test_none_always_passes(self, sut):
+        assert sut.validate("field", None) is None
 
 
 class TestNumericRangeRule:
@@ -100,12 +102,6 @@ class TestNumericRangeRule:
     @pytest.fixture(scope="class")
     def sut(self) -> Rule:
         return NumericRangeRule(min_value=0, max_value=100)
-
-    # @pytest.mark.parametrize("value", [-1, -99])
-    # def test_below_range_fails(self, value):
-    #     rule = RangeRule(min_value=0, max_value=100)
-    #     v = rule.validate("field", value) is None
-    #
 
     @pytest.mark.parametrize("value", [1, 99, .01, 99.999])
     def test_value_within_range_passes(self, sut, value):
@@ -292,7 +288,7 @@ class TestRuleCombinations:
     def test_combining_required_and_length_rules(self):
         """Can combine RequiredRule with length rules."""
         required = ValueRequiredRule()
-        min_len = MinLengthRule(min_length=5)
+        min_len = MinStrSizeRule(min_length=5)
 
         # Both fail on empty
         assert required.validate("password", "") is not None
@@ -309,7 +305,7 @@ class TestRuleCombinations:
     def test_combining_regex_and_length_rules(self):
         """Can combine RegexRule with length rules."""
         regex = RegexRule(pattern=r'^\d+$', message="must be numeric")
-        max_len = MaxLengthRule(max_length=10)
+        max_len = MaxStrSizeRule(max_length=10)
 
         # Both pass
         assert regex.validate("code", "12345") is None
