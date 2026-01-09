@@ -77,7 +77,7 @@ class MinStrSizeRule(Rule[str]):
     Usage:
         ```python
         rule = MinLengthRule(min_length=5)
-        violation = rule.validate("password", "1234")  # Returns violation
+        violation = rule.validate("password", "1234") # Returns violation
         ```
     """
     min_length: int
@@ -104,7 +104,7 @@ class MaxStrSizeRule(Rule[str]):
     Usage:
         ```python
         rule = MaxLengthRule(max_length=100)
-        violation = rule.validate("bio", "x" * 101)  # Returns violation
+        violation = rule.validate("bio", "x" * 101) # Returns violation
         ```
     """
     max_length: int
@@ -259,7 +259,7 @@ class OneOfRule(Rule[Any]):
     Usage:
         ```python
         rule = OneOfRule(allowed_values={"pending", "approved", "rejected"})
-        violation = rule.validate("status", "unknown")  # Returns violation
+        violation = rule.validate("status", "unknown") # Returns violation
         ```
     """
     allowed_values: set[Any]
