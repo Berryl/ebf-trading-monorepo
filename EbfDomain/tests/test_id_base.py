@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from src.id_base import IDBase
+from src.ebf_domain.id_base import IDBase
 
 """Tests demonstrating that a single generic entity class can safely use different ID types."""
 
