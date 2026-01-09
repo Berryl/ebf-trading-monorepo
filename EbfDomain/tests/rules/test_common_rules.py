@@ -12,46 +12,46 @@ from src.ebf_domain.rules.rule import Rule
 class TestValueRequiredRule:
     """Tests for RequiredRule."""
 
-    @pytest.mark.parametrize("illegal_value", [None, "", "   "])
-    def test_fails_on_none_or_empty_str(self, illegal_value):
-        rule = ValueRequiredRule()
-        v = rule.validate("password", illegal_value)
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return ValueRequiredRule()
 
-        assert 'password: is required' in str(v)
+    @pytest.mark.parametrize("bad_value", [None, "", "   "])
+    def test_fails_on_none_or_empty_str(self, sut, bad_value):
+        result = sut.validate("password", bad_value)
 
-    @pytest.mark.parametrize("legal_value", ["hello", 12, False, [1, 2, 3], {}])
-    def test_passes_on_any_value(self, legal_value):
-        rule = ValueRequiredRule()
+        assert 'password: is required' in str(result)
 
-        assert rule.validate("field", legal_value) is None
+    @pytest.mark.parametrize("good_value", ["hello", 12, False, [1, 2, 3], {}])
+    def test_passes_on_any_value(self, sut, good_value):
+        assert sut.validate("field", good_value) is None
 
 
 class TestRegexRule:
     """Tests for RegexRule."""
 
-    def test_matching_pattern_passes(self):
-        rule = RegexRule(pattern=r'^\d{3}-\d{4}$')
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return RegexRule(r'^\d{3}-\d{4}$')
 
-        assert rule.validate("phone", "123-4567") is None
+    @pytest.mark.parametrize("good_value", ["123-4567", "000-0000"])
+    def test_matching_pattern_passes(self, sut, good_value):
+        assert sut.validate("phone", good_value) is None
 
-    def test_non_matching_pattern_fails(self):
-        rule = RegexRule(pattern=r'^\d{3}-\d{4}$')
-        violation = rule.validate("phone", "blah")
+    def test_non_matching_pattern_fails(self, sut):
+        result = sut.validate("phone", "blah")
 
-        assert violation is not None
+        assert "phone: does not match required format" in str(result)
+
+    def test_none_always_passes_on_none(self, sut):
+        assert sut.validate("field", None) is None
 
     def test_can_use_compiled_pattern(self):
         import re
-        pattern = re.compile(r'^[A-Z]+$')
-        rule = RegexRule(pattern=pattern)
+        rule = RegexRule(re.compile(r'^[A-Z]+$'))
 
         assert rule.validate("code", "ABC") is None
         assert rule.validate("code", "abc") is not None
-
-    def test_passes_on_none(self):
-        """RegexRule passes on None (use ValueRequiredRule for null checks)."""
-        rule = RegexRule(pattern=r'^\d+$')
-        assert rule.validate("field", None) is None
 
 
 class TestMinLengthRule:
