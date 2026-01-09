@@ -215,22 +215,31 @@ class TestEmailRule:
 class TestOneOfRule:
     """Tests for OneOfRule."""
 
-    def test_passes_when_value_in_set(self):
-        """OneOfRule passes when value is in allowed set."""
-        rule = OneOfRule(allowed_values={"red", "green", "blue"})
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return OneOfRule(allowed_values={"red", "green", "blue"})
 
-        assert rule.validate("color", "red") is None
-        assert rule.validate("color", "green") is None
-        assert rule.validate("color", "blue") is None
+    @pytest.mark.parametrize("good_value", ["red", "blue", "green"])
+    def test_value_is_in_set_passes(self, sut, good_value):
+        assert sut.validate("color", good_value) is None
 
-    def test_fails_when_value_not_in_set(self):
-        """OneOfRule fails when value is not in allowed set."""
-        rule = OneOfRule(allowed_values={"red", "green", "blue"})
-        violation = rule.validate("color", "yellow")
+    @pytest.mark.parametrize("bad_value", ["X", "yellow", 1])
+    def test_value_is_not_in_set_fails(self, sut, bad_value):
+        result = sut.validate("color", bad_value)
+        assert "color: must be one of: 'blue', 'green', 'red'" in str(result)
 
-        assert violation is not None
-        assert "must be one of" in violation.message
-        assert "red" in violation.message
+    @pytest.mark.parametrize("bad_value", ["RED", "bLUe", "GReeN"])
+    def test_str_case_is_sensitive_by_default(self, sut, bad_value):
+        result = sut.validate("color", bad_value)
+        assert "color: must be one of: 'blue', 'green', 'red'" in str(result)
+
+    def test_none_always_passes(self, sut):
+        assert sut.validate("field", None) is None
+
+    @pytest.mark.parametrize("good_value", ["RED", "bLUe", "GReeN"])
+    def test_str_case_insensitivity_can_be_allowed(self, sut, good_value):
+        sut.case_sensitive = False
+        assert sut.validate("color", good_value) is None
 
     def test_case_sensitive_by_default(self):
         """OneOfRule is case-sensitive by default."""
@@ -239,28 +248,12 @@ class TestOneOfRule:
         assert rule.validate("color", "RED") is None
         assert rule.validate("color", "red") is not None
 
-    def test_case_insensitive_when_specified(self):
-        """OneOfRule can be case-insensitive."""
-        rule = OneOfRule(
-            allowed_values={"red", "green", "blue"},
-            case_sensitive=False
-        )
+    @pytest.mark.parametrize("good_value", [1, 99, 3])
+    def test_non_string_values_are_ok(self, sut, good_value):
+        """OneOfRule works with non-string types."""
+        sut.allowed_values = {1, 2, 3, 99}
 
-        assert rule.validate("color", "RED") is None
-        assert rule.validate("color", "Red") is None
-        assert rule.validate("color", "red") is None
-
-    def test_works_with_non_string_values(self):
-        """OneOfRule works with non-string values."""
-        rule = OneOfRule(allowed_values={1, 2, 3})
-
-        assert rule.validate("priority", 1) is None
-        assert rule.validate("priority", 4) is not None
-
-    def test_passes_on_none(self):
-        """OneOfRule passes on None."""
-        rule = OneOfRule(allowed_values={"a", "b", "c"})
-        assert rule.validate("field", None) is None
+        assert sut.validate("priority", good_value) is None
 
 
 class TestRuleCombinations:
