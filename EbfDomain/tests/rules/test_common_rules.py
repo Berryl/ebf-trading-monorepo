@@ -55,23 +55,16 @@ class TestRegexRule:
 class TestMinLengthRule:
     """Tests for MinLengthRule."""
 
-    def test_passes_when_length_equal_to_minimum(self):
-        """MinLengthRule passes when length equals minimum."""
-        rule = MinLengthRule(min_length=5)
-        assert rule.validate("field", "12345") is None
+    @pytest.mark.parametrize("length", ["123", "1234678"])
+    def test_minimum_or_exceeded_length_passes(self, length):
+        rule = MinLengthRule(min_length=3)
+        assert rule.validate("field", length) is None
 
-    def test_passes_when_length_exceeds_minimum(self):
-        """MinLengthRule passes when length exceeds minimum."""
+    def test_below_minimum_length_fails(self):
         rule = MinLengthRule(min_length=5)
-        assert rule.validate("field", "123456") is None
+        v = rule.validate("password", "x")
 
-    def test_fails_when_length_below_minimum(self):
-        """MinLengthRule fails when length is below minimum."""
-        rule = MinLengthRule(min_length=5)
-        violation = rule.validate("password", "1234")
-
-        assert violation is not None
-        assert "at least 5" in violation.message
+        assert f'password: must be at least 5 characters' in str(v)
 
     def test_passes_on_none(self):
         """MinLengthRule passes on None."""
