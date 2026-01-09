@@ -124,7 +124,7 @@ class MaxLengthRule(Rule[str]):
 
 
 @dataclass
-class RangeRule(Rule[int | float]):
+class NumericRangeRule(Rule[int | float]):
     """
     Rule that validates a numeric value is within a range.
     

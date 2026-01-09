@@ -1,8 +1,10 @@
+import sys
+
 import pytest
 
 from src.ebf_domain.rules.common_rules import (
     ValueRequiredRule, RegexRule, MinLengthRule, MaxLengthRule,
-    RangeRule, CallableRule, EmailRule, OneOfRule
+    NumericRangeRule, CallableRule, EmailRule, OneOfRule
 )
 from src.ebf_domain.rules.rule import Rule
 
@@ -92,19 +94,18 @@ class TestMaxLengthRule:
         assert rule.validate("field", None) is None
 
 
-class TestRangeRule:
+class TestNumericRangeRule:
     """Tests for RangeRule."""
 
     @pytest.fixture(scope="class")
     def sut(self) -> Rule:
-        return RangeRule(min_value=0, max_value=100)
+        return NumericRangeRule(min_value=0, max_value=100)
 
     # @pytest.mark.parametrize("value", [-1, -99])
     # def test_below_range_fails(self, value):
     #     rule = RangeRule(min_value=0, max_value=100)
     #     v = rule.validate("field", value) is None
     #
-    #     assert "field: must be at least 0" in str(v)
 
     @pytest.mark.parametrize("value", [1, 99, .01, 99.999])
     def test_value_within_range_passes(self, sut, value):
@@ -114,25 +115,24 @@ class TestRangeRule:
     def test_value_at_range_boundary_passes(self, sut, value):
         assert sut.validate("age", value) is None
 
-    def test_fails_below_minimum(self):
-        """RangeRule fails when value is below minimum."""
-        rule = RangeRule(min_value=0, max_value=100)
-        violation = rule.validate("age", -1)
+    @pytest.mark.parametrize("value", [-1, -0.0001])
+    def test_value_below_minimum_fails(self, sut, value):
+        result = sut.validate("age", value)
+        assert "age: must be at least 0" in str(result)
 
-        assert violation is not None
-        assert "at least 0" in violation.message
+    @pytest.mark.parametrize("value", [101, 100.0001])
+    def test_value_above_maximum_fails(self, sut, value):
+        result = sut.validate("age", value)
+        assert "age: must be at most 100" in str(result)
 
-    def test_fails_above_maximum(self):
-        """RangeRule fails when value is above maximum."""
-        rule = RangeRule(min_value=0, max_value=100)
-        violation = rule.validate("age", 101)
-
-        assert violation is not None
-        assert "at most 100" in violation.message
+    @pytest.mark.parametrize("value", [.001, 50, sys.maxsize, float('inf')])
+    def test_unspecified_maximum_is_positive_infinity(self, sut, value):
+        sut.max_value = None
+        assert sut.validate("age", value) is None
 
     def test_min_only(self):
         """RangeRule works with only minimum specified."""
-        rule = RangeRule(min_value=0)
+        rule = NumericRangeRule(min_value=0)
 
         assert rule.validate("count", 0) is None
         assert rule.validate("count", 1000) is None
@@ -140,7 +140,7 @@ class TestRangeRule:
 
     def test_max_only(self):
         """RangeRule works with only maximum specified."""
-        rule = RangeRule(max_value=100)
+        rule = NumericRangeRule(max_value=100)
 
         assert rule.validate("score", 100) is None
         assert rule.validate("score", -1000) is None
@@ -148,7 +148,7 @@ class TestRangeRule:
 
     def test_works_with_floats(self):
         """RangeRule works with float values."""
-        rule = RangeRule(min_value=0.0, max_value=1.0)
+        rule = NumericRangeRule(min_value=0.0, max_value=1.0)
 
         assert rule.validate("probability", 0.5) is None
         assert rule.validate("probability", -0.1) is not None
@@ -156,7 +156,7 @@ class TestRangeRule:
 
     def test_passes_on_none(self):
         """RangeRule passes on None."""
-        rule = RangeRule(min_value=0, max_value=100)
+        rule = NumericRangeRule(min_value=0, max_value=100)
         assert rule.validate("field", None) is None
 
 
