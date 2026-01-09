@@ -45,7 +45,7 @@ class RegexRule(Rule[str]):
             pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
             message="must be a valid email address"
         )
-        violation = email_rule.validate("email", "invalid")  # Returns violation
+        violation = email_rule.validate("email", "invalid") # Returns violation
         ```
     """
     pattern: str | re.Pattern

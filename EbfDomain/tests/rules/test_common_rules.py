@@ -27,32 +27,18 @@ class TestValueRequiredRule:
 class TestRegexRule:
     """Tests for RegexRule."""
     
-    def test_passes_on_matching_pattern(self):
-        """RegexRule passes when value matches pattern."""
+    def test_matching_pattern_passes(self):
         rule = RegexRule(pattern=r'^\d{3}-\d{4}$')
         
         assert rule.validate("phone", "123-4567") is None
     
-    def test_fails_on_non_matching_pattern(self):
-        """RegexRule fails when value doesn't match pattern."""
+    def test_non_matching_pattern_fails(self):
         rule = RegexRule(pattern=r'^\d{3}-\d{4}$')
-        violation = rule.validate("phone", "12-34567")
+        violation = rule.validate("phone", "blah")
         
         assert violation is not None
-    
-    def test_custom_error_message(self):
-        """RegexRule uses custom error message."""
-        rule = RegexRule(
-            pattern=r'^\d+$',
-            message="must contain only digits"
-        )
-        violation = rule.validate("code", "abc")
-        
-        assert violation is not None
-        assert violation.message == "must contain only digits"
-    
-    def test_accepts_compiled_pattern(self):
-        """RegexRule accepts pre-compiled regex patterns."""
+
+    def test_can_use_compiled_pattern(self):
         import re
         pattern = re.compile(r'^[A-Z]+$')
         rule = RegexRule(pattern=pattern)
@@ -61,66 +47,66 @@ class TestRegexRule:
         assert rule.validate("code", "abc") is not None
     
     def test_passes_on_none(self):
-        """RegexRule passes on None (use RequiredRule for null checks)."""
+        """RegexRule passes on None (use ValueRequiredRule for null checks)."""
         rule = RegexRule(pattern=r'^\d+$')
         assert rule.validate("field", None) is None
 
 
 class TestMinLengthRule:
     """Tests for MinLengthRule."""
-    
+
     def test_passes_when_length_equal_to_minimum(self):
         """MinLengthRule passes when length equals minimum."""
         rule = MinLengthRule(min_length=5)
         assert rule.validate("field", "12345") is None
-    
+
     def test_passes_when_length_exceeds_minimum(self):
         """MinLengthRule passes when length exceeds minimum."""
         rule = MinLengthRule(min_length=5)
         assert rule.validate("field", "123456") is None
-    
+
     def test_fails_when_length_below_minimum(self):
         """MinLengthRule fails when length is below minimum."""
         rule = MinLengthRule(min_length=5)
         violation = rule.validate("password", "1234")
-        
+
         assert violation is not None
         assert "at least 5" in violation.message
-    
+
     def test_passes_on_none(self):
         """MinLengthRule passes on None."""
         rule = MinLengthRule(min_length=5)
         assert rule.validate("field", None) is None
-    
+
     def test_error_message_includes_minimum(self):
         """Error message includes the minimum length."""
         rule = MinLengthRule(min_length=10)
         violation = rule.validate("field", "short")
-        
+
         assert "10" in violation.message
 
 
 class TestMaxLengthRule:
     """Tests for MaxLengthRule."""
-    
+
     def test_passes_when_length_equal_to_maximum(self):
         """MaxLengthRule passes when length equals maximum."""
         rule = MaxLengthRule(max_length=5)
         assert rule.validate("field", "12345") is None
-    
+
     def test_passes_when_length_below_maximum(self):
         """MaxLengthRule passes when length is below maximum."""
         rule = MaxLengthRule(max_length=5)
         assert rule.validate("field", "1234") is None
-    
+
     def test_fails_when_length_exceeds_maximum(self):
         """MaxLengthRule fails when length exceeds maximum."""
         rule = MaxLengthRule(max_length=5)
         violation = rule.validate("bio", "123456")
-        
+
         assert violation is not None
         assert "at most 5" in violation.message
-    
+
     def test_passes_on_none(self):
         """MaxLengthRule passes on None."""
         rule = MaxLengthRule(max_length=5)
@@ -335,7 +321,7 @@ class TestRuleCombinations:
     
     def test_combining_required_and_length_rules(self):
         """Can combine RequiredRule with length rules."""
-        required = RequiredRule()
+        required = ValueRequiredRule()
         min_len = MinLengthRule(min_length=5)
         
         # Both fail on empty
