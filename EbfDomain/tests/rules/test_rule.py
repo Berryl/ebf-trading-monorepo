@@ -32,7 +32,6 @@ class TestRuleViolation:
     """Tests for RuleViolation dataclass."""
 
     class TestInit:
-
         """Tests for RuleViolation creation."""
 
         def test_init_with_all_fields(self):
@@ -67,11 +66,11 @@ class TestRuleViolation:
     class TestImmutability:
 
         def test_changes_raise_error(self):
-                rv = RuleViolation(field_name="username", message="is required", rule_name="required")
+            rv = RuleViolation(field_name="username", message="is required", rule_name="required")
 
-                with pytest.raises(FrozenInstanceError):
-                    # noinspection PyDataclass
-                    rv.field_name = "changed"
+            with pytest.raises(FrozenInstanceError):
+                # noinspection PyDataclass
+                rv.field_name = "changed"
 
 
 class TestRuleBase:
@@ -100,7 +99,6 @@ class TestRuleBase:
             assert AlwaysPassRule().rule_name == "alwayspass"
 
         def test_rule_name_can_be_defined_in_subclass(self):
-
             @dataclass
             class CustomNameRule(Rule[str]):
                 @property
@@ -122,52 +120,51 @@ class TestRuleBase:
         assert v2.field_name == "quantity"
         assert v1.message == v2.message == "same instance is reusable"
 
+    class TestGenerics:
+        """Tests demonstrating generic type parameter usage."""
 
-class TestRuleWithGenerics:
-    """Tests demonstrating generic type parameter usage."""
+        def test_with_int(self):
+            """Rule can be typed for integers."""
 
-    def test_rule_with_int_type(self):
-        """Rule can be typed for integers."""
+            @dataclass
+            class PositiveRule(Rule[int]):
+                def validate(self, field_name: str, value: int) -> RuleViolation | None:
+                    if value is not None and value <= 0:
+                        return RuleViolation(
+                            field_name=field_name,
+                            message="must be positive",
+                            rule_name="positive",
+                            actual_value=value
+                        )
+                    return None
 
-        @dataclass
-        class PositiveRule(Rule[int]):
-            def validate(self, field_name: str, value: int) -> RuleViolation | None:
-                if value is not None and value <= 0:
-                    return RuleViolation(
-                        field_name=field_name,
-                        message="must be positive",
-                        rule_name="positive",
-                        actual_value=value
-                    )
-                return None
+            rule = PositiveRule()
+            assert rule.validate("count", 5) is None
+            assert rule.validate("count", -1) is not None
 
-        rule = PositiveRule()
-        assert rule.validate("count", 5) is None
-        assert rule.validate("count", -1) is not None
+        def test_with_custom_type(self):
+            """Rule can be typed for custom classes."""
 
-    def test_rule_with_custom_type(self):
-        """Rule can be typed for custom classes."""
+            @dataclass
+            class User:
+                name: str
+                age: int
 
-        @dataclass
-        class User:
-            name: str
-            age: int
+            @dataclass
+            class AdultUserRule(Rule[User]):
+                def validate(self, field_name: str, value: User) -> RuleViolation | None:
+                    if value is not None and value.age < 18:
+                        return RuleViolation(
+                            field_name=field_name,
+                            message="must be 18 or older",
+                            rule_name="adult",
+                            actual_value=value
+                        )
+                    return None
 
-        @dataclass
-        class AdultUserRule(Rule[User]):
-            def validate(self, field_name: str, value: User) -> RuleViolation | None:
-                if value is not None and value.age < 18:
-                    return RuleViolation(
-                        field_name=field_name,
-                        message="must be 18 or older",
-                        rule_name="adult",
-                        actual_value=value
-                    )
-                return None
+            rule = AdultUserRule()
+            adult = User(name="Alice", age=25)
+            minor = User(name="Bob", age=15)
 
-        rule = AdultUserRule()
-        adult = User(name="Alice", age=25)
-        minor = User(name="Bob", age=15)
-
-        assert rule.validate("user", adult) is None
-        assert rule.validate("user", minor) is not None
+            assert rule.validate("user", adult) is None
+            assert rule.validate("user", minor) is not None
