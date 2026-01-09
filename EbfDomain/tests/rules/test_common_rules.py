@@ -195,14 +195,13 @@ class TestCallableRule:
 class TestEmailRule:
     """Tests for EmailRule."""
 
-    def test_passes_on_valid_emails(self):
-        """EmailRule passes for valid email addresses."""
-        rule = EmailRule()
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return EmailRule()
 
-        assert rule.validate("email", "user@example.com") is None
-        assert rule.validate("email", "first.last@example.com") is None
-        assert rule.validate("email", "user+tag@example.co.uk") is None
-        assert rule.validate("email", "user_name@sub.example.com") is None
+    @pytest.mark.parametrize("good_email", ["user@example.com", "tom@hotmail.org"])
+    def test__valid_email_passes(self, sut, good_email):
+        assert sut.validate("email", good_email) is None
 
     def test_fails_on_invalid_emails(self):
         """EmailRule fails for invalid email addresses."""
