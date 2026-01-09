@@ -67,10 +67,10 @@ class TestMinLengthRule:
 
         assert f'password: must be at least 3 characters' in str(result)
 
-    @pytest.mark.parametrize("length", ["123", "1234678"])
-    def test_at_or_above_minimum_length_passes(self, length):
+    @pytest.mark.parametrize("value", ["123", "1234678"])
+    def test_at_or_above_minimum_length_passes(self, value):
         rule = MinStrSizeRule(min_length=3)
-        assert rule.validate("field", length) is None
+        assert rule.validate("field", value) is None
 
     def test_none__always_passes(self, sut):
         assert sut.validate("field", None) is None
@@ -137,15 +137,16 @@ class TestNumericRangeRule:
 class TestCallableRule:
     """Tests for CallableRule."""
 
-    def test_passes_when_callable_returns_true(self):
-        """CallableRule passes when validation function returns True."""
-        rule = CallableRule(
+    @pytest.fixture(scope="class")
+    def sut(self) -> Rule:
+        return CallableRule(
             validation_func=lambda x: x % 2 == 0,
             message="must be even"
         )
 
-        assert rule.validate("number", 4) is None
-        assert rule.validate("number", 100) is None
+    @pytest.mark.parametrize("good_value", [4, 16, 222])
+    def test_callable_true_passes(self, sut, good_value):
+        assert sut.validate("number", good_value) is None
 
     def test_fails_when_callable_returns_false(self):
         """CallableRule fails when validation function returns False."""
