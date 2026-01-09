@@ -127,37 +127,15 @@ class TestNumericRangeRule:
 
     @pytest.mark.parametrize("value", [.001, 50, sys.maxsize, float('inf')])
     def test_unspecified_maximum_is_positive_infinity(self, sut, value):
+        sut.min_value = 0
         sut.max_value = None
         assert sut.validate("age", value) is None
 
-    def test_min_only(self):
-        """RangeRule works with only minimum specified."""
-        rule = NumericRangeRule(min_value=0)
-
-        assert rule.validate("count", 0) is None
-        assert rule.validate("count", 1000) is None
-        assert rule.validate("count", -1) is not None
-
-    def test_max_only(self):
-        """RangeRule works with only maximum specified."""
-        rule = NumericRangeRule(max_value=100)
-
-        assert rule.validate("score", 100) is None
-        assert rule.validate("score", -1000) is None
-        assert rule.validate("score", 101) is not None
-
-    def test_works_with_floats(self):
-        """RangeRule works with float values."""
-        rule = NumericRangeRule(min_value=0.0, max_value=1.0)
-
-        assert rule.validate("probability", 0.5) is None
-        assert rule.validate("probability", -0.1) is not None
-        assert rule.validate("probability", 1.1) is not None
-
-    def test_passes_on_none(self):
-        """RangeRule passes on None."""
-        rule = NumericRangeRule(min_value=0, max_value=100)
-        assert rule.validate("field", None) is None
+    @pytest.mark.parametrize("value", [-.001, -50, -sys.maxsize, float('-inf')])
+    def test_unspecified_minimum_is_negative_infinity(self, sut, value):
+        sut.min_value = None
+        sut.max_value = 100
+        assert sut.validate("age", value) is None
 
 
 class TestCallableRule:
