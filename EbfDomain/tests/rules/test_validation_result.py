@@ -61,7 +61,7 @@ class TestValidationResult:
 
         def test_when_success(self):
             result = ValidationResult.success()
-            assert "passed" in str(result)
+            assert  str(result) == "Validation passed"
 
         def test_when_failure(self, errors: list[RuleViolation]):
             result = ValidationResult.failure(errors)
