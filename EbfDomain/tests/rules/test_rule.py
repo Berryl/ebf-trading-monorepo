@@ -5,29 +5,6 @@ import pytest
 from src.ebf_domain.rules.rule import Rule, RuleViolation
 
 
-# Test helper: A simple concrete rule implementation
-@dataclass
-class AlwaysFailRule(Rule[str]):
-    """Test rule that always fails."""
-    custom_message: str = "always fails"
-
-    def validate(self, field_name: str, value: str) -> RuleViolation | None:
-        return RuleViolation(
-            field_name=field_name,
-            message=self.custom_message,
-            rule_name="always_fail",
-            actual_value=value
-        )
-
-
-@dataclass
-class AlwaysPassRule(Rule[str]):
-    """Test rule that always passes."""
-
-    def validate(self, field_name: str, value: str) -> RuleViolation | None:
-        return None
-
-
 class TestRuleViolation:
     """Tests for RuleViolation dataclass."""
 
@@ -76,16 +53,39 @@ class TestRuleViolation:
 class TestRuleBase:
     """Tests for Rule base class."""
 
+    # region concrete impls
+    @dataclass
+    class AlwaysFailRule(Rule[str]):
+        """Test rule that always fails."""
+        custom_message: str = "always fails"
+
+        def validate(self, field_name: str, value: str) -> RuleViolation | None:
+            return RuleViolation(
+                field_name=field_name,
+                message=self.custom_message,
+                rule_name="always_fail",
+                actual_value=value
+            )
+
+    @dataclass
+    class AlwaysPassRule(Rule[str]):
+        """Test rule that always passes."""
+
+        def validate(self, field_name: str, value: str) -> RuleViolation | None:
+            return None
+
+    # endregion
+
     class TestValidation:
 
         def test_failure_returns_violation(self):
-            rule = AlwaysFailRule(custom_message="test failure")
+            rule = TestRuleBase.AlwaysFailRule(custom_message="test failure")
 
             result = rule.validate("field", "value")
             assert isinstance(result, RuleViolation)
 
         def test_success_returns_none(self):
-            rule = AlwaysPassRule()
+            rule = TestRuleBase.AlwaysPassRule()
 
             result = rule.validate("field", "value")
             assert result is None
@@ -94,9 +94,9 @@ class TestRuleBase:
 
         # noinspection SpellCheckingInspection
         def test_rule_name_defaults_to_class_name(self):
-            assert AlwaysFailRule().rule_name == "alwaysfail"
+            assert TestRuleBase.AlwaysFailRule().rule_name == "alwaysfail"
 
-            assert AlwaysPassRule().rule_name == "alwayspass"
+            assert TestRuleBase.AlwaysPassRule().rule_name == "alwayspass"
 
         def test_rule_name_can_be_defined_in_subclass(self):
             @dataclass
@@ -111,7 +111,7 @@ class TestRuleBase:
             assert CustomNameRule().rule_name == "my_custom_rule"
 
     def test_instance_reusability(self):
-        r = AlwaysFailRule(custom_message="same instance is reusable")
+        r = TestRuleBase.AlwaysFailRule(custom_message="same instance is reusable")
 
         v1 = r.validate("age", 32)
         v2 = r.validate("quantity", 100)
