@@ -165,7 +165,7 @@ class NumericRangeRule(Rule[int | float]):
 
 
 @dataclass
-class CallableRule(Rule[Any]):
+class CallableMustBeTrueRule(Rule[Any]):
     """
     Rule that uses a custom callable function for validation.
     
@@ -184,7 +184,7 @@ class CallableRule(Rule[Any]):
             validation_func=is_even,
             message="must be an even number"
         )
-        violation = rule.validate("count", 3)  # Returns violation
+        violation = rule.validate("count", 3) # Returns violation
         ```
     """
     validation_func: Callable[[Any], bool]

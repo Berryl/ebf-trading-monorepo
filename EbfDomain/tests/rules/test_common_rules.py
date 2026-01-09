@@ -4,7 +4,7 @@ import pytest
 
 from src.ebf_domain.rules.common_rules import (
     ValueRequiredRule, RegexRule, MinStrSizeRule, MaxStrSizeRule,
-    NumericRangeRule, CallableRule, EmailRule, OneOfRule
+    NumericRangeRule, CallableMustBeTrueRule, EmailRule, OneOfRule
 )
 from src.ebf_domain.rules.rule import Rule
 
@@ -139,54 +139,42 @@ class TestCallableRule:
 
     @pytest.fixture(scope="class")
     def sut(self) -> Rule:
-        return CallableRule(
+        return CallableMustBeTrueRule(
             validation_func=lambda x: x % 2 == 0,
             message="must be even"
         )
 
     @pytest.mark.parametrize("good_value", [4, 16, 222])
-    def test_callable_true_passes(self, sut, good_value):
+    def test_true_eval_passes(self, sut, good_value):
         assert sut.validate("number", good_value) is None
 
-    def test_fails_when_callable_returns_false(self):
-        """CallableRule fails when validation function returns False."""
-        rule = CallableRule(
-            validation_func=lambda x: x % 2 == 0,
-            message="must be even"
-        )
-        violation = rule.validate("number", 3)
+    @pytest.mark.parametrize("bad_value", [9, -3, 27])
+    def test_false_eval_fails(self, sut, bad_value):
+        result = sut.validate("number", bad_value)
 
-        assert violation is not None
-        assert violation.message == "must be even"
+        assert 'number: must be even' in str(result)
 
-    def test_handles_exceptions_in_callable(self):
+    def test_exceptions_are_handled_with_useful_message(self):
         """CallableRule handles exceptions in validation function."""
 
         def buggy_validator(x):
             return x / 0  # Will raise ZeroDivisionError
 
-        rule = CallableRule(
+        rule = CallableMustBeTrueRule(
             validation_func=buggy_validator,
             message="must pass validation"
         )
-        violation = rule.validate("field", 10)
+        result = rule.validate("field", 10)
 
-        assert violation is not None
-        assert "validation error" in violation.message.lower()
+        assert "(validation error: division by zero)" in str(result)
 
-    def test_passes_on_none(self):
-        """CallableRule passes on None."""
-        rule = CallableRule(
-            validation_func=lambda x: len(x) > 0,
-            message="must not be empty"
-        )
-        assert rule.validate("field", None) is None
+    def test_none__always_passes(self, sut):
+        assert sut.validate("field", None) is None
 
-    def test_can_use_complex_validation_logic(self):
-        """CallableRule can encapsulate complex validation logic."""
-
+    @pytest.mark.parametrize("good_value", ["user_123", "tom123"])
+    @pytest.mark.parametrize("bad_value", ["123user", "tom@hotmail"])
+    def test_can_use_arbitrarily_complex_validation_logic(self, good_value, bad_value):
         def is_valid_username(username: str) -> bool:
-            # Complex multi-condition validation
             if not username:
                 return False
             if not username[0].isalpha():
@@ -195,14 +183,13 @@ class TestCallableRule:
                 return False
             return True
 
-        rule = CallableRule(
+        rule = CallableMustBeTrueRule(
             validation_func=is_valid_username,
             message="must start with letter and contain only letters, numbers, and underscores"
         )
 
-        assert rule.validate("username", "user_123") is None
-        assert rule.validate("username", "123user") is not None
-        assert rule.validate("username", "user@name") is not None
+        assert rule.validate("username", good_value) is None
+        assert rule.validate("username", bad_value) is not None
 
 
 class TestEmailRule:
