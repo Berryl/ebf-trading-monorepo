@@ -11,53 +11,6 @@ from typeguard import (
 )
 
 
-# region helpers
-class ContractError(AssertionError):
-    """Raised when a programming contract is violated in our own code."""
-
-
-def create_clean_error_context(
-        description: str,
-        object_info: dict[str, Any] | None,
-        frames_to_show: int = 3,
-        skip_patterns: list[str] | None = None,
-) -> str:
-    """
-    Creates a clean, formatted error context with filtered traceback.
-    """
-    object_info = object_info or {}
-    skip_patterns = skip_patterns or ['pytest', 'pluggy', '_pytest', 'site-packages']
-
-    stack = traceback.extract_stack()
-    relevant_frames = [frame for frame in stack if not any(skip in frame.filename.lower() for skip in skip_patterns)]
-
-    clean_traceback = ''.join(traceback.format_list(relevant_frames[-(frames_to_show or 3):]))
-
-    error_parts = [description]
-    if object_info:
-        error_parts.extend(f"{key}: {value}" for key, value in object_info.items())
-
-    error_parts.append("\nRelevant call stack:")
-    error_parts.append(clean_traceback)
-
-    return "\n".join(error_parts)
-
-
-def _fail(message: str, **context: Any) -> NoReturn:
-    """Central point of truth for all guard failures."""
-    raise ContractError(
-        create_clean_error_context(
-            description=message,
-            object_info=context or None,
-            frames_to_show=3,
-            skip_patterns=None,
-        )
-    )
-
-
-# endregion
-
-
 def ensure_not_none(candidate: Any, description: str | None = None) -> None:
     """
     Ensures that the candidate is not None, raising a ContractError if it is.
@@ -175,7 +128,7 @@ def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path
         return candidate
 
     if isinstance(candidate, str):
-        ensure_not_empty_str(candidate, description)
+        ensure_str_is_valued(candidate, description)
         return Path(candidate)
 
     prefix = f"Arg '{description}'" if description else "Value"
@@ -187,6 +140,17 @@ def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path
 
 
 # region bool
+
+def ensure_true(condition: bool, description: str = "") -> None:
+    """Ensures that the provided condition is strictly True."""
+    _ensure_bool_strict(condition, expected=True, description=description)
+
+
+def ensure_false(condition: bool, description: str = "") -> None:
+    """Ensures that the provided condition is strictly False."""
+    _ensure_bool_strict(condition, expected=False, description=description)
+
+
 def _ensure_bool_strict(condition: bool, expected: bool, description: str = "", ) -> None:
     if not (isinstance(condition, bool) and condition is expected):
         expected_str = "True" if expected else "False"
@@ -203,19 +167,11 @@ def _ensure_bool_strict(condition: bool, expected: bool, description: str = "", 
         )
 
 
-def ensure_true(condition: bool, description: str = "") -> None:
-    """Ensures that the provided condition is strictly True."""
-    _ensure_bool_strict(condition, expected=True, description=description)
-
-
-def ensure_false(condition: bool, description: str = "") -> None:
-    """Ensures that the provided condition is strictly False."""
-    _ensure_bool_strict(condition, expected=False, description=description)
 # endregion
 
 
 # region str
-def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
+def ensure_str_is_valued(candidate: Any, description: str | None = None) -> None:
     """
     Ensures that the candidate is not None or an empty string, raising a ContractError if it is.
     """
@@ -230,76 +186,170 @@ def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None
             Received="Empty String",
         )
 
-def ensure_str_length(
-    candidate: Any,
-    min_length: int | None = None,
-    max_length: int | None = None,
-    exact_length: int | None = None,
-    description: str | None = None,
+def ensure_str_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> str:
+    """Ensures string has exactly exact_length characters."""
+    ensure_type(candidate, str, description)
+    return _ensure_length(candidate, exact_length=exact_length, description=description)
+
+def ensure_str_min_length(candidate: Any, min_length: int, description: str | None = None) -> str:
+    ensure_type(candidate, str, description)
+    return _ensure_length(candidate, min_length=min_length, description=description)
+
+
+def ensure_str_max_length(candidate: Any, max_length: int, description: str | None = None) -> str:
+    """Ensures string has at most min_length characters."""
+    ensure_type(candidate, str, description)
+    return _ensure_length(candidate, max_length=max_length, description=description)
+
+
+def ensure_str_length_between(
+        candidate: Any,
+        min_length: int,
+        max_length: int,
+        description: str | None = None,
 ) -> str:
     """
-    Ensures a value is a string of appropriate length.
+    Ensures the value is a string with length between min_length and max_length (inclusive).
 
-    You can specify:
-    - min_length (inclusive)
-    - max_length (inclusive)
-    - exact_length (must be exactly this length — overrides min/max)
-
-    Raises ContractError if conditions are not met.
-    Returns the string (after validation).
+    Raises ContractError if the value is not a string or its length is out of range.
+    Returns the validated string.
     """
-    # First: must be string at all
     ensure_type(candidate, str, description)
-    s = candidate  # we know it's str now
+
+    s = candidate
+
+    prefix = f"Arg '{description}'" if description else "Value"
+
+    actual_len = len(s)
+
+    if actual_len < min_length:
+        _fail(
+            message=f"{prefix} must be at least {min_length} characters long",
+            Description=description or "Unnamed",
+            Min_length=min_length,
+            Actual_length=actual_len,
+            Value=repr(s),
+        )
+
+    if actual_len > max_length:
+        _fail(
+            message=f"{prefix} must be at most {max_length} characters long",
+            Description=description or "Unnamed",
+            Max_length=max_length,
+            Actual_length=actual_len,
+            Value=repr(s),
+        )
+
+    return s
+
+# endregion
+
+# region internal
+
+def _fail(message: str, **context: Any) -> NoReturn:
+    """Central point of truth for all guard failures."""
+    raise ContractError(
+        create_clean_error_context(
+            description=message,
+            object_info=context or None,
+            frames_to_show=3,
+            skip_patterns=None,
+        )
+    )
+
+def _ensure_length(
+        value: Any,
+        *,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        exact_length: int | None = None,
+        description: str | None = None,
+) -> Any:
+    """
+    Internal helper: Enforce length constraints on any object that supports len().
+
+    This is NOT part of the public API.
+    Use the specific convenience functions instead (ensure_str_min_length, etc.).
+
+    Raises ContractError if any length constraint is violated.
+    Returns the original value when all checks pass.
+    """
+    actual_length = len(value)
 
     prefix = f"Arg '{description}'" if description else "Value"
 
     if exact_length is not None:
-        if len(s) != exact_length:
+        if actual_length != exact_length:
             _fail(
-                message=f"{prefix} must be exactly {exact_length} characters long",
+                message=f"{prefix} must have exactly {exact_length} characters",
                 Description=description or "Unnamed",
                 Expected_length=exact_length,
-                Actual_length=len(s),
-                Value=repr(s),
+                Actual_length=actual_length,
+                Value=repr(value)[:100],  # truncate very long values
             )
-
     else:
-        # min/max mode
-        if min_length is not None and len(s) < min_length:
+        if min_length is not None and actual_length < min_length:
             _fail(
-                message=f"{prefix} must be at least {min_length} characters long",
+                message=f"{prefix} must have at least {min_length} characters",
                 Description=description or "Unnamed",
                 Min_length=min_length,
-                Actual_length=len(s),
-                Value=repr(s),
+                Actual_length=actual_length,
+                Value=repr(value)[:100],
             )
 
-        if max_length is not None and len(s) > max_length:
+        if max_length is not None and actual_length > max_length:
             _fail(
-                message=f"{prefix} must be at most {max_length} characters long",
+                message=f"{prefix} must have at most {max_length} characters",
                 Description=description or "Unnamed",
                 Max_length=max_length,
-                Actual_length=len(s),
-                Value=repr(s),
+                Actual_length=actual_length,
+                Value=repr(value)[:100],
             )
 
-    return s
+    return value
+
+# Later, if and when needed:
+def ensure_list_min_length(candidate: Any, min_length: int, description: str | None = None) -> list:
+    ensure_type(candidate, list, description)
+    return _ensure_length(candidate, min_length=min_length, description=description)
 
 
-def ensure_str_min_length(candidate: Any, min_length: int, description: str | None = None) -> str:
-    """Ensures string has at least min_length characters."""
-    return ensure_str_length(candidate, min_length=min_length, description=description)
-
-
-def ensure_str_max_length(candidate: Any, max_length: int, description: str | None = None) -> str:
-    """Ensures string has at most max_length characters."""
-    return ensure_str_length(candidate, max_length=max_length, description=description)
-
-
-def ensure_str_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> str:
-    """Ensures string has exactly exact_length characters."""
-    return ensure_str_length(candidate, exact_length=exact_length, description=description)
+def ensure_bytes_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> bytes:
+    ensure_type(candidate, bytes, description)
+    return _ensure_length(candidate, exact_length=exact_length, description=description,)
 # endregion
 
 
+# region custom error
+class ContractError(AssertionError):
+    """Raised when a programming contract is violated in our own code."""
+
+
+def create_clean_error_context(
+        description: str,
+        object_info: dict[str, Any] | None,
+        frames_to_show: int = 3,
+        skip_patterns: list[str] | None = None,
+) -> str:
+    """
+    Creates a clean, formatted error context with filtered traceback.
+    """
+    object_info = object_info or {}
+    skip_patterns = skip_patterns or ['pytest', 'pluggy', '_pytest', 'site-packages']
+
+    stack = traceback.extract_stack()
+    relevant_frames = [frame for frame in stack if not any(skip in frame.filename.lower() for skip in skip_patterns)]
+
+    clean_traceback = ''.join(traceback.format_list(relevant_frames[-(frames_to_show or 3):]))
+
+    error_parts = [description]
+    if object_info:
+        error_parts.extend(f"{key}: {value}" for key, value in object_info.items())
+
+    error_parts.append("\nRelevant call stack:")
+    error_parts.append(clean_traceback)
+
+    return "\n".join(error_parts)
+
+
+# endregion

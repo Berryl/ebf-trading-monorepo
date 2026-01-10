@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Iterable, List, ClassVar, Self
 
 from ebf_core.fileutil.path_norm import norm_path
-from ebf_core.guards.guards import ensure_not_empty_str
+from ebf_core.guards.guards import ensure_str_is_valued
 
 logger = logging.getLogger(__name__)
 
@@ -461,7 +461,7 @@ class ProjectFileLocator:
         found_any = False
         for m in markers:
             found_any = True
-            ensure_not_empty_str(m, "marker")
+            ensure_str_is_valued(m, "marker")
 
         if not found_any:
             raise ValueError("Marker list must not be empty. Provide markers or use defaults.")
@@ -520,7 +520,7 @@ class ProjectFileLocator:
             AssertionError: If the path is empty
             ValueError: If the path is '.' or starts with ~
         """
-        ensure_not_empty_str(str_path, "relpath")
+        ensure_str_is_valued(str_path, "relpath")
         if str_path == ".":
             raise ValueError("'.' is not allowed as a project file.")
         if str_path.startswith("~"):

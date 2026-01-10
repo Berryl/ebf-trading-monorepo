@@ -1,9 +1,8 @@
 import re
 from pathlib import Path
 
-import pytest
-
 import ebf_core.guards.guards as g
+import pytest
 
 
 class TestEnsureType:
@@ -79,12 +78,12 @@ class TestEnsureNotNone:
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_not_none(None, desc_param)
 
-class TestStrs:
 
+class TestStrs:
     class TestEnsureNotEmptyStr:
 
         def test_when_valid(self):
-            g.ensure_not_empty_str('42', "filename")
+            g.ensure_str_is_valued('42', "filename")
             pass  # No exception should be raised
 
         @pytest.mark.parametrize(
@@ -96,14 +95,9 @@ class TestStrs:
             ])
         def test_description_parameter(self, value, desc_param, msg):
             with pytest.raises(g.ContractError, match=msg):
-                g.ensure_not_empty_str(value, desc_param)
-
-    # test_guards.py  (add this class after the existing ones)
+                g.ensure_str_is_valued(value, desc_param)
 
     class TestEnsureStrLength:
-
-        # === ensure_str_min_length ===
-
         class TestMinlength:
 
             @pytest.mark.parametrize("candidate", ["hello world", "abcdefg"])
@@ -111,74 +105,79 @@ class TestStrs:
                 result = g.ensure_str_min_length(candidate, min_length=5, description="greeting")
                 assert result == candidate
 
-            @pytest.mark.parametrize("candidate", ["ed", " "])
+            @pytest.mark.parametrize("candidate", ["ed", " ", ""])
             def test_when_invalid(self, candidate):
-                msg = re.escape("Arg 'username' must be at least 4 characters long")
+                msg = re.escape("Arg 'username' must have at least 4 characters")
 
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_min_length(candidate, min_length=4, description="username")
 
-            def test_invalid_type(self):
-                msg = re.escape("Value must be of type str (it was type int)")
+        class TestMaxLength:
+
+            @pytest.mark.parametrize("candidate", ["hello", "python", "a"])
+            def test_when_valid(self, candidate):
+                result = g.ensure_str_max_length(candidate, max_length=10, description="title")
+                assert result == candidate
+
+            @pytest.mark.parametrize("candidate", ["this is way too long", "python_is_cool"])
+            def test_when_invalid(self, candidate):
+                msg = re.escape("Arg 'comment' must have at most 12 characters")
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_max_length(candidate, max_length=12, description="comment")
+
+        class TestExactLength:
+
+            @pytest.mark.parametrize("candidate", ["ABC123", "hello"])
+            def test_when_valid(self, candidate):
+                result = g.ensure_str_exact_length(candidate, exact_length=len(candidate), description="code")
+                assert result == candidate
+
+            @pytest.mark.parametrize("candidate", ["ABC12", "ABC1234"])
+            def test_when_invalid(self, candidate):
+                msg = re.escape("Arg 'token' must have exactly 6 characters")
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_exact_length(candidate, exact_length=6, description="token")
+
+        class TestBetween:
+
+            @pytest.mark.parametrize("candidate", ["hello", "python", "1234567890"])  # 5, 6 & 10 chars
+            def test_when_valid(self, candidate):
+                result = g.ensure_str_length_between(candidate, min_length=3, max_length=12, description="username")
+                assert result == candidate
+
+            @pytest.mark.parametrize("candidate", ["ab", ""])
+            def test_when_below_minimum(self, candidate):
+                msg = re.escape("Arg 'username' must be at least 3 characters long")
 
                 with pytest.raises(g.ContractError, match=msg):
-                    g.ensure_str_min_length(12345, min_length=3)
+                    g.ensure_str_length_between(candidate, min_length=3, max_length=20, description="username")
 
-        # === ensure_str_max_length ===
+            @pytest.mark.parametrize("candidate", ["this string is way too long for this test case here"])
+            def test_when_too_long(self, candidate):
+                msg = re.escape("Arg 'comment' must be at most 30 characters long")
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_length_between(candidate, min_length=5, max_length=30, description="comment")
 
-        def test_max_length_valid(self):
-            result = g.ensure_str_max_length("hello", max_length=10, description="title")
-            assert result == "hello"
+            def test_invalid_type(self):
+                msg = re.escape("Value must be of type str (it was type int)")
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_length_between(12345, min_length=1, max_length=10)
 
-        def test_max_length_at_limit(self):
-            g.ensure_str_max_length("exactly10", max_length=10)  # should pass
+        # region General / edge cases
+        @pytest.mark.parametrize("candidate", [33, None, object(), [1, 2, 3]])
+        def test_invalid_type(self, candidate):
+            msg = re.escape("Value must be of type str ")
 
-        def test_max_length_too_long(self):
-            msg = re.escape("Arg 'comment' must be at most 20 characters long")
             with pytest.raises(g.ContractError, match=msg):
-                g.ensure_str_max_length("this comment is way too long now", max_length=20, description="comment")
+                g.ensure_str_exact_length(12345, exact_length=3)
 
-        def test_max_length_empty_string_allowed(self):
-            g.ensure_str_max_length("", max_length=50)  # empty is fine if max allows
-
-        # === ensure_str_exact_length ===
-
-        def test_exact_length_valid(self):
-            result = g.ensure_str_exact_length("ABC123", exact_length=6, description="code")
-            assert result == "ABC123"
-
-        def test_exact_length_too_short(self):
-            msg = re.escape("Arg 'token' must be exactly 8 characters long")
             with pytest.raises(g.ContractError, match=msg):
-                g.ensure_str_exact_length("short", exact_length=8, description="token")
+                g.ensure_str_min_length(12345, min_length=3)
 
-        def test_exact_length_too_long(self):
-            msg = re.escape("must be exactly 4 characters long")
             with pytest.raises(g.ContractError, match=msg):
-                g.ensure_str_exact_length("hello", exact_length=4)
+                g.ensure_str_max_length(12345, max_length=3)
 
-        def test_exact_length_empty_string(self):
-            g.ensure_str_exact_length("", exact_length=0)  # valid edge case
-
-        # === General / edge cases ===
-
-        def test_none_rejected(self):
-            msg = re.escape("cannot be None")
-            with pytest.raises(g.ContractError, match=msg):
-                g.ensure_str_min_length(None, min_length=1)
-
-        def test_whitespace_only_string_min_length(self):
-            # Note: whitespace counts toward length
-            g.ensure_str_min_length("   ", min_length=3)  # passes
-            with pytest.raises(g.ContractError):
-                g.ensure_str_min_length("  ", min_length=3)
-
-        def test_combining_min_and_max_via_main_function(self):
-            # Just showing it works - though we usually use the convenience functions
-            result = g.ensure_str_length(
-                "perfect", min_length=5, max_length=10, description="password"
-            )
-            assert result == "perfect"
+        # endregion
 
 
 class TestEnsureAttribute:
@@ -220,6 +219,7 @@ class TestEnsureAttribute:
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_attribute(None, "missing_attr", "example_value")
 
+
 class TestEnsureIn:
 
     def test_valid_with_list(self):
@@ -245,6 +245,7 @@ class TestEnsureIn:
         msg = re.escape("Arg 'choices' cannot be None")
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_in("yaml", None)  # type: ignore[arg-type]
+
 
 class TestEnsureUsablePath:
 
@@ -272,6 +273,7 @@ class TestEnsureUsablePath:
         msg = re.escape("Arg 'filename' must be a Path or non-empty string\nDescription: filename\nReceived Type: int")
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_usable_path(42, "filename")
+
 
 class TestEnsureBooleanGuards:
 

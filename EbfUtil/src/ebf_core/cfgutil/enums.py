@@ -11,7 +11,7 @@ def enum_from_str(value: str | None, enum_type: Type[E]) -> E:
     Convert a string (case-insensitive, hyphens → underscores) to an Enum member.
 
     """
-    g.ensure_not_empty_str(value, "value")
+    g.ensure_str_is_valued(value, "value")
 
     normalized = str(value).strip().replace("-", "_").replace(" ", "_").upper()
 

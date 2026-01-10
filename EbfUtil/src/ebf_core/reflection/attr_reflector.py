@@ -26,7 +26,7 @@ class AttributeReflector:
         :param value: The value to set at the specified attribute path.
         :raises AttributeError: If the attribute does not exist and cannot be set.
         """
-        g.ensure_not_empty_str(attr_path, "attr_path")
+        g.ensure_str_is_valued(attr_path, "attr_path")
 
 
         attrs = attr_path.split(".")
@@ -54,7 +54,7 @@ class AttributeReflector:
         :return: The value of the attribute, or None if the attribute doesn't exist or is None.
         :raises AttributeError: If the attribute path is invalid or does not exist.
         """
-        g.ensure_not_empty_str(attr_path, "attr_path")
+        g.ensure_str_is_valued(attr_path, "attr_path")
 
         attrs = attr_path.split(".")
         obj = self.instance
@@ -82,7 +82,7 @@ class AttributeReflector:
         :param attr_path: A dot-separated string indicating the path to the attribute.
         :return: True if the attribute exists, False otherwise.
         """
-        g.ensure_not_empty_str(attr_path, "attr_path")
+        g.ensure_str_is_valued(attr_path, "attr_path")
 
         attrs = attr_path.split(".")
         obj = self.instance
