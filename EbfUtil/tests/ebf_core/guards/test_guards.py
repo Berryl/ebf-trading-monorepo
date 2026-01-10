@@ -80,7 +80,7 @@ class TestEnsureNotNone:
 
 
 class TestStrs:
-    class TestEnsureNotEmptyStr:
+    class TestIsValued:
 
         def test_when_valid(self):
             g.ensure_str_is_valued('42', "filename")
@@ -97,7 +97,7 @@ class TestStrs:
             with pytest.raises(g.ContractError, match=msg):
                 g.ensure_str_is_valued(value, desc_param)
 
-    class TestEnsureStrLength:
+    class TestStrLength:
         class TestMinlength:
 
             @pytest.mark.parametrize("candidate", ["hello world", "abcdefg"])
@@ -147,14 +147,14 @@ class TestStrs:
 
             @pytest.mark.parametrize("candidate", ["ab", ""])
             def test_when_below_minimum(self, candidate):
-                msg = re.escape("Arg 'username' must be at least 3 characters long")
+                msg = re.escape("Arg 'username' must have at least 3 characters")
 
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_length_between(candidate, min_length=3, max_length=20, description="username")
 
             @pytest.mark.parametrize("candidate", ["this string is way too long for this test case here"])
             def test_when_too_long(self, candidate):
-                msg = re.escape("Arg 'comment' must be at most 30 characters long")
+                msg = re.escape("Arg 'comment' must have at most 30 characters")
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_length_between(candidate, min_length=5, max_length=30, description="comment")
 

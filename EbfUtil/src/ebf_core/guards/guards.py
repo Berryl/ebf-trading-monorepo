@@ -186,10 +186,12 @@ def ensure_str_is_valued(candidate: Any, description: str | None = None) -> None
             Received="Empty String",
         )
 
+
 def ensure_str_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> str:
     """Ensures string has exactly exact_length characters."""
     ensure_type(candidate, str, description)
     return _ensure_length(candidate, exact_length=exact_length, description=description)
+
 
 def ensure_str_min_length(candidate: Any, min_length: int, description: str | None = None) -> str:
     ensure_type(candidate, str, description)
@@ -208,39 +210,14 @@ def ensure_str_length_between(
         max_length: int,
         description: str | None = None,
 ) -> str:
-    """
-    Ensures the value is a string with length between min_length and max_length (inclusive).
-
-    Raises ContractError if the value is not a string or its length is out of range.
-    Returns the validated string.
-    """
     ensure_type(candidate, str, description)
+    return _ensure_length(
+        candidate,
+        min_length=min_length,
+        max_length=max_length,
+        description=description,
+    )
 
-    s = candidate
-
-    prefix = f"Arg '{description}'" if description else "Value"
-
-    actual_len = len(s)
-
-    if actual_len < min_length:
-        _fail(
-            message=f"{prefix} must be at least {min_length} characters long",
-            Description=description or "Unnamed",
-            Min_length=min_length,
-            Actual_length=actual_len,
-            Value=repr(s),
-        )
-
-    if actual_len > max_length:
-        _fail(
-            message=f"{prefix} must be at most {max_length} characters long",
-            Description=description or "Unnamed",
-            Max_length=max_length,
-            Actual_length=actual_len,
-            Value=repr(s),
-        )
-
-    return s
 
 # endregion
 
@@ -256,6 +233,7 @@ def _fail(message: str, **context: Any) -> NoReturn:
             skip_patterns=None,
         )
     )
+
 
 def _ensure_length(
         value: Any,
@@ -308,6 +286,7 @@ def _ensure_length(
 
     return value
 
+
 # Later, if and when needed:
 def ensure_list_min_length(candidate: Any, min_length: int, description: str | None = None) -> list:
     ensure_type(candidate, list, description)
@@ -316,7 +295,9 @@ def ensure_list_min_length(candidate: Any, min_length: int, description: str | N
 
 def ensure_bytes_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> bytes:
     ensure_type(candidate, bytes, description)
-    return _ensure_length(candidate, exact_length=exact_length, description=description,)
+    return _ensure_length(candidate, exact_length=exact_length, description=description, )
+
+
 # endregion
 
 
@@ -350,6 +331,5 @@ def create_clean_error_context(
     error_parts.append(clean_traceback)
 
     return "\n".join(error_parts)
-
 
 # endregion
