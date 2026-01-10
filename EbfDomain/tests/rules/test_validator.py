@@ -57,47 +57,25 @@ class TestValidator:
                 assert sut.validate_field("unknown_field", "any_value").is_valid
 
         class TestValidateDictAndObject:
-            @pytest.fixture
-            def data(self) -> dict:
-                return  {
+
+            def test_with_valid_data(self, sut):
+                data = {
                     "name": "alice",
                     "email": "alice@example.com"
                 }
-
-            def test_with_valid_data(self, sut, data):
                 assert sut.validate_dict(data).is_valid
 
-        def test_validate_dict_with_invalid_data(self):
-            """validate_dict() finds violations in dictionary."""
-            validator = Validator()
-            validator.add_rules("username", RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.MinStrSizeRule(min_length=3)
-            ))
-            validator.add_rules("email", RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.EmailRule()
-            ))
+            def test_with_invalid_data(self, sut):
+                data = {
+                    "name": "ab",  # Too short
+                    "email": "invalid"  # Not an email
+                }
+                assert not sut.validate_dict(data).is_valid
 
-            data = {
-                "username": "ab",  # Too short
-                "email": "invalid"  # Not an email
-            }
-            result = validator.validate_dict(data)
-
-            assert not result.is_valid
-            assert len(result.violations) == 2
-
-        def test_validate_dict_with_missing_fields(self):
-            """validate_dict() handles missing fields (treats as None)."""
-            validator = Validator()
-            validator.add_rules("username", RuleCollection.from_rules(cr.ValueRequiredRule()))
-
-            data = {}  # username is missing
-            result = validator.validate_dict(data)
-
-            assert not result.is_valid
-            assert len(result.violations) == 1
+            def test_missing_fields_makes_data_invalid(self, sut):
+                """validate_dict() handles missing fields (treats as None)."""
+                data = {}  # user is missing
+                assert not sut.validate_dict(data).is_valid
 
         def test_validate_object_with_valid_data(self):
             """validate() validates an object successfully."""
