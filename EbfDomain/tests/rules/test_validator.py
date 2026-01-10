@@ -20,7 +20,7 @@ class TestValidator:
     @dataclass
     class User:
         username: str
-        email: str
+        email: str = None
 
     class TestAdding:
 
@@ -84,30 +84,19 @@ class TestValidator:
 
         class TestObjectValidation:
 
-            def test_validate_object_with_valid_data(self, sut):
+            def test_when_valid(self, sut):
                 user = TestValidator.User(username="alice", email="alice@example.com")
                 assert sut.validate(user).is_valid
 
-            def test_validate_object_with_invalid_data(self, sut):
+            def test_when_invalid_data(self, sut):
                 user = TestValidator.User(username="ab", email="not-email")
                 assert not sut.validate(user).is_valid
 
-        def test_validate_object_with_missing_fields(self):
-            """validate() skips fields that don't exist on object."""
-
-            @dataclass
-            class User:
-                username: str
-
-            validator = Validator[User]()
-            validator.add_rules("username", RuleCollection.from_rules(cr.ValueRequiredRule()))
-            validator.add_rules("email", RuleCollection.from_rules(cr.ValueRequiredRule()))  # email doesn't exist
-
-            user = User(username="alice")
-            result = validator.validate(user)
-
-            # Should only validate username, skip email
-            assert result.is_valid
+            def test_when_missing_fields(self, sut):
+                """validate() skips fields that don't exist on object."""
+                user = TestValidator.User(username="alice")
+                # Should only validate username, skip email
+                assert sut.validate(user).is_valid
 
     def test_for_fields_class_method(self):
         """Can create validator using for_fields() class method."""
