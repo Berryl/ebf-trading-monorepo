@@ -17,6 +17,11 @@ class TestValidator:
             cr.MinStrSizeRule(min_length=5)
         )
 
+    @dataclass
+    class User:
+        username: str
+        email: str
+
     class TestAdding:
 
         def test_field_rules_are_added(self, rules: RuleCollection):
@@ -56,7 +61,7 @@ class TestValidator:
             def test_is_valid_when_field_not_in_validator(self, sut):
                 assert sut.validate_field("unknown_field", "any_value").is_valid
 
-        class TestValidateDictAndObject:
+        class TestValidateDict:
 
             def test_with_valid_data(self, sut):
                 data = {
@@ -77,43 +82,15 @@ class TestValidator:
                 data = {}  # user is missing
                 assert not sut.validate_dict(data).is_valid
 
-        def test_validate_object_with_valid_data(self):
-            """validate() validates an object successfully."""
+        class TestObjectValidation:
 
-            @dataclass
-            class User:
-                username: str
-                email: str
+            def test_validate_object_with_valid_data(self, sut):
+                user = TestValidator.User(username="alice", email="alice@example.com")
+                assert sut.validate(user).is_valid
 
-            validator = Validator[User]()
-            validator.add_rules("username", RuleCollection.from_rules(cr.ValueRequiredRule()))
-            validator.add_rules("email", RuleCollection.from_rules(cr.EmailRule()))
-
-            user = User(username="alice", email="alice@example.com")
-            result = validator.validate(user)
-
-            assert result.is_valid
-
-        def test_validate_object_with_invalid_data(self):
-            """validate() finds violations in object."""
-
-            @dataclass
-            class User:
-                username: str
-                email: str
-
-            validator = Validator[User]()
-            validator.add_rules("username", RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.MinStrSizeRule(min_length=3)
-            ))
-            validator.add_rules("email", RuleCollection.from_rules(cr.EmailRule()))
-
-            user = User(username="ab", email="not-email")
-            result = validator.validate(user)
-
-            assert not result.is_valid
-            assert len(result.violations) == 2
+            def test_validate_object_with_invalid_data(self, sut):
+                user = TestValidator.User(username="ab", email="not-email")
+                assert not sut.validate(user).is_valid
 
         def test_validate_object_with_missing_fields(self):
             """validate() skips fields that don't exist on object."""
