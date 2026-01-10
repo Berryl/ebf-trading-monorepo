@@ -33,7 +33,7 @@ class TestValidator:
 
             assert len(validator.field_rules) == 1
 
-        def test_chaining(self, rules: RuleCollection):
+        def test_chaining(self):
             """add_rules() returns self for method chaining."""
             validator = Validator()
 
@@ -93,7 +93,7 @@ class TestValidator:
                 assert not sut.validate(user).is_valid
 
             def test_when_missing_fields(self, sut):
-                """validate() skips fields that don't exist on object."""
+                """validate() skips fields that don't exist on the object."""
                 user = TestValidator.User(username="alice")
                 # Should only validate username, skip email
                 assert sut.validate(user).is_valid
@@ -131,90 +131,89 @@ class TestValidator:
             assert "username" in sut.field_rules
             assert "email" in sut.field_rules
 
+    class TestScenarios:
+        """Integration tests for complete validation scenarios."""
 
-class TestScenarios:
-    """Integration tests for complete validation scenarios."""
+        class TestUserRegistration:
 
-    class TestUserRegistration:
+            @dataclass
+            class UserRegistration:
+                username: str
+                email: str
+                password: str
+                age: int
 
-        @dataclass
-        class UserRegistration:
-            username: str
-            email: str
-            password: str
-            age: int
-
-        @pytest.fixture(scope="class")
-        def sut(self) -> Validator:
-            validator = Validator.for_fields(
-                username=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.MinStrSizeRule(min_length=3),
-                    cr.MaxStrSizeRule(max_length=20)
-                ),
-                email=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.EmailRule()
-                ),
-                password=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.MinStrSizeRule(min_length=8)
-                ),
-                age=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.NumericRangeRule(min_value=13, max_value=120)
+            @pytest.fixture(scope="class")
+            def sut(self) -> Validator:
+                validator = Validator.for_fields(
+                    username=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.MinStrSizeRule(min_length=3),
+                        cr.MaxStrSizeRule(max_length=20)
+                    ),
+                    email=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.EmailRule()
+                    ),
+                    password=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.MinStrSizeRule(min_length=8)
+                    ),
+                    age=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.NumericRangeRule(min_value=13, max_value=120)
+                    )
                 )
-            )
-            return validator
+                return validator
 
-        def test_valid_registration(self, sut: Validator[UserRegistration]):
-            valid_user = TestScenarios.TestUserRegistration.UserRegistration(
-                username="alice",
-                email="alice@example.com",
-                password="secure_password",
-                age=25
-            )
-            assert sut.validate(valid_user).is_valid
-
-        def test_invalid_registration(self, sut: Validator[UserRegistration]):
-            invalid_user = TestScenarios.TestUserRegistration.UserRegistration(
-                username="ab",  # Too short
-                email="invalid",  # Not an email
-                password="short",  # Too short
-                age=10  # Too young
-            )
-            assert sut.validate(invalid_user).is_valid is False
-
-    class TestApiRequests:
-
-        @pytest.fixture(scope="class")
-        def sut(self) -> Validator:
-            validator = Validator.for_fields(
-                action=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.OneOfRule({"create", "update", "delete"})
-                ),
-                resource_id=RuleCollection.from_rules(
-                    cr.ValueRequiredRule(),
-                    cr.MinStrSizeRule(min_length=1)
+            def test_valid_registration(self, sut: Validator[UserRegistration]):
+                valid_user = TestValidator.TestScenarios.TestUserRegistration.UserRegistration(
+                    username="alice",
+                    email="alice@example.com",
+                    password="secure_password",
+                    age=25
                 )
-            )
-            return validator
+                assert sut.validate(valid_user).is_valid
 
-        def test_valid_api_request(self, sut: Validator):
-            valid_request = {
-                "action": "create",
-                "resource_id": "RES-123"
-            }
-            assert sut.validate_dict(valid_request).is_valid
+            def test_invalid_registration(self, sut: Validator[UserRegistration]):
+                invalid_user = TestValidator.TestScenarios.TestUserRegistration.UserRegistration(
+                    username="ab",  # Too short
+                    email="invalid",  # Not an email
+                    password="short",  # Too short
+                    age=10  # Too young
+                )
+                assert sut.validate(invalid_user).is_valid is False
 
-        def test_invalid_api_request(self, sut: Validator):
-            invalid_request = {
-                "action": "invalid_action",
-                "resource_id": ""
-            }
+        class TestApiRequests:
 
-            result = sut.validate_dict(invalid_request)
+            @pytest.fixture(scope="class")
+            def sut(self) -> Validator:
+                validator = Validator.for_fields(
+                    action=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.OneOfRule({"create", "update", "delete"})
+                    ),
+                    resource_id=RuleCollection.from_rules(
+                        cr.ValueRequiredRule(),
+                        cr.MinStrSizeRule(min_length=1)
+                    )
+                )
+                return validator
 
-            assert not result.is_valid
-            assert len(result.violations) >= 2
+            def test_valid_api_request(self, sut: Validator):
+                valid_request = {
+                    "action": "create",
+                    "resource_id": "RES-123"
+                }
+                assert sut.validate_dict(valid_request).is_valid
+
+            def test_invalid_api_request(self, sut: Validator):
+                invalid_request = {
+                    "action": "invalid_action",
+                    "resource_id": ""
+                }
+
+                result = sut.validate_dict(invalid_request)
+
+                assert not result.is_valid
+                assert len(result.violations) >= 2
