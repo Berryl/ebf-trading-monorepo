@@ -97,8 +97,88 @@ class TestStrs:
         def test_description_parameter(self, value, desc_param, msg):
             with pytest.raises(g.ContractError, match=msg):
                 g.ensure_not_empty_str(value, desc_param)
-    
-    
+
+    # test_guards.py  (add this class after the existing ones)
+
+    class TestEnsureStrLength:
+
+        # === ensure_str_min_length ===
+
+        class TestMinlength:
+
+            @pytest.mark.parametrize("candidate", ["hello world", "abcdefg"])
+            def test_when_valid(self, candidate):
+                result = g.ensure_str_min_length(candidate, min_length=5, description="greeting")
+                assert result == candidate
+
+            @pytest.mark.parametrize("candidate", ["ed", " "])
+            def test_when_invalid(self, candidate):
+                msg = re.escape("Arg 'username' must be at least 4 characters long")
+
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_min_length(candidate, min_length=4, description="username")
+
+            def test_invalid_type(self):
+                msg = re.escape("Value must be of type str (it was type int)")
+
+                with pytest.raises(g.ContractError, match=msg):
+                    g.ensure_str_min_length(12345, min_length=3)
+
+        # === ensure_str_max_length ===
+
+        def test_max_length_valid(self):
+            result = g.ensure_str_max_length("hello", max_length=10, description="title")
+            assert result == "hello"
+
+        def test_max_length_at_limit(self):
+            g.ensure_str_max_length("exactly10", max_length=10)  # should pass
+
+        def test_max_length_too_long(self):
+            msg = re.escape("Arg 'comment' must be at most 20 characters long")
+            with pytest.raises(g.ContractError, match=msg):
+                g.ensure_str_max_length("this comment is way too long now", max_length=20, description="comment")
+
+        def test_max_length_empty_string_allowed(self):
+            g.ensure_str_max_length("", max_length=50)  # empty is fine if max allows
+
+        # === ensure_str_exact_length ===
+
+        def test_exact_length_valid(self):
+            result = g.ensure_str_exact_length("ABC123", exact_length=6, description="code")
+            assert result == "ABC123"
+
+        def test_exact_length_too_short(self):
+            msg = re.escape("Arg 'token' must be exactly 8 characters long")
+            with pytest.raises(g.ContractError, match=msg):
+                g.ensure_str_exact_length("short", exact_length=8, description="token")
+
+        def test_exact_length_too_long(self):
+            msg = re.escape("must be exactly 4 characters long")
+            with pytest.raises(g.ContractError, match=msg):
+                g.ensure_str_exact_length("hello", exact_length=4)
+
+        def test_exact_length_empty_string(self):
+            g.ensure_str_exact_length("", exact_length=0)  # valid edge case
+
+        # === General / edge cases ===
+
+        def test_none_rejected(self):
+            msg = re.escape("cannot be None")
+            with pytest.raises(g.ContractError, match=msg):
+                g.ensure_str_min_length(None, min_length=1)
+
+        def test_whitespace_only_string_min_length(self):
+            # Note: whitespace counts toward length
+            g.ensure_str_min_length("   ", min_length=3)  # passes
+            with pytest.raises(g.ContractError):
+                g.ensure_str_min_length("  ", min_length=3)
+
+        def test_combining_min_and_max_via_main_function(self):
+            # Just showing it works - though we usually use the convenience functions
+            result = g.ensure_str_length(
+                "perfect", min_length=5, max_length=10, description="password"
+            )
+            assert result == "perfect"
 
 
 class TestEnsureAttribute:
