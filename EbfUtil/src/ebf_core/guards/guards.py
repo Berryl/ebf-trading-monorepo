@@ -60,6 +60,7 @@ def ensure_type(candidate: Any, expected_type: type[T], description: str | None 
             Received_Type=actual_type,
         )
 
+
 def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = None, ) -> T:
     """
     Ensures that the candidate has the specified attribute.
@@ -139,6 +140,51 @@ def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path
         Description=description or "Unnamed",
         **{"Received Type": type(candidate).__name__},
     )
+
+
+# region numbers
+def ensure_positive_number(
+        candidate: Any,
+        *,
+        description: str | None = None,
+        allow_zero: bool = False,
+        strict: bool = False,
+) -> int | float:
+    """
+    Ensures the value is a positive number (> 0 or >= 0 if allow_zero=True).
+
+    Returns the number after validation.
+    Raises ContractError if invalid.
+    """
+    prefix = f"Arg '{description}'" if description else "Value"
+
+    # First: must be number at all
+    if not isinstance(candidate, (int, float)):
+        expected = "int or float" if strict else "number"
+        _fail(
+            message=f"{prefix} must be a {expected}",
+            Description=description or "Unnamed",
+            Received_type=type(candidate).__name__,
+        )
+
+    # Then check the sign
+    if candidate < 0:
+        _fail(
+            message=f"{prefix} must be positive",
+            Description=description or "Unnamed",
+            Received=candidate,
+        )
+
+    if not allow_zero and candidate == 0:
+        zero_msg = "strictly positive (greater than zero)" if not allow_zero else "positive"
+        _fail(
+            message=f"{prefix} must be {zero_msg}",
+            Description=description or "Unnamed",
+            Received=candidate,
+        )
+
+    return candidate
+# endregion
 
 
 # region bool
@@ -290,14 +336,14 @@ def _ensure_length(
 
 
 # Later, if and when needed:
-def ensure_list_min_length(candidate: Any, min_length: int, description: str | None = None) -> list:
-    ensure_type(candidate, list, description)
-    return _ensure_length(candidate, min_length=min_length, description=description)
-
-
-def ensure_bytes_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> bytes:
-    ensure_type(candidate, bytes, description)
-    return _ensure_length(candidate, exact_length=exact_length, description=description, )
+# def ensure_list_min_length(candidate: Any, min_length: int, description: str | None = None) -> list:
+#     ensure_type(candidate, list, description)
+#     return _ensure_length(candidate, min_length=min_length, description=description)
+#
+#
+# def ensure_bytes_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> bytes:
+#     ensure_type(candidate, bytes, description)
+#     return _ensure_length(candidate, exact_length=exact_length, description=description, )
 
 
 # endregion
