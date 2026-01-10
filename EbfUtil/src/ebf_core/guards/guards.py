@@ -71,22 +71,6 @@ def ensure_not_none(candidate: Any, description: str | None = None) -> None:
         )
 
 
-def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
-    """
-    Ensures that the candidate is not None or an empty string, raising a ContractError if it is.
-    """
-    ensure_not_none(candidate, description)
-    ensure_type(candidate, str, description)
-
-    if not candidate.strip():
-        prefix = f"Arg '{description}'" if description else "Value"
-        _fail(
-            message=f"{prefix} cannot be an empty string",
-            Description=description or "Unnamed",
-            Received="Empty String",
-        )
-
-
 T = TypeVar('T')
 
 
@@ -108,7 +92,7 @@ def ensure_type(candidate: Any, expected_type: type[T], description: str | None 
         expected_name = getattr(expected_type, "__name__", str(expected_type))
 
         if hasattr(expected_type, "__origin__"):
-            # Generic like list[int] → use typeguard's message
+            # Generic like list[int] → use type-guard's message
             message = f"{prefix}: {e}"
         else:
             message = f"{prefix} must be of type {expected_name} (it was type {actual_type})"
@@ -202,6 +186,7 @@ def ensure_usable_path(candidate: Any, description: str | None = None, ) -> Path
     )
 
 
+# region bool
 def _ensure_bool_strict(condition: bool, expected: bool, description: str = "", ) -> None:
     if not (isinstance(condition, bool) and condition is expected):
         expected_str = "True" if expected else "False"
@@ -226,3 +211,95 @@ def ensure_true(condition: bool, description: str = "") -> None:
 def ensure_false(condition: bool, description: str = "") -> None:
     """Ensures that the provided condition is strictly False."""
     _ensure_bool_strict(condition, expected=False, description=description)
+# endregion
+
+
+# region str
+def ensure_not_empty_str(candidate: Any, description: str | None = None) -> None:
+    """
+    Ensures that the candidate is not None or an empty string, raising a ContractError if it is.
+    """
+    ensure_not_none(candidate, description)
+    ensure_type(candidate, str, description)
+
+    if not candidate.strip():
+        prefix = f"Arg '{description}'" if description else "Value"
+        _fail(
+            message=f"{prefix} cannot be an empty string",
+            Description=description or "Unnamed",
+            Received="Empty String",
+        )
+
+def ensure_str_length(
+    candidate: Any,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    exact_length: int | None = None,
+    description: str | None = None,
+) -> str:
+    """
+    Ensures a value is a string of appropriate length.
+
+    You can specify:
+    - min_length (inclusive)
+    - max_length (inclusive)
+    - exact_length (must be exactly this length — overrides min/max)
+
+    Raises ContractError if conditions are not met.
+    Returns the string (after validation).
+    """
+    # First: must be string at all
+    ensure_type(candidate, str, description)
+    s = candidate  # we know it's str now
+
+    prefix = f"Arg '{description}'" if description else "Value"
+
+    if exact_length is not None:
+        if len(s) != exact_length:
+            _fail(
+                message=f"{prefix} must be exactly {exact_length} characters long",
+                Description=description or "Unnamed",
+                Expected_length=exact_length,
+                Actual_length=len(s),
+                Value=repr(s),
+            )
+
+    else:
+        # min/max mode
+        if min_length is not None and len(s) < min_length:
+            _fail(
+                message=f"{prefix} must be at least {min_length} characters long",
+                Description=description or "Unnamed",
+                Min_length=min_length,
+                Actual_length=len(s),
+                Value=repr(s),
+            )
+
+        if max_length is not None and len(s) > max_length:
+            _fail(
+                message=f"{prefix} must be at most {max_length} characters long",
+                Description=description or "Unnamed",
+                Max_length=max_length,
+                Actual_length=len(s),
+                Value=repr(s),
+            )
+
+    return s
+
+
+def ensure_str_min_length(candidate: Any, min_length: int, description: str | None = None) -> str:
+    """Ensures string has at least min_length characters."""
+    return ensure_str_length(candidate, min_length=min_length, description=description)
+
+
+def ensure_str_max_length(candidate: Any, max_length: int, description: str | None = None) -> str:
+    """Ensures string has at most max_length characters."""
+    return ensure_str_length(candidate, max_length=max_length, description=description)
+
+
+def ensure_str_exact_length(candidate: Any, exact_length: int, description: str | None = None) -> str:
+    """Ensures string has exactly exact_length characters."""
+    return ensure_str_length(candidate, exact_length=exact_length, description=description)
+# endregion
+
+
