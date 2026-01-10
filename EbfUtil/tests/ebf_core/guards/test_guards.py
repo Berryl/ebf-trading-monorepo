@@ -136,6 +136,52 @@ class TestNotNone:
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_not_none(None, desc_param)
 
+class TestEnsurePositiveNumber:
+
+    @pytest.mark.parametrize("candidate", [1, 42, 3.14, 0.0001])
+    def test_when_valid_positive(self, candidate):
+        result = g.ensure_positive_number(candidate, description="quantity")
+        assert result == candidate
+
+    @pytest.mark.parametrize("candidate", [0, 0.0])
+    def test_zero_allowed_when_configured(self, candidate):
+        result = g.ensure_positive_number(candidate, allow_zero=True, description="count")
+        assert result == candidate
+
+    @pytest.mark.parametrize("candidate", [0, 0.0, -1, -5.5])
+    def test_when_invalid_non_positive(self, candidate):
+        msg = re.escape("Arg 'score' must be positive")
+
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number(candidate, description="score")
+
+    @pytest.mark.parametrize("candidate", [0, 0.0])
+    def test_zero_rejected_when_not_allowed(self, candidate):
+        msg = re.escape("Arg 'limit' must be positive (greater than zero)")
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number(candidate, allow_zero=False, description="limit")
+
+    @pytest.mark.parametrize("candidate", [-42, -0.001])
+    def test_negative_rejected_regardless(self, candidate):
+        msg = re.escape("Arg 'offset' must be positive")
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number(candidate, allow_zero=True, description="offset")
+
+    def test_invalid_type(self):
+        msg = re.escape("Arg 'value' must be a number")
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number("42", description="value")
+
+    def test_none_rejected(self):
+        msg = re.escape("Arg 'amount' must be a number")
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number(None, description="amount")
+
+    def test_strict_mode_rejects_bool(self):
+        # bool is subclass of int, but strict mode should reject it
+        msg = re.escape("Arg 'flag' must be an int or float (bool not allowed in strict mode)")
+        with pytest.raises(g.ContractError, match=msg):
+            g.ensure_positive_number(True, strict=True, description="flag")
 
 class TestStrGuards:
     class TestIsValued:

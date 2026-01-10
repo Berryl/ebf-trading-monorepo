@@ -153,21 +153,38 @@ def ensure_positive_number(
     """
     Ensures the value is a positive number (> 0 or >= 0 if allow_zero=True).
 
-    Returns the number after validation.
-    Raises ContractError if invalid.
+    Args:
+        candidate: The value to check
+        description: Optional name for better error messages
+        allow_zero: If True, zero is accepted (non-negative)
+        strict: If True, only accepts int/float (explicitly rejects bool, Decimal, etc.)
+
+    Returns:
+        The validated number (int or float)
+
+    Raises:
+        ContractError: If value is not a number, negative, or zero when not allowed
     """
     prefix = f"Arg '{description}'" if description else "Value"
 
-    # First: must be number at all
-    if not isinstance(candidate, (int, float)):
-        expected = "int or float" if strict else "number"
-        _fail(
-            message=f"{prefix} must be a {expected}",
-            Description=description or "Unnamed",
-            Received_type=type(candidate).__name__,
-        )
+    # 1. Type check
+    if strict:
+        if not (isinstance(candidate, (int, float)) and not isinstance(candidate, bool)):
+            _fail(
+                message=f"{prefix} must be an int or float (bool not allowed in strict mode)",
+                Description=description or "Unnamed",
+                Received_type=type(candidate).__name__,
+            )
+    else:
+        # Permissive mode: accept anything that is int or float (bool still accepted)
+        if not isinstance(candidate, (int, float)):
+            _fail(
+                message=f"{prefix} must be a number",
+                Description=description or "Unnamed",
+                Received_type=type(candidate).__name__,
+            )
 
-    # Then check the sign
+    # 2. Value check - unified base message
     if candidate < 0:
         _fail(
             message=f"{prefix} must be positive",
@@ -175,17 +192,14 @@ def ensure_positive_number(
             Received=candidate,
         )
 
-    if not allow_zero and candidate == 0:
-        zero_msg = "strictly positive (greater than zero)" if not allow_zero else "positive"
+    if candidate == 0 and not allow_zero:
         _fail(
-            message=f"{prefix} must be {zero_msg}",
+            message=f"{prefix} must be positive (greater than zero)",
             Description=description or "Unnamed",
             Received=candidate,
         )
 
     return candidate
-# endregion
-
 
 # region bool
 
