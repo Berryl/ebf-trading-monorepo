@@ -12,7 +12,7 @@ class ValueRequiredRule(Rule[Any]):
     
     Usage:
         ```python
-        rule = RequiredRule()
+        rule = ValueRequiredRule()
         violation = rule.validate("email", None)  # Returns violation
         violation = rule.validate("email", "")    # Returns violation
         violation = rule.validate("email", "a@b.com")  # Returns None
@@ -76,7 +76,7 @@ class MinStrSizeRule(Rule[str]):
     
     Usage:
         ```python
-        rule = MinLengthRule(min_length=5)
+        rule = MinStrSizeRule(min_length=5)
         violation = rule.validate("password", "1234") # Returns violation
         ```
     """
@@ -103,7 +103,7 @@ class MaxStrSizeRule(Rule[str]):
     
     Usage:
         ```python
-        rule = MaxLengthRule(max_length=100)
+        rule = MaxStrSizeRule(max_length=100)
         violation = rule.validate("bio", "x" * 101) # Returns violation
         ```
     """
@@ -134,7 +134,7 @@ class NumericRangeRule(Rule[int | float]):
     
     Usage:
         ```python
-        age_rule = RangeRule(min_value=0, max_value=150)
+        age_rule = NumericRangeRule(min_value=0, max_value=150)
         violation = age_rule.validate("age", -5) # Returns violation
         ```
     """

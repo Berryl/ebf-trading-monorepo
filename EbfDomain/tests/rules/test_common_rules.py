@@ -99,7 +99,7 @@ class TestMaxLengthRule:
 class TestNumericRangeRule:
     """Tests for RangeRule."""
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def sut(self) -> Rule:
         return NumericRangeRule(min_value=0, max_value=100)
 
