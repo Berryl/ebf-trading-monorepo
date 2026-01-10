@@ -40,7 +40,9 @@ class TestValidator:
 
         @pytest.fixture
         def sut(self, rules) -> Validator:
-            v = Validator().add_rules("name", rules=rules)
+            v = Validator()
+            v.add_rules("name", rules=rules)
+            v.add_rules("email", rules=RuleCollection.from_rules(cr.EmailRule()))
             return v
 
         class TestValidateField:
@@ -51,33 +53,19 @@ class TestValidator:
             def test_with_invalid_value(self, sut):
                 assert not sut.validate_field("name", "").is_valid
 
-            def test_validate_field_not_in_validator(self):
-                """validate_field() returns success for unknown fields."""
-                validator = Validator()
+            def test_is_valid_when_field_not_in_validator(self, sut):
+                assert sut.validate_field("unknown_field", "any_value").is_valid
 
-                result = validator.validate_field("unknown_field", "any_value")
+        class TestValidateDictAndObject:
+            @pytest.fixture
+            def data(self) -> dict:
+                return  {
+                    "name": "alice",
+                    "email": "alice@example.com"
+                }
 
-                assert result.is_valid
-
-        def test_validate_dict_with_valid_data(self):
-            """validate_dict() validates a dictionary successfully."""
-            validator = Validator()
-            validator.add_rules("username", RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.MinStrSizeRule(min_length=3)
-            ))
-            validator.add_rules("email", RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.EmailRule()
-            ))
-
-            data = {
-                "username": "alice",
-                "email": "alice@example.com"
-            }
-            result = validator.validate_dict(data)
-
-            assert result.is_valid
+            def test_with_valid_data(self, sut, data):
+                assert sut.validate_dict(data).is_valid
 
         def test_validate_dict_with_invalid_data(self):
             """validate_dict() finds violations in dictionary."""
