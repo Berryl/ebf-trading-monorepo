@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TypeVar, NoReturn
 
+from ebf_core.reflection.type_name import get_descriptive_type_name
 from typeguard import (
     CollectionCheckStrategy,
     ForwardRefPolicy,
@@ -27,7 +28,7 @@ def ensure_not_none(candidate: Any, description: str | None = None) -> None:
 T = TypeVar('T')
 
 
-def ensure_type(candidate: Any, expected_type: type[T], description: str | None = None, ) -> T:
+def ensure_type(candidate: Any, expected_type: type[T], description: str | None = None) -> T:
     """
     Ensures that the candidate is of the expected type, raising a ContractError if not.
     """
@@ -42,10 +43,12 @@ def ensure_type(candidate: Any, expected_type: type[T], description: str | None 
     except TypeCheckError as e:
         actual_type = type(candidate).__name__ if candidate is not None else "None"
         prefix = f"Arg '{description}'" if description else "Value"
-        expected_name = getattr(expected_type, "__name__", str(expected_type))
 
+        # Use the new function for a better name
+        expected_name = get_descriptive_type_name(expected_type)
+
+        # For generics, still leverage type-guard's detailed message if available
         if hasattr(expected_type, "__origin__"):
-            # Generic like list[int] → use type-guard's message
             message = f"{prefix}: {e}"
         else:
             message = f"{prefix} must be of type {expected_name} (it was type {actual_type})"
@@ -56,7 +59,6 @@ def ensure_type(candidate: Any, expected_type: type[T], description: str | None 
             Expected_Type=expected_name,
             Received_Type=actual_type,
         )
-
 
 def ensure_attribute(candidate: Any, attr_spec: str, description: str | None = None, ) -> T:
     """
@@ -259,7 +261,7 @@ def _ensure_length(
     if exact_length is not None:
         if actual_length != exact_length:
             _fail(
-                message=f"{prefix} must have exactly {exact_length} characters",
+                message=f"{prefix} must have an exact length of {exact_length}",
                 Description=description or "Unnamed",
                 Expected_length=exact_length,
                 Actual_length=actual_length,
@@ -268,7 +270,7 @@ def _ensure_length(
     else:
         if min_length is not None and actual_length < min_length:
             _fail(
-                message=f"{prefix} must have at least {min_length} characters",
+                message=f"{prefix} must have a minimum length of {min_length}",
                 Description=description or "Unnamed",
                 Min_length=min_length,
                 Actual_length=actual_length,
@@ -277,7 +279,7 @@ def _ensure_length(
 
         if max_length is not None and actual_length > max_length:
             _fail(
-                message=f"{prefix} must have at most {max_length} characters",
+                message=f"{prefix} must have a maximum length of {max_length}",
                 Description=description or "Unnamed",
                 Max_length=max_length,
                 Actual_length=actual_length,

@@ -107,7 +107,7 @@ class TestStrs:
 
             @pytest.mark.parametrize("candidate", ["ed", " ", ""])
             def test_when_invalid(self, candidate):
-                msg = re.escape("Arg 'username' must have at least 4 characters")
+                msg = re.escape("Arg 'username' must have a minimum length of 4")
 
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_min_length(candidate, min_length=4, description="username")
@@ -121,7 +121,7 @@ class TestStrs:
 
             @pytest.mark.parametrize("candidate", ["this is way too long", "python_is_cool"])
             def test_when_invalid(self, candidate):
-                msg = re.escape("Arg 'comment' must have at most 12 characters")
+                msg = re.escape("Arg 'comment' must have a maximum length of 12")
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_max_length(candidate, max_length=12, description="comment")
 
@@ -134,7 +134,7 @@ class TestStrs:
 
             @pytest.mark.parametrize("candidate", ["ABC12", "ABC1234"])
             def test_when_invalid(self, candidate):
-                msg = re.escape("Arg 'token' must have exactly 6 characters")
+                msg = re.escape("Arg 'token' must have an exact length of 6")
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_exact_length(candidate, exact_length=6, description="token")
 
@@ -147,14 +147,14 @@ class TestStrs:
 
             @pytest.mark.parametrize("candidate", ["ab", ""])
             def test_when_below_minimum(self, candidate):
-                msg = re.escape("Arg 'username' must have at least 3 characters")
+                msg = re.escape("Arg 'username' must have a minimum length of 3")
 
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_length_between(candidate, min_length=3, max_length=20, description="username")
 
             @pytest.mark.parametrize("candidate", ["this string is way too long for this test case here"])
             def test_when_too_long(self, candidate):
-                msg = re.escape("Arg 'comment' must have at most 30 characters")
+                msg = re.escape("Arg 'comment' must have a maximum length of 30")
                 with pytest.raises(g.ContractError, match=msg):
                     g.ensure_str_length_between(candidate, min_length=5, max_length=30, description="comment")
 
