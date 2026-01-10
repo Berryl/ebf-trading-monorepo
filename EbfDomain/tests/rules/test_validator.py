@@ -10,14 +10,14 @@ from src.ebf_domain.rules.validator import Validator
 class TestValidator:
     """Tests for Validator."""
 
-    class TestAdding:
+    @pytest.fixture(scope="class")
+    def rules(self) -> RuleCollection:
+        return RuleCollection.from_rules(
+            cr.ValueRequiredRule(),
+            cr.MinStrSizeRule(min_length=5)
+        )
 
-        @pytest.fixture(scope="class")
-        def rules(self) -> RuleCollection:
-            return RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.MinStrSizeRule(min_length=5)
-            )
+    class TestAdding:
 
         def test_field_rules_are_added(self, rules: RuleCollection):
             """Can add rules for a specific field."""
@@ -37,13 +37,6 @@ class TestValidator:
             assert len(validator.field_rules) == 2
 
     class TestValidating:
-
-        @pytest.fixture(scope="class")
-        def rules(self) -> RuleCollection:
-            return RuleCollection.from_rules(
-                cr.ValueRequiredRule(),
-                cr.MinStrSizeRule(min_length=5)
-            )
 
         @pytest.fixture
         def sut(self, rules) -> Validator:
