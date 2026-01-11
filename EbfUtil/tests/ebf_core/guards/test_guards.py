@@ -157,13 +157,13 @@ class TestEnsurePositiveNumber:
 
     @pytest.mark.parametrize("candidate", [0, 0.0])
     def test_zero_rejected_when_not_allowed(self, candidate):
-        msg = re.escape("Arg 'limit' must be positive (greater than zero)")
+        msg = re.escape("Arg 'limit' must be positive (> 0)")
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_positive_number(candidate, allow_zero=False, description="limit")
 
     @pytest.mark.parametrize("candidate", [-42, -0.001])
     def test_negative_rejected_regardless(self, candidate):
-        msg = re.escape("Arg 'offset' must be positive")
+        msg = re.escape("Arg 'offset' must be non-negative")
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_positive_number(candidate, allow_zero=True, description="offset")
 
@@ -178,7 +178,7 @@ class TestEnsurePositiveNumber:
             g.ensure_positive_number(None, description="amount")
 
     def test_strict_mode_rejects_bool(self):
-        # bool is subclass of int, but strict mode should reject it
+        # bool is a subclass of int, but strict mode should reject it
         msg = re.escape("Arg 'flag' must be an int or float (bool not allowed in strict mode)")
         with pytest.raises(g.ContractError, match=msg):
             g.ensure_positive_number(True, strict=True, description="flag")

@@ -156,8 +156,8 @@ def ensure_positive_number(
     Args:
         candidate: The value to check
         description: Optional name for better error messages
-        allow_zero: If True, zero is accepted (non-negative)
-        strict: If True, only accepts int/float (explicitly rejects bool, Decimal, etc.)
+        allow_zero: If True, zero is accepted (>= 0 instead of > 0)
+        strict: If True, only accepts int/float (rejects bool, Decimal, etc.)
 
     Returns:
         The validated number (int or float)
@@ -176,7 +176,6 @@ def ensure_positive_number(
                 Received_type=type(candidate).__name__,
             )
     else:
-        # Permissive mode: accept anything that is int or float (bool still accepted)
         if not isinstance(candidate, (int, float)):
             _fail(
                 message=f"{prefix} must be a number",
@@ -184,23 +183,24 @@ def ensure_positive_number(
                 Received_type=type(candidate).__name__,
             )
 
-    # 2. Value check - unified base message
+    # 2. Value check - message adapts to allow_zero
+    threshold = "non-negative (>= 0)" if allow_zero else "positive (> 0)"
+
     if candidate < 0:
         _fail(
-            message=f"{prefix} must be positive",
+            message=f"{prefix} must be {threshold}",
             Description=description or "Unnamed",
             Received=candidate,
         )
 
     if candidate == 0 and not allow_zero:
         _fail(
-            message=f"{prefix} must be positive (greater than zero)",
+            message=f"{prefix} must be positive (> 0)",
             Description=description or "Unnamed",
             Received=candidate,
         )
 
     return candidate
-
 # region bool
 
 def ensure_true(condition: bool, description: str = "") -> None:
