@@ -12,20 +12,20 @@ class Money:
     """
     Money represents a monetary amount with a specific currency.
     
-    Stores amount as integer cents/sub-units for efficiency and precision.
+    Stores amount as integer cents/subunits for efficiency and precision.
     All arithmetic operations use Decimal for precision, then convert back to int.
     
     Attributes:
-        amount_cents: Amount in currency's sub-units (e.g., cents for USD)
+        amount_cents: Amount in currency's subunits (e.g., cents for USD)
         currency: Currency instance defining the money's type
     
     Usage:
         ```python
         # Create money from decimal amount
-        price = Money.mint(29.99, USD)  # $29.99
+        price = Money.mint(29.99, USD) # $29.99
         
         # Create from cents (from DB/API)
-        db_value = Money.from_cents(2999, USD)  # $29.99
+        db_value = Money.from_cents(2999, USD) # $29.99
         
         # Arithmetic
         total = price + tax
@@ -33,10 +33,10 @@ class Money:
         per_person = bill / 4
         
         # Get decimal amount
-        print(price.amount)  # Decimal('29.99')
+        print(price.amount) # Decimal('29.99')
         
         # Format for display
-        print(price)  # $29.99
+        print(price) # $29.99
         ```
     
     Design Decisions:
@@ -55,7 +55,7 @@ class Money:
         """
         Create Money from a decimal amount.
         
-        Converts amount to currency's sub-units with proper rounding.
+        Converts amount to currency's subunits with proper rounding.
         
         Args:
             amount: Decimal amount (e.g., 29.99 for $29.99)
@@ -71,9 +71,7 @@ class Money:
             ```
         """
         dec_amount = Decimal(str(amount))
-        cents = (dec_amount * currency.sub_units_per_unit).quantize(
-            Decimal('1'), rounding=ROUND_HALF_UP
-        )
+        cents = (dec_amount * currency.sub_units_per_unit).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         return cls(int(cents), currency)
     
     @classmethod
@@ -92,12 +90,12 @@ class Money:
     @classmethod
     def from_cents(cls, cents: int, currency: Currency = USD) -> Self:
         """
-        Create Money from integer sub-units (cents).
+        Create Money from integer subunits (cents).
         
         Useful for database storage and API interactions.
         
         Args:
-            cents: Amount in sub-units (e.g., 2999 for $29.99)
+            cents: Amount in subunits (e.g., 2999 for $29.99)
             currency: Currency instance (default: USD)
             
         Returns:
@@ -105,7 +103,7 @@ class Money:
             
         Example:
             ```python
-            # From database
+            # From a database
             db_amount = 2999
             price = Money.from_cents(db_amount, USD)
             
@@ -150,7 +148,7 @@ class Money:
             assert money.dollars_part == 29
             
             negative = Money.mint(-29.99, USD)
-            assert negative.dollars_part == -29  # Truncates toward zero
+            assert negative.dollars_part == -29 # Truncates toward zero
             ```
         """
         # Truncate toward zero (not floor division which rounds down)
@@ -174,7 +172,7 @@ class Money:
             assert money.cents_part == 99
             
             negative = Money.mint(-29.99, USD)
-            assert negative.cents_part == 99  # Absolute value
+            assert negative.cents_part == 99 # Absolute value
             ```
         """
         # Get absolute cents value: abs(amount_cents) % sub_units
@@ -182,17 +180,17 @@ class Money:
     
     @property
     def is_zero(self) -> bool:
-        """Check if amount is zero."""
+        """True if the amount is zero."""
         return self.amount_cents == 0
     
     @property
     def is_positive(self) -> bool:
-        """Check if amount is positive (> 0)."""
+        """True if the amount is positive (> 0)."""
         return self.amount_cents > 0
     
     @property
     def is_negative(self) -> bool:
-        """Check if amount is negative (< 0)."""
+        """True if the amount is negative (< 0)."""
         return self.amount_cents < 0
     
     # endregion
@@ -211,34 +209,26 @@ class Money:
         
         if not isinstance(other, Money):
             return NotImplemented
-        
-        if self.currency != other.currency:
-            raise TypeError(
-                f"Cannot add Money with different currencies: "
-                f"{self.currency.iso_code} and {other.currency.iso_code}"
-            )
-        
+
+        self._validate_same_currency(other, action='add')
+
         # Direct integer addition - very efficient
         return Money.from_cents(
             self.amount_cents + other.amount_cents,
             self.currency
         )
-    
+
     def __radd__(self, other: object) -> Self:
         """Support sum([money1, money2]) by handling 0 + money."""
         return self.__add__(other)
-    
+
     def __sub__(self, other: object) -> Self:
         """Subtract two Money objects (same currency required)."""
         if not isinstance(other, Money):
             return NotImplemented
-        
-        if self.currency != other.currency:
-            raise TypeError(
-                f"Cannot subtract Money with different currencies: "
-                f"{self.currency.iso_code} and {other.currency.iso_code}"
-            )
-        
+
+        self._validate_same_currency(other, action='subtract')
+         
         return Money.from_cents(
             self.amount_cents - other.amount_cents,
             self.currency
@@ -351,11 +341,11 @@ class Money:
         self._validate_same_currency(other)
         return self.amount_cents >= other.amount_cents
     
-    def _validate_same_currency(self, other: Money) -> None:
+    def _validate_same_currency(self, other: Money, action: str = 'compare') -> None:
         """Ensure two Money objects have the same currency."""
         if self.currency != other.currency:
             raise TypeError(
-                f"Cannot compare different currencies: "
+                f"Cannot {action} Money with different currencies: "
                 f"{self.currency.iso_code} and {other.currency.iso_code}"
             )
     
@@ -376,8 +366,8 @@ class Money:
         """
         Split money into n equal parts.
         
-        Distributes remainder across parts to ensure sum equals original.
-        For negative amounts, distributes to last parts.
+        Distributes the remainder across parts to ensure the sum equals the original.
+        For negative amounts, distribute the remainder to the last parts.
         
         Args:
             n: Number of parts to split into (must be positive)
@@ -406,9 +396,9 @@ class Money:
         
         parts = []
         for i in range(n):
-            # For positive amounts: add +1 to first `remainder` parts
-            # For negative amounts: add +1 to last `remainder` parts (makes them less negative)
-            # Python's modulo gives non-negative remainder even for negative dividends
+            # For positive amounts: add +1 to the first ` remainder ` parts
+            # For negative amounts: add +1 to the last ` remainder ` parts (makes them less negative)
+            # Python's modulo gives a non-negative remainder even for negative dividends
             extra = 0
             if self.amount_cents >= 0:
                 # Positive: give extra to first parts
@@ -428,7 +418,7 @@ class Money:
         Allocate money according to ratios.
         
         Useful for splitting payments proportionally (e.g., taxes, commissions).
-        Handles rounding to ensure sum equals original.
+        Handles rounding to ensure the sum equals the original.
         
         Args:
             ratios: List of ratios (doesn't need to sum to 1 or 100)
@@ -505,9 +495,9 @@ class Money:
         Example:
             ```python
             price = Money.mint(29.99, USD)
-            price.format()  # '$29.99 USD'
-            price.format(show_currency=False)  # '$29.99'
-            price.format(symbol='US$')  # 'US$29.99 USD'
+            price.format() # '$29.99 USD'
+            price.format(show_currency=False) # '$29.99'
+            price.format(symbol='US$') # 'US$29.99 USD'
             ```
         """
         sym = symbol if symbol is not None else self.currency.symbol
