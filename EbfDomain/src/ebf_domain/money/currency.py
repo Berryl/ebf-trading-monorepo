@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 import ebf_core.guards.guards as g
 
 
@@ -39,30 +40,35 @@ class Currency:
     sub_unit_name: str
     sub_units_per_unit: int = 100
     sub_unit_precision: int = 2
-    
+
     def __post_init__(self):
-        """Validate currency attributes."""
         g.ensure_str_is_valued(self.iso_code, 'iso_code')
         g.ensure_str_exact_length(self.iso_code, 3, 'iso_code')
         object.__setattr__(self, 'iso_code', self.iso_code.upper())
-        
-        # Validate sub-units
+
+        g.ensure_str_is_valued(self.symbol, "symbol")
+        g.ensure_str_max_length(self.symbol, 5, 'symbol')
+
+        g.ensure_str_is_valued(self.name, "name")
+        g.ensure_str_is_valued(self.sub_unit_name, "sub_unit_name")
+
         g.ensure_positive_number(self.sub_units_per_unit, description="sub_units_per_unit", allow_zero=False)
+        g.ensure_positive_number(self.sub_unit_precision, description="sub_unit_precision", allow_zero=True)
 
     def __str__(self) -> str:
         """String representation: 'USD ($)'"""
         return f"{self.iso_code} ({self.symbol})"
-    
+
     def __repr__(self) -> str:
         """Developer representation."""
         return (f"Currency('{self.iso_code}', '{self.symbol}', "
                 f"'{self.name}', '{self.sub_unit_name}')")
-    
+
     @property
     def display_name(self) -> str:
         """Full display name: 'United States Dollar (USD)'"""
         return f"{self.name.title()} ({self.iso_code})"
-    
+
     @property
     def sub_unit_display_name(self) -> str:
         """Sub-unit display: 'cent (1/100 dollar)'"""
@@ -89,7 +95,7 @@ RUB = Currency('RUB', '₽', 'ruble', 'kopek')
 
 # Cryptocurrencies (for demonstration)
 BTC = Currency('BTC', '₿', 'bitcoin', 'satoshi', sub_units_per_unit=100_000_000, sub_unit_precision=8)
-ETH = Currency('ETH', 'Ξ', 'ether', 'wei', sub_units_per_unit=10**18, sub_unit_precision=18)
+ETH = Currency('ETH', 'Ξ', 'ether', 'wei', sub_units_per_unit=10 ** 18, sub_unit_precision=18)
 
 # endregion
 
@@ -154,7 +160,8 @@ def register_currency(currency: Currency) -> None:
         register_currency(custom)
         ```
     """
-    _CURRENCY_REGISTRY[currency.iso_code] = currency
+    if currency.iso_code not in _CURRENCY_REGISTRY:
+        _CURRENCY_REGISTRY[currency.iso_code] = currency
 
 
 def list_currencies() -> list[Currency]:

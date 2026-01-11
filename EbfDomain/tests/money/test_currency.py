@@ -1,5 +1,3 @@
-import re
-
 import pytest
 from ebf_core.guards.guards import ContractError
 
@@ -14,51 +12,85 @@ class TestCurrency:
 
     class TestIsoCode:
 
+        @pytest.mark.parametrize('iso_code', ["usd", "jpy"])
+        def test_iso_code_normalized_to_uppercase(self, iso_code):
+            c = Currency(iso_code, '$', 'dollar', 'cent')
+
+            assert c.iso_code == iso_code.upper()
+
         @pytest.mark.parametrize('iso_code', ["    "])
-        def test_rejects_invalid_iso_code_type(self,iso_code):
+        def test_iso_code_must_be_valued(self, iso_code):
             with pytest.raises(ContractError, match="Arg 'iso_code' cannot be an empty string"):
                 Currency(iso_code, '$', 'dollar', 'cent')
 
         @pytest.mark.parametrize('iso_code', ['US-DOLLAR', 'US'])
-        def test_rejects_invalid_iso_code_length(self,iso_code):
+        def test_iso_code_length(self, iso_code):
             with pytest.raises(ContractError, match="Arg 'iso_code' must have an exact length of 3"):
                 Currency(iso_code, '$', 'dollar', 'cent')
 
-        @pytest.mark.parametrize('iso_code', ["usd", "jpy"])
-        def test_iso_code_normalized_to_uppercase(self,iso_code):
-            c = Currency(iso_code, '$', 'dollar', 'cent')
-            assert c.iso_code == iso_code.upper()
+    class TestSymbol:
+
+        def test_symbol_must_be_valued(self):
+            with pytest.raises(ContractError):
+                Currency("CCC", '    ', 'dollar', 'cent')
+
+        def test_symbol_must_be_reasonable_length(self):
+            with pytest.raises(ContractError):
+                Currency("CCC", '123456', 'dollar', 'cent')
 
     class TestSubunits:
 
-        def test_default_values(self):
+        def test_default_per_unit_is_100(self):
             cur = Currency('USD', '$', 'dollar', 'cent')
 
             assert cur.sub_units_per_unit == 100
+
+        def test_default_precision_is_2(self):
+            cur = Currency('USD', '$', 'dollar', 'cent')
+
             assert cur.sub_unit_precision == 2
 
-        def test_with_overrides(self):
-            jpy = Currency('JPY', '¥', 'yen', 'sen',
-                           sub_units_per_unit=1,
-                           sub_unit_precision=0)
+        def test_with_per_unit_override(self):
+            jpy = Currency('JPY', '¥', 'yen', 'sen', sub_units_per_unit=99)
 
-            assert jpy.sub_units_per_unit == 1
-            assert jpy.sub_unit_precision == 0
+            assert jpy.sub_units_per_unit == 99
+
+        def test_with_precision_override(self):
+            jpy = Currency('JPY', '¥', 'yen', 'sen', sub_unit_precision=99)
+
+            assert jpy.sub_unit_precision == 99
 
         def test_display_name(self):
             assert USD.sub_unit_display_name == "cent (1/100 dollar)"
             assert JPY.sub_unit_display_name == "sen (1/1 yen)"
 
-        def test_cannot_be_negative(self):
-            with pytest.raises(ContractError, match="Arg 'sub_units_per_unit' must be positive"):
-                Currency('USD', '$', 'dollar', 'cent',
-                         sub_units_per_unit=-1)
+        def test_subunit_name_cannot_be_empty_str(self):
+            with pytest.raises(ContractError):
+                Currency('USD', '$', 'dollar', ' ')
 
-        def test_cannot_be_zero(self):
-            msg = re.escape("Arg 'sub_units_per_unit' must be positive (greater than zero)")
-            with pytest.raises(ContractError, match=msg):
-                Currency('USD', '$', 'dollar', 'cent',
-                         sub_units_per_unit=0)
+        def test_subunit_cannot_be_negative(self):
+            with pytest.raises(ContractError, match="Arg 'sub_units_per_unit' must be positive"):
+                Currency('USD', '$', 'dollar', 'cent', sub_units_per_unit=-1)
+
+        def test_subunit_cannot_be_zero(self):
+            with pytest.raises(ContractError):
+                Currency('USD', '$', 'dollar', 'cent', sub_units_per_unit=0)
+
+        def test_precision_be_negative(self):
+            with pytest.raises(ContractError, match="Arg 'sub_unit_precision' must be positive"):
+                Currency('USD', '$', 'dollar', 'cent', sub_unit_precision=-1)
+
+        def test_subunit_can_be_huge_value(self):
+            huge = 10 ** 18
+            btc = Currency('BTC', '₿', 'bitcoin', 'satoshi', sub_units_per_unit=huge)
+
+            assert btc.sub_units_per_unit == huge
+
+        def test_precision_can_be_huge_value(self):
+            huge = 10 ** 18
+            btc = Currency('BTC', '₿', 'bitcoin', 'satoshi', sub_unit_precision=huge)
+
+            assert btc.sub_unit_precision == huge
 
     class TestImmutability:
         """Currency is immutable (frozen)."""
@@ -101,7 +133,6 @@ class TestCurrency:
             eur = get_currency('EUR')
             assert c1 != eur
 
-
         def test_currencies_are_hashable(self):
             """Currencies can be used in sets/dicts."""
             currencies = {USD, EUR, GBP}
@@ -118,7 +149,6 @@ class TestCurrency:
             }
 
             assert exchange_rates[USD] == 1.0
-
 
     class TestConvenienceConstants:
         """Tests for predefined currency constants."""
@@ -146,25 +176,6 @@ class TestCurrency:
             assert JPY.iso_code == 'JPY'
             assert JPY.sub_units_per_unit == 1
             assert JPY.sub_unit_precision == 0
-
-    class TestEdgeCases:
-        """Tests for edge cases and special scenarios."""
-
-        def test_cryptocurrency_with_large_sub_units(self):
-            """Can create cryptocurrency with large subunit ratios."""
-            btc = Currency('BTC', '₿', 'bitcoin', 'satoshi',
-                           sub_units_per_unit=100_000_000,
-                           sub_unit_precision=8)
-
-            assert btc.sub_units_per_unit == 100_000_000
-            assert btc.sub_unit_precision == 8
-
-        def test_currency_with_unusual_precision(self):
-            """Can create currency with non-standard precision."""
-            custom = Currency('XXX', 'X', 'custom', 'unit',
-                              sub_unit_precision=4)
-
-            assert custom.sub_unit_precision == 4
 
 
 class TestCurrencyRegistry:

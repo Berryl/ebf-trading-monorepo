@@ -89,7 +89,7 @@
 #     class TestLegacyCompatibility:
 #
 #         def test_from_db_alias(self):
-#             """from_db() is alias for from_cents()."""
+#             """from_db() is an alias for from_cents()."""
 #             money = Money.from_db(2999, USD)
 #
 #             assert money.amount_cents == 2999
