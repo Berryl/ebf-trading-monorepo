@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from ebf_core.guards.guards import ContractError
 
@@ -69,7 +71,9 @@ class TestCurrency:
                 Currency('USD', '$', 'dollar', ' ')
 
         def test_subunit_cannot_be_negative(self):
-            with pytest.raises(ContractError, match="Arg 'sub_units_per_unit' must be positive"):
+            msg = "Arg 'sub_units_per_unit' must be positive"
+
+            with pytest.raises(ContractError, match=msg):
                 Currency('USD', '$', 'dollar', 'cent', sub_units_per_unit=-1)
 
         def test_subunit_cannot_be_zero(self):
@@ -77,7 +81,9 @@ class TestCurrency:
                 Currency('USD', '$', 'dollar', 'cent', sub_units_per_unit=0)
 
         def test_precision_be_negative(self):
-            with pytest.raises(ContractError, match="Arg 'sub_unit_precision' must be positive"):
+            msg = re.escape("Arg 'sub_unit_precision' must be non-negative (>= 0)")
+
+            with pytest.raises(ContractError, match=msg):
                 Currency('USD', '$', 'dollar', 'cent', sub_unit_precision=-1)
 
         def test_subunit_can_be_huge_value(self):

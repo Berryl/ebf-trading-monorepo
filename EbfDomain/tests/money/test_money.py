@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 
 from src.ebf_domain.money.currency import USD, EUR, GBP, JPY
-from src.ebf_domain.money.money import Money, dollars_part, cents_part
+from src.ebf_domain.money.money import Money, to_money, to_money_like
 
 
 class TestMoneyCreation:
@@ -85,6 +85,7 @@ class TestMoneyCreation:
             assert euros.is_zero
             assert euros.currency == EUR
 
+
 class TestMoneyProperties:
     """Tests for Money properties."""
 
@@ -136,7 +137,6 @@ class TestMoneyProperties:
             money = Money.mint(100.00, USD)
 
             assert money.cents_part == 0
-
 
     class TestStatusChecks:
 
@@ -442,11 +442,8 @@ class TestMoneyComparison:
 
     def test_comparison_different_currencies_raises_error(self):
         """Comparing different currencies raises error."""
-        usd = Money.mint(10, USD)
-        eur = Money.mint(10, EUR)
-
         with pytest.raises(TypeError, match="different currencies"):
-            usd < eur
+            Money.mint(10, USD) < Money.mint(10, EUR) # noqa
 
     def test_same_currency_method(self):
         """same_currency() checks if currencies match."""
@@ -642,14 +639,14 @@ class TestMoneyImmutability:
         money = Money.mint(10, USD)
 
         with pytest.raises(Exception):  # FrozenInstanceError
-            money.amount_cents = 2000 # noqa
+            money.amount_cents = 2000  # noqa
 
     def test_cannot_modify_currency(self):
         """Cannot change currency after creation."""
         money = Money.mint(10, USD)
 
         with pytest.raises(Exception):
-            money.currency = EUR # noqa
+            money.currency = EUR  # noqa
 
     def test_hashable_for_sets(self):
         """Money objects are hashable."""
@@ -708,3 +705,36 @@ class TestMoneyEdgeCases:
         assert (usd * 2).currency == USD
         assert (eur * 2).currency == EUR
         assert (gbp * 2).currency == GBP
+
+
+class TestConversionHelpers:
+    """Tests for Excel migration helpers."""
+
+    def test_to_money_from_float(self):
+        """Can convert float to Money."""
+        result = to_money(29.99, USD)
+
+        assert result == Money.mint(29.99, USD)
+
+    def test_to_money_idempotent(self):
+        """to_money is idempotent for Money inputs."""
+        original = Money.mint(10, USD)
+        result = to_money(original, USD)
+
+        assert result is original
+
+    def test_to_money_like_uses_reference_currency(self):
+        """to_money_like uses reference's currency."""
+        reference = Money.mint(100, EUR)
+        result = to_money_like(50.0, reference)
+
+        assert result.currency == EUR
+        assert result.amount_cents == 5000
+
+    def test_to_money_like_validates_currency_mismatch(self):
+        """to_money_like rejects different currencies."""
+        reference = Money.mint(100, USD)
+        value = Money.mint(50, EUR)
+
+        with pytest.raises(TypeError, match="Currency mismatch"):
+            to_money_like(value, reference)
