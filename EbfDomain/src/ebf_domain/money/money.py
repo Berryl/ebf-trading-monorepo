@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Self
 
-from currency import Currency, USD
+from src.ebf_domain.money.currency import Currency, USD
 
 
 @dataclass(frozen=True)
