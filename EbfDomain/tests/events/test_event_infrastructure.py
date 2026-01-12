@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from ebf_core.guards.guards import ContractError
+
 from src.ebf_domain.events.domain_event import DomainEvent
 from src.ebf_domain.events.event_collection import EventCollection
 
@@ -95,7 +97,7 @@ class TestDomainEvent:
 
     def test_validation_rejects_none_event_id(self):
         """Cannot create event with None event_id."""
-        with pytest.raises(ValueError, match="event_id cannot be None"):
+        with pytest.raises(ContractError, match="cannot be None"):
             TestEvent(
                 event_id=None,
                 occurred_at=datetime.now(UTC),
@@ -107,7 +109,7 @@ class TestDomainEvent:
 
     def test_validation_rejects_none_occurred_at(self):
         """Cannot create event with None occurred_at."""
-        with pytest.raises(ValueError, match="occurred_at cannot be None"):
+        with pytest.raises(ContractError, match="cannot be None"):
             TestEvent(
                 event_id=uuid4(),
                 occurred_at=None,
@@ -131,7 +133,7 @@ class TestDomainEvent:
 
     def test_validation_rejects_empty_aggregate_type(self):
         """Cannot create event with empty aggregate_type."""
-        with pytest.raises(ValueError, match="aggregate_type cannot be empty"):
+        with pytest.raises(ContractError, match="cannot be an empty string"):
             TestEvent(
                 event_id=uuid4(),
                 occurred_at=datetime.now(UTC),
