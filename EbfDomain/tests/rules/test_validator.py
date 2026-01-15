@@ -12,10 +12,6 @@ class TestValidator:
     """Tests for Validator."""
 
     @pytest.fixture(scope="class")
-    def rule(self) -> Rule:
-        return cr.EmailRule()
-
-    @pytest.fixture(scope="class")
     def rules(self) -> RuleCollection:
         return RuleCollection.from_rules(
             cr.ValueRequiredRule(),
@@ -29,14 +25,25 @@ class TestValidator:
 
     class TestAdding:
 
+        @pytest.fixture(scope="class")
+        def one_rule(self) -> Rule:
+            return cr.EmailRule()
+
         @pytest.fixture
         def sut(self) -> Validator:
             return Validator()
 
-        def test_can_add_rules_collection(self, sut, rules: RuleCollection):
+        def test_can_add_a_rules_collection(self, sut, rules: RuleCollection):
             assert len(sut.field_rules) == 0
 
             sut.add_rules("name", rules)
+
+            assert len(sut.field_rules) == 1
+
+        def test_can_add_a_single_rules(self, sut, one_rule: Rule):
+            assert len(sut.field_rules) == 0
+
+            sut.add_rules("name", one_rule)
 
             assert len(sut.field_rules) == 1
 

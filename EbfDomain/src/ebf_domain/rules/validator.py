@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable, Self
+from typing import Any, Callable, Self, Any
 
+from ebf_domain.rules.rule import Rule
 from src.ebf_domain.rules.rule_collection import RuleCollection
 from src.ebf_domain.rules.validation_result import ValidationResult
 
@@ -39,7 +40,7 @@ class Validator[T]:
     """
     field_rules: dict[str, RuleCollection] = field(default_factory=dict)
 
-    def add_rules(self, field_name: str, rules: RuleCollection) -> Self:
+    def add_rules(self, field_name: str, rules: RuleCollection | Rule[Any]) -> Self:
         """
         Add a rule collection for a specific field.
         
@@ -50,6 +51,8 @@ class Validator[T]:
         Returns:
             Self for method chaining
         """
+        if isinstance(rules, Rule):
+            rules = RuleCollection.from_rules(rules)
         self.field_rules[field_name] = rules
         return self
 
