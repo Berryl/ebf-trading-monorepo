@@ -36,20 +36,20 @@ class TestValidator:
         def test_can_add_a_rules_collection(self, sut, rules: RuleCollection):
             assert len(sut.field_rules) == 0
 
-            sut.add_rules("name", rules)
+            sut.add("name", rules)
 
             assert len(sut.field_rules) == 1
 
         def test_can_add_a_single_rules(self, sut, one_rule: Rule):
             assert len(sut.field_rules) == 0
 
-            sut.add_rules("name", one_rule)
+            sut.add("name", one_rule)
 
             assert len(sut.field_rules) == 1
 
         def test_chaining(self, sut):
             """add_rules() returns self for method chaining."""
-            result = sut.add_rules("name", cr.ValueRequiredRule()).add_rules("age", cr.ValueRequiredRule())
+            result = sut.add("name", cr.ValueRequiredRule()).add("age", cr.ValueRequiredRule())
 
             assert isinstance(result, Validator)
             assert len(sut.field_rules) == 2
@@ -59,8 +59,8 @@ class TestValidator:
         @pytest.fixture
         def sut(self, rules) -> Validator:
             v = Validator()
-            v.add_rules("name", rules=rules)
-            v.add_rules("email", rules=RuleCollection.from_rules(cr.EmailRule()))
+            v.add("name", rules=rules)
+            v.add("email", rules=RuleCollection.from_rules(cr.EmailRule()))
             return v
 
         class TestValidateField:
@@ -125,7 +125,7 @@ class TestValidator:
                     return obj.data.get(field_name)
 
                 sut = Validator[User]()
-                sut.add_rules("user", RuleCollection.from_rules(cr.ValueRequiredRule()))
+                sut.add("user", RuleCollection.from_rules(cr.ValueRequiredRule()))
 
                 result = sut.validate(user, field_accessor=dict_accessor_func)
 

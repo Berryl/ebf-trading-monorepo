@@ -40,13 +40,13 @@ class Validator[T]:
     """
     field_rules: dict[str, RuleCollection] = field(default_factory=dict)
 
-    def add_rules(self, field_name: str, rules: RuleCollection | Rule[Any]) -> Self:
+    def add(self, field_name: str, rules: RuleCollection | Rule[Any]) -> Self:
         """
-        Add a rule collection for a specific field.
+        Add either a rule collection or a single rule for a specific field.
         
         Args:
             field_name: Name of the field to validate
-            rules: RuleCollection to apply to this field
+            rules: RuleCollection or Rule to apply to this field
             
         Returns:
             Self for method chaining
