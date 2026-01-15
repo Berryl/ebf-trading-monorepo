@@ -520,19 +520,23 @@ class TestMoneyFormatting:
 
         assert str(yen) == "¥1000"
 
+    def test_can_display_negative_money(self):
+       assert str(Money.mint(-1000, JPY)) == "¥-1000"
+
+
     def test_repr_representation_shows_amount_cents_only(self):
         money = Money.mint(29.99, USD)
 
         assert repr(money) == "Money(2999, USD)"
 
-    def test_format_default_includes_iso_code(self):
+    def test_default_includes_iso_code(self):
         money = Money.mint(29.99, USD)
 
         formatted = money.format()
 
         assert formatted == "$29.99 USD"
 
-    def test_format_without_currency_code(self):
+    def test_can_suppress_currency_code(self):
         money = Money.mint(29.99, USD)
 
         formatted = money.format(show_currency=False)

@@ -239,7 +239,9 @@ class Money:
 
     def __rsub__(self, other: object) -> Self:
         """Support other - money."""
-        return (-self).__add__(other)
+        if not isinstance(other, Money):
+            return NotImplemented
+        return other.__sub__(self)
 
     def __mul__(self, scalar: object) -> Self:
         """
@@ -440,7 +442,7 @@ class Money:
             # platform: $100.00, seller: $900.00
             ```
         """
-        if not ratios or sum(ratios) == 0:
+        if not ratios:
             raise ValueError("Ratios must be non-empty and sum to non-zero")
 
         total_ratio = sum(Decimal(str(r)) for r in ratios)
@@ -480,7 +482,7 @@ class Money:
         """
         precision = self.currency.sub_unit_precision
         if precision == 0:
-            return f"{self.currency.symbol}{self.amount_cents // self.currency.sub_units_per_unit}"
+            return f"{self.currency.symbol}{self.dollars_part}"
         return f"{self.currency.symbol}{self.amount}"
 
     def __repr__(self) -> str:
