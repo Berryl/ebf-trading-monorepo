@@ -7,7 +7,8 @@ from ebf_domain.rules.rule_collection import RuleCollection
 from ebf_domain.rules.validation_result import ValidationResult
 
 
-class FailureDisplayPolicy(StrEnum):
+class FailurePolicy(StrEnum):
+    """ whether to collect all rule violations or stop on first failure"""
     SHOW_ALL_FAILURES = auto()
     STOP_ON_FIRST_FAIL = auto()
 
@@ -82,7 +83,7 @@ class Validator[T]:
         return ValidationResult.success()
 
     def validate(self, obj: T, field_accessor: Callable[[T, str], Any] = None,
-                 policy: FailureDisplayPolicy = FailureDisplayPolicy.SHOW_ALL_FAILURES) -> ValidationResult:
+                 policy: FailurePolicy = FailurePolicy.SHOW_ALL_FAILURES) -> ValidationResult:
         """
         Validate all fields of an object.
         
@@ -100,19 +101,17 @@ class Validator[T]:
 
         result = ValidationResult.success()
 
-        has_failures = False
         for field_name, rule_collection in self.field_rules.items():
             try:
                 value = field_accessor(obj, field_name)
-                violations = rule_collection.validate(field_name, value)
-                result.add_violations(violations)
-                has_failures = has_failures or len(violations) > 0
-
-                if policy == FailureDisplayPolicy.STOP_ON_FIRST_FAIL and has_failures:
-                    break
             except AttributeError:
-                # Field doesn't exist on this object - skip it
-                continue
+                continue # Field doesn't exist on this object - skip it
+
+            violations = rule_collection.validate(field_name, value)
+            result.add_violations(violations)
+
+            if policy == FailurePolicy.STOP_ON_FIRST_FAIL and violations:
+                break
 
         return result
 

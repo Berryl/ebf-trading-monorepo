@@ -6,7 +6,7 @@ import ebf_domain.rules.common_rules as cr
 from ebf_domain.rules.rule import Rule
 from ebf_domain.rules.rule_collection import RuleCollection
 from ebf_domain.rules.validation_result import ValidationResult
-from ebf_domain.rules.validator import Validator, FailureDisplayPolicy
+from ebf_domain.rules.validator import Validator, FailurePolicy
 
 
 class TestValidator:
@@ -79,7 +79,7 @@ class TestValidator:
                 assert len(result.violations) == 2
 
         def test_can_set_policy_to_stop_on_first_failure(self, sut: Validator, user_with_issues):
-            result: ValidationResult = sut.validate(user_with_issues, policy=FailureDisplayPolicy.STOP_ON_FIRST_FAIL)
+            result: ValidationResult = sut.validate(user_with_issues, policy=FailurePolicy.STOP_ON_FIRST_FAIL)
             assert not result.is_valid
             assert len(result.violations) == 1
 
