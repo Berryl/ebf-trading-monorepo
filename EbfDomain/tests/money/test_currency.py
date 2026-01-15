@@ -3,7 +3,7 @@ import re
 import pytest
 from ebf_core.guards.guards import ContractError
 
-from src.ebf_domain.money.currency import (
+from ebf_domain.money.currency import (
     Currency, USD, EUR, GBP, JPY,
     get_currency, register_currency, list_currencies
 )

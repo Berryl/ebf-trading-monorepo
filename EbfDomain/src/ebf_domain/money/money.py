@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Self
 
-from src.ebf_domain.money.currency import Currency, USD
+from ebf_domain.money.currency import Currency, USD
 
 
 @dataclass(frozen=True)
@@ -132,7 +132,8 @@ class Money:
         Returns:
             Decimal amount (e.g., Decimal('29.99') for $29.99)
         """
-        return Decimal(self.amount_cents) / self.currency.sub_units_per_unit
+        q = Decimal(1).scaleb(-self.currency.sub_unit_precision)  # 10 ** -precision
+        return (Decimal(self.amount_cents) / self.currency.sub_units_per_unit).quantize(q)
 
     @property
     def dollars_part(self) -> int:
@@ -289,6 +290,8 @@ class Money:
         """Floor division of money by scalar."""
         if isinstance(scalar, Money):
             raise TypeError("Cannot divide Money by Money (use scalar values)")
+        if not isinstance(scalar, int):
+            raise TypeError("Floor division requires an int scalar")
 
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide money by zero")
@@ -441,6 +444,9 @@ class Money:
             raise ValueError("Ratios must be non-empty and sum to non-zero")
 
         total_ratio = sum(Decimal(str(r)) for r in ratios)
+        if not ratios or total_ratio == 0:
+            raise ValueError("Ratios must be non-empty and sum to non-zero")
+
         results = []
 
         for ratio in ratios:
@@ -473,7 +479,9 @@ class Money:
             Formatted string like '$29.99' or '¥1000'
         """
         precision = self.currency.sub_unit_precision
-        return f"{self.currency.symbol}{self.amount:.{precision}f}"
+        if precision == 0:
+            return f"{self.currency.symbol}{self.amount_cents // self.currency.sub_units_per_unit}"
+        return f"{self.currency.symbol}{self.amount}"
 
     def __repr__(self) -> str:
         """

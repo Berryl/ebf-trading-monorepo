@@ -2,8 +2,8 @@ from decimal import Decimal
 
 import pytest
 
-from src.ebf_domain.money.currency import USD, EUR, GBP, JPY
-from src.ebf_domain.money.money import Money, to_money, to_money_like
+from ebf_domain.money.currency import USD, EUR, GBP, JPY
+from ebf_domain.money.money import Money, to_money, to_money_like
 
 
 class TestMoneyCreation:
@@ -12,7 +12,6 @@ class TestMoneyCreation:
     class TestMint:
 
         def test_mint_from_decimal(self):
-            """Can create Money from decimal using mint()."""
             money = Money.mint(29.99, USD)
 
             assert money.amount_cents == 2999
@@ -20,28 +19,23 @@ class TestMoneyCreation:
             assert money.amount == Decimal('29.99')
 
         def test_mint_from_int(self):
-            """Can mint Money from integer."""
             money = Money.mint(100, USD)
 
             assert money.amount_cents == 10000
             assert money.amount == Decimal('100')
 
         def test_mint_rounds_correctly(self):
-            """mint() rounds to the nearest cent (not truncates)."""
             money = Money.mint(10.126, USD)
 
-            # Should round 10.126 -> 10.13 -> 1013 cents
-            assert money.amount_cents == 1013
+            assert money.amount_cents == 1013 # Should round 10.126 -> 10.13 -> 1013 cents
             assert money.amount == Decimal('10.13')
 
         def test_mint_rounds_half_up(self):
-            """mint() uses ROUND_HALF_UP (0.5 rounds up)."""
             money = Money.mint(10.125, USD)
 
             assert money.amount_cents == 1013  # Rounds up
 
         def test_mint_with_different_currency(self):
-            """Can mint with any currency."""
             euros = Money.mint(50.00, EUR)
 
             assert euros.currency == EUR
@@ -50,20 +44,17 @@ class TestMoneyCreation:
     class TestFromCents:
 
         def test_from_cents_creates_money(self):
-            """from_cents() creates Money from integer cents."""
             money = Money.from_cents(2999, USD)
 
             assert money.amount_cents == 2999
             assert money.amount == Decimal('29.99')
 
         def test_from_cents_with_zero(self):
-            """from_cents() works with zero."""
             money = Money.from_cents(0, USD)
 
             assert money.is_zero
 
         def test_from_cents_with_negative(self):
-            """from_cents() works with negative amounts."""
             money = Money.from_cents(-500, USD)
 
             assert money.amount == Decimal('-5.00')
@@ -72,14 +63,12 @@ class TestMoneyCreation:
     class TestZero:
 
         def test_zero_creates_zero_money(self):
-            """zero() creates Money with amount 0."""
             money = Money.zero(USD)
 
             assert money.amount_cents == 0
             assert money.is_zero
 
         def test_zero_with_different_currency(self):
-            """zero() works with any currency."""
             euros = Money.zero(EUR)
 
             assert euros.is_zero
@@ -106,14 +95,12 @@ class TestMoneyProperties:
 
             assert money.dollars_part == 29
 
-        def test_dollars_part_for_negative(self):
-            """dollars_part works with negative amounts."""
+        def test_dollars_part_when_negative(self):
             money = Money.mint(-29.99, USD)
 
             assert money.dollars_part == -29
 
-        def test_dollars_part_for_whole_number(self):
-            """dollars_part for whole dollar amount."""
+        def test_dollars_part_when_whole_number(self):
             money = Money.mint(100.00, USD)
 
             assert money.dollars_part == 100
@@ -121,19 +108,16 @@ class TestMoneyProperties:
     class TestCentsPart:
 
         def test_cents_part_for_positive(self):
-            """cents_part returns cents only."""
             money = Money.mint(29.99, USD)
 
             assert money.cents_part == 99
 
-        def test_cents_part_for_negative_is_positive(self):
-            """cents_part is always positive (absolute value)."""
+        def test_cents_part_when_negative_is_positive(self):
             money = Money.mint(-29.99, USD)
 
             assert money.cents_part == 99  # Positive
 
         def test_cents_part_for_whole_dollars(self):
-            """cents_part is 0 for whole dollar amounts."""
             money = Money.mint(100.00, USD)
 
             assert money.cents_part == 0
@@ -141,18 +125,15 @@ class TestMoneyProperties:
     class TestStatusChecks:
 
         def test_is_zero(self):
-            """is_zero returns True for zero amount."""
             assert Money.zero(USD).is_zero
             assert not Money.mint(0.01, USD).is_zero
 
         def test_is_positive(self):
-            """is_positive returns True for positive amount."""
             assert Money.mint(10, USD).is_positive
             assert not Money.zero(USD).is_positive
             assert not Money.mint(-10, USD).is_positive
 
         def test_is_negative(self):
-            """is_negative returns True for negative amount."""
             assert Money.mint(-10, USD).is_negative
             assert not Money.zero(USD).is_negative
             assert not Money.mint(10, USD).is_negative
@@ -163,8 +144,7 @@ class TestMoneyArithmetic:
 
     class TestAddition:
 
-        def test_add_same_currency(self):
-            """Can add Money with same currency."""
+        def test_can_add_same_currency(self):
             m1 = Money.mint(10.50, USD)
             m2 = Money.mint(5.25, USD)
 
@@ -173,8 +153,7 @@ class TestMoneyArithmetic:
             assert result.amount == Decimal('15.75')
             assert result.currency == USD
 
-        def test_add_optimized_for_cents(self):
-            """Addition works directly with cents (optimization)."""
+        def test_add_is_optimized_for_cents(self):
             m1 = Money.from_cents(1050, USD)
             m2 = Money.from_cents(525, USD)
 
@@ -182,24 +161,19 @@ class TestMoneyArithmetic:
 
             assert result.amount_cents == 1575
 
-        def test_add_different_currencies_raises_error(self):
-            """Cannot add different currencies."""
+        def test_cannot_add_different_currencies(self):
             usd = Money.mint(10, USD)
             eur = Money.mint(10, EUR)
-
             with pytest.raises(TypeError, match="different currencies"):
                 usd + eur
 
-        def test_add_with_zero_for_sum_support(self):
-            """Can add 0 to support sum() function."""
+        def test_can_add_with_zero_for_sum_support(self):
             money = Money.mint(10, USD)
 
             result = money + 0
-
             assert result == money
 
-        def test_sum_function_works(self):
-            """sum() works on list of Money."""
+        def test_sum_function(self):
             amounts = [
                 Money.mint(10, USD),
                 Money.mint(20, USD),
@@ -212,8 +186,7 @@ class TestMoneyArithmetic:
 
     class TestSubtraction:
 
-        def test_subtract_same_currency(self):
-            """Can subtract Money with same currency."""
+        def test_can_subtract_same_currency(self):
             m1 = Money.mint(20.00, USD)
             m2 = Money.mint(7.50, USD)
 
@@ -221,16 +194,13 @@ class TestMoneyArithmetic:
 
             assert result.amount == Decimal('12.50')
 
-        def test_subtract_different_currencies_raises_error(self):
-            """Cannot subtract different currencies."""
+        def test_cannot_subtract_different_currencies(self):
             usd = Money.mint(10, USD)
             eur = Money.mint(5, EUR)
-
             with pytest.raises(TypeError, match="different currencies"):
                 usd - eur
 
-        def test_subtract_larger_from_smaller(self):
-            """Can create negative Money from subtraction."""
+        def test_subtract_can_produce_negative_result(self):
             m1 = Money.mint(5, USD)
             m2 = Money.mint(10, USD)
 
@@ -241,40 +211,35 @@ class TestMoneyArithmetic:
 
     class TestMultiplication:
 
-        def test_multiply_by_int(self):
-            """Can multiply Money by integer."""
+        def test_can_multiply_by_int(self):
             money = Money.mint(10.50, USD)
 
             result = money * 3
 
             assert result.amount == Decimal('31.50')
 
-        def test_multiply_by_decimal(self):
-            """Can multiply Money by Decimal."""
+        def test_can_multiply_by_decimal(self):
             money = Money.mint(100, USD)
 
             result = money * Decimal("0.15")
 
             assert result.amount == Decimal('15.00')
 
-        def test_multiply_by_float(self):
-            """Can multiply Money by float."""
+        def test_can_multiply_by_float(self):
             money = Money.mint(20, USD)
 
             result = money * 1.5
 
             assert result.amount == Decimal('30.00')
 
-        def test_reverse_multiplication(self):
-            """Support scalar * Money."""
+        def test_can_reverse_multiplication_operand_order(self):
             money = Money.mint(10, USD)
 
             result = 3 * money
 
             assert result.amount == Decimal('30')
 
-        def test_multiply_rounds_correctly(self):
-            """Multiplication rounds to nearest cent."""
+        def test_multiply_rounds_to_the_nearest_cent(self):
             money = Money.mint(10.00, USD)
 
             result = money * Decimal("0.126")
@@ -282,58 +247,47 @@ class TestMoneyArithmetic:
             # 10.00 * 0.126 = 1.26 -> 126 cents
             assert result.amount_cents == 126
 
-        def test_multiply_by_money_raises_error(self):
-            """Cannot multiply Money by Money."""
+        def test_cannot_multiply_by_money(self):
             m1 = Money.mint(10, USD)
             m2 = Money.mint(5, USD)
-
             with pytest.raises(TypeError, match="Cannot multiply Money by Money"):
                 m1 * m2
 
     class TestDivision:
 
-        def test_divide_by_int(self):
-            """Can divide Money by integer."""
+        def test_can_divide_by_int(self):
             money = Money.mint(30, USD)
 
             result = money / 3
 
             assert result.amount == Decimal('10.00')
 
-        def test_divide_by_decimal(self):
-            """Can divide Money by Decimal."""
+        def test_can_divide_by_decimal(self):
             money = Money.mint(100, USD)
 
             result = money / Decimal("4")
 
             assert result.amount == Decimal('25.00')
 
-        def test_divide_rounds_correctly(self):
-            """Division rounds to nearest cent."""
+        def test_divide_rounds_to_nearest_cent(self):
             money = Money.mint(10.00, USD)
 
             result = money / 3
 
-            # 10.00 / 3 = 3.333... -> rounds to 3.33
             assert result.amount_cents == 333
 
-        def test_divide_by_money_raises_error(self):
-            """Cannot divide Money by Money."""
+        def test_cannot_divide_by_money(self):
             m1 = Money.mint(10, USD)
             m2 = Money.mint(5, USD)
-
             with pytest.raises(TypeError, match="Cannot divide Money by Money"):
                 m1 / m2
 
-        def test_divide_by_zero_raises_error(self):
-            """Division by zero raises error."""
+        def test_cannot_divide_by_zero(self):
             money = Money.mint(10, USD)
-
             with pytest.raises(ZeroDivisionError):
                 money / 0
 
         def test_floor_division(self):
-            """Floor division works correctly."""
             money = Money.mint(10, USD)
 
             result = money // 3
@@ -342,32 +296,28 @@ class TestMoneyArithmetic:
 
     class TestNegationAndAbs:
 
-        def test_negate_positive(self):
-            """Can negate positive Money."""
+        def test_can_negate_positive(self):
             money = Money.mint(10, USD)
 
             result = -money
 
             assert result.amount == Decimal('-10')
 
-        def test_negate_negative(self):
-            """Can negate negative Money."""
+        def test_can_negate_negative(self):
             money = Money.mint(-5, USD)
 
             result = -money
 
             assert result.amount == Decimal('5')
 
-        def test_abs_of_negative(self):
-            """Absolute value of negative Money."""
+        def test_abs_of_negative_is_positive(self):
             money = Money.mint(-15, USD)
 
             result = abs(money)
 
             assert result.amount == Decimal('15')
 
-        def test_abs_of_positive(self):
-            """Absolute value of positive is unchanged."""
+        def test_abs_of_positive_is_positive(self):
             money = Money.mint(15, USD)
 
             result = abs(money)
