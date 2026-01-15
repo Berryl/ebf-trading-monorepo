@@ -85,6 +85,13 @@ class TestValidator:
 
         class TestValidateDict:
 
+            @pytest.fixture(scope="class")
+            def dict_with_issues(self) -> dict:
+                return {
+                    "name": "ab",  # Too short
+                    "email": "invalid"  # Not an email
+                }
+
             def test_with_valid_data(self, sut):
                 data = {
                     "name": "alice",
@@ -92,12 +99,8 @@ class TestValidator:
                 }
                 assert sut.validate_dict(data).is_valid
 
-            def test_with_invalid_data(self, sut):
-                data = {
-                    "name": "ab",  # Too short
-                    "email": "invalid"  # Not an email
-                }
-                assert not sut.validate_dict(data).is_valid
+            def test_with_invalid_data(self, sut, dict_with_issues):
+                assert not sut.validate_dict(dict_with_issues).is_valid
 
             def test_missing_fields_makes_data_invalid(self, sut):
                 """validate_dict() handles missing fields (treats as None)."""
