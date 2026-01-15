@@ -6,7 +6,7 @@ import ebf_domain.rules.common_rules as cr
 from ebf_domain.rules.rule import Rule
 from ebf_domain.rules.rule_collection import RuleCollection
 from ebf_domain.rules.validation_result import ValidationResult
-from ebf_domain.rules.validator import Validator
+from ebf_domain.rules.validator import Validator, FailureDisplayPolicy
 
 
 class TestValidator:
@@ -21,7 +21,7 @@ class TestValidator:
 
     @dataclass
     class User:
-        username: str
+        name: str
         email: str = None
 
     class TestAdding:
@@ -70,13 +70,18 @@ class TestValidator:
         @pytest.fixture(scope="class")
         def user_with_issues(self) -> "TestValidator.User":
             """ bad email AND bad username"""
-            return TestValidator.User(username="ab", email="invalid")
+            return TestValidator.User(name="ab", email="invalid")
 
         class TestFailurePolicy:
-            def test_default_is_stop_on_first_failure(self, sut: Validator, user_with_issues):
+            def test_default_is_show_all_failures(self, sut: Validator, user_with_issues):
                 result: ValidationResult = sut.validate(user_with_issues)
                 assert not result.is_valid
-                assert len(result.violations) == 1
+                assert len(result.violations) == 2
+
+        def test_can_set_policy_to_stop_on_first_failure(self, sut: Validator, user_with_issues):
+            result: ValidationResult = sut.validate(user_with_issues, policy=FailureDisplayPolicy.STOP_ON_FIRST_FAIL)
+            assert not result.is_valid
+            assert len(result.violations) == 1
 
         class TestValidateDict:
 
@@ -99,20 +104,19 @@ class TestValidator:
                 data = {}  # user is missing
                 assert not sut.validate_dict(data).is_valid
 
-
         class TestValidateObject:
 
             def test_when_valid(self, sut):
-                user = TestValidator.User(username="alice", email="alice@example.com")
+                user = TestValidator.User(name="alice", email="alice@example.com")
                 assert sut.validate(user).is_valid
 
             def test_when_invalid_data(self, sut):
-                user = TestValidator.User(username="ab", email="not-email")
+                user = TestValidator.User(name="ab", email="not-email")
                 assert not sut.validate(user).is_valid
 
             def test_when_missing_fields(self, sut):
                 """validate() skips fields that don't exist on the object."""
-                user = TestValidator.User(username="alice")
+                user = TestValidator.User(name="alice")
                 # Should only validate username, skip email
                 assert sut.validate(user).is_valid
 
@@ -120,10 +124,10 @@ class TestValidator:
             """validate() can use custom field accessor (Callable[[T, str], Any])."""
 
             def test_custom_field_accessor(self):
-
                 @dataclass
                 class User:
                     data: dict
+
                 user = User(data={"user": "alice"})
 
                 def dict_accessor_func(obj, field_name: str):
@@ -135,7 +139,6 @@ class TestValidator:
                 result = sut.validate(user, field_accessor=dict_accessor_func)
 
                 assert result.is_valid
-
 
     class TestFactoryCreate:
 
@@ -153,7 +156,6 @@ class TestValidator:
         """Integration tests for complete validation scenarios."""
 
         class TestUserRegistration:
-
             @dataclass
             class UserRegistration:
                 username: str
