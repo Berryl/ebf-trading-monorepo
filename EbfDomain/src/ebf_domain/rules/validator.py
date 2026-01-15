@@ -105,7 +105,7 @@ class Validator[T]:
             try:
                 value = field_accessor(obj, field_name)
             except AttributeError:
-                continue # Field doesn't exist on this object - skip it
+                continue  # Field doesn't exist on this object - skip it
 
             violations = rule_collection.validate(field_name, value)
             result.add_violations(violations)
@@ -115,12 +115,14 @@ class Validator[T]:
 
         return result
 
-    def validate_dict(self, data: dict[str, Any]) -> ValidationResult:
+    def validate_dict(
+            self, data: dict[str, Any], policy: FailurePolicy = FailurePolicy.SHOW_ALL_FAILURES) -> ValidationResult:
         """
         Validate a dictionary of field values.
         
         Args:
             data: Dictionary mapping field names to values
+            policy: Policy to use for violation collection. Default: SHOW_ALL_FAILURES
             
         Returns:
             ValidationResult with all violations found
@@ -131,6 +133,9 @@ class Validator[T]:
             value = data.get(field_name)
             violations = rule_collection.validate(field_name, value)
             result.add_violations(violations)
+
+            if policy == FailurePolicy.STOP_ON_FIRST_FAIL and violations:
+                break
 
         return result
 
