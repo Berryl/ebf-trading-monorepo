@@ -1,7 +1,7 @@
 import pytest
 
-from src.ebf_domain.rules.rule import RuleViolation
-from src.ebf_domain.rules.validation_result import ValidationResult
+from ebf_domain.rules.rule import RuleViolation
+from ebf_domain.rules.validation_result import ValidationResult
 
 
 class TestValidationResult:

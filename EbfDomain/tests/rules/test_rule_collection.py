@@ -1,8 +1,8 @@
 import pytest
 
-from src.ebf_domain.rules import common_rules as cr
-from src.ebf_domain.rules.rule import Rule
-from src.ebf_domain.rules.rule_collection import RuleCollection
+from ebf_domain.rules import common_rules as cr
+from ebf_domain.rules.rule import Rule
+from ebf_domain.rules.rule_collection import RuleCollection
 
 
 class TestRuleCollection:

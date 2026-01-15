@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Any
 
-from src.ebf_domain.rules.rule import Rule, RuleViolation
+from ebf_domain.rules.rule import Rule, RuleViolation
 
 
 @dataclass

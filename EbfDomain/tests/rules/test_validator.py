@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 import pytest
 
-import src.ebf_domain.rules.common_rules as cr
+import ebf_domain.rules.common_rules as cr
 from ebf_domain.rules.rule import Rule
-from src.ebf_domain.rules.rule_collection import RuleCollection
-from src.ebf_domain.rules.validator import Validator
+from ebf_domain.rules.rule_collection import RuleCollection
+from ebf_domain.rules.validator import Validator
 
 
 class TestValidator:
@@ -54,7 +54,7 @@ class TestValidator:
             assert isinstance(result, Validator)
             assert len(sut.field_rules) == 2
 
-            assert isinstance(sut.field_rules["name"], cr.EmailRule)
+            assert len(sut.field_rules["name"]) == 1
             assert len(sut.field_rules["age"]) == 2
 
     class TestValidating:

@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import Callable, Self, Any
 
 from ebf_domain.rules.rule import Rule
-from src.ebf_domain.rules.rule_collection import RuleCollection
-from src.ebf_domain.rules.validation_result import ValidationResult
+from ebf_domain.rules.rule_collection import RuleCollection
+from ebf_domain.rules.validation_result import ValidationResult
 
 
 @dataclass
@@ -51,7 +51,7 @@ class Validator[T]:
         Returns:
             Self for method chaining
         """
-        if isinstance(rules, Rule):
+        if not isinstance(rules, RuleCollection):
             rules = RuleCollection.from_rules(rules)
         self.field_rules[field_name] = rules
         return self

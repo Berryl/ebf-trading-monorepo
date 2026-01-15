@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from src.ebf_domain.rules.common_rules import (
+from ebf_domain.rules.common_rules import (
     ValueRequiredRule, RegexRule, MinStrSizeRule, MaxStrSizeRule,
     NumericRangeRule, CallableMustBeTrueRule, EmailRule, OneOfRule
 )
