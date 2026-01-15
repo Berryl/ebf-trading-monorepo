@@ -78,10 +78,10 @@ class TestValidator:
                 assert not result.is_valid
                 assert len(result.violations) == 2
 
-        def test_can_set_policy_to_stop_on_first_failure(self, sut: Validator, user_with_issues):
-            result: ValidationResult = sut.validate(user_with_issues, policy=FailurePolicy.STOP_ON_FIRST_FAIL)
-            assert not result.is_valid
-            assert len(result.violations) == 1
+            def test_can_set_policy_to_stop_on_first_failure(self, sut: Validator, user_with_issues):
+                result: ValidationResult = sut.validate(user_with_issues, policy=FailurePolicy.STOP_ON_FIRST_FAIL)
+                assert not result.is_valid
+                assert len(result.violations) == 1
 
         class TestValidateDict:
 
@@ -89,7 +89,7 @@ class TestValidator:
             def dict_with_issues(self) -> dict:
                 return {
                     "name": "ab",  # Too short
-                    "email": "invalid"  # Not an email
+                    "email": "invalid-email"  # Not an email
                 }
 
             def test_with_valid_data(self, sut):
@@ -106,6 +106,18 @@ class TestValidator:
                 """validate_dict() handles missing fields (treats as None)."""
                 data = {}  # user is missing
                 assert not sut.validate_dict(data).is_valid
+
+            class TestFailurePolicy:
+                def test_when_show_all_failures(self, sut: Validator, dict_with_issues):
+                    result: ValidationResult = sut.validate_dict(dict_with_issues)
+                    assert not result.is_valid
+                    assert len(result.violations) == 2
+
+                def test_can_set_policy_to_stop_on_first_failure(self, sut: Validator, dict_with_issues):
+                    result: ValidationResult = sut.validate_dict(
+                        dict_with_issues, policy=FailurePolicy.STOP_ON_FIRST_FAIL)
+                    assert not result.is_valid
+                    assert len(result.violations) == 1
 
         class TestValidateObject:
 
