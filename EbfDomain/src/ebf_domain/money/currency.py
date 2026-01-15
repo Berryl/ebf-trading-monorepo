@@ -142,7 +142,7 @@ def get_currency(iso_code: str) -> Currency:
     """
     code = iso_code.upper()
     if code not in _CURRENCY_REGISTRY:
-        raise KeyError(f"Currency '{iso_code}' not found. Available: {list(_CURRENCY_REGISTRY.keys())}")
+        raise KeyError(f"Currency '{iso_code}' not found in registry.")
     return _CURRENCY_REGISTRY[code]
 
 

@@ -446,7 +446,7 @@ class Money:
             raise ValueError("Ratios must be non-empty and sum to non-zero")
 
         total_ratio = sum(Decimal(str(r)) for r in ratios)
-        if not ratios or total_ratio == 0:
+        if total_ratio == 0:
             raise ValueError("Ratios must be non-empty and sum to non-zero")
 
         results = []

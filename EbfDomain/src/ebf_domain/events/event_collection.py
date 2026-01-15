@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, TypeVar
 
-from .domain_event import DomainEvent
+from ebf_domain.events.domain_event import DomainEvent
 
 TEvent = TypeVar('TEvent', bound=DomainEvent)
 
@@ -74,8 +74,8 @@ class EventCollection:
         Example:
             ```python
             fills = events.of_type(TradeFilled)
-            for fill in fills:
-                print(f"Filled {fill.quantity} @ {fill.fill_price}")
+            for f in fills:
+                print(f"Filled {f.quantity} @ {f.fill_price}")
             ```
         """
         filtered = [e for e in self._events if isinstance(e, event_type)]

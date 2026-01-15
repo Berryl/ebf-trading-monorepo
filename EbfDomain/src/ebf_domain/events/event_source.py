@@ -4,8 +4,8 @@ EventSource mixin for domain aggregates that raise events.
 
 from dataclasses import dataclass, field, KW_ONLY
 
-from .domain_event import DomainEvent
-from .event_collection import EventCollection
+from ebf_domain.events.domain_event import DomainEvent
+from ebf_domain.events.event_collection import EventCollection
 
 
 @dataclass
@@ -34,9 +34,10 @@ class EventSource:
             def open(symbol: str, quantity: int) -> 'Trade[str]':
                 trade = Trade(symbol=symbol, quantity=quantity)
                 trade.resolve_id("TRADE-001")
-                trade.record_event(TradeOpened(...))
+                trade.record_event(TradeOpened)...))
                 return trade
 
+    # noinspection GrazieInspection
             def fill(self, price: Money) -> None:
                 # Business logic here
                 self.record_event(TradeFilled(...))
@@ -45,7 +46,7 @@ class EventSource:
     Integration with IDBase:
         When using EventSource with IDBase[T], be aware that:
         - You can record events on TBD aggregates (they queue up)
-        - Event aggregate_id will use whatever ID the aggregate has
+        - Event aggregate_id will use whatever the ID is that the aggregate has
         - Best practice: resolve ID before recording events, or use
           a temporary ID during creation
 
