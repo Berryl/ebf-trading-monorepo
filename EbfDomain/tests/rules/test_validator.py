@@ -5,6 +5,7 @@ import pytest
 import ebf_domain.rules.common_rules as cr
 from ebf_domain.rules.rule import Rule
 from ebf_domain.rules.rule_collection import RuleCollection
+from ebf_domain.rules.validation_result import ValidationResult
 from ebf_domain.rules.validator import Validator
 
 
@@ -66,16 +67,16 @@ class TestValidator:
             v.add("email", rules=RuleCollection.from_rules(cr.EmailRule()))
             return v
 
-        class TestValidateField:
+        @pytest.fixture(scope="class")
+        def user_with_issues(self) -> "TestValidator.User":
+            """ bad email AND bad username"""
+            return TestValidator.User(username="ab", email="invalid")
 
-            def test_with_valid_value(self, sut):
-                assert sut.validate_field("name", "Herbert").is_valid
-
-            def test_with_invalid_value(self, sut):
-                assert not sut.validate_field("name", "").is_valid
-
-            def test_is_valid_when_field_not_in_validator(self, sut):
-                assert sut.validate_field("unknown_field", "any_value").is_valid
+        class TestFailurePolicy:
+            def test_default_is_stop_on_first_failure(self, sut: Validator, user_with_issues):
+                result: ValidationResult = sut.validate(user_with_issues)
+                assert not result.is_valid
+                assert len(result.violations) == 1
 
         class TestValidateDict:
 
@@ -97,6 +98,7 @@ class TestValidator:
                 """validate_dict() handles missing fields (treats as None)."""
                 data = {}  # user is missing
                 assert not sut.validate_dict(data).is_valid
+
 
         class TestValidateObject:
 

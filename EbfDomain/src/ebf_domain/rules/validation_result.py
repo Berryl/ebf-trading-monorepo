@@ -3,7 +3,7 @@ from typing import Self
 
 import ebf_core.miscutil.string_helpers as sh
 
-from src.ebf_domain.rules.rule import RuleViolation
+from ebf_domain.rules.rule import RuleViolation
 
 
 @dataclass
