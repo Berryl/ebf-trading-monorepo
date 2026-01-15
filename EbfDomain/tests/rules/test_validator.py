@@ -49,7 +49,6 @@ class TestValidator:
             assert len(sut.field_rules) == 1
 
         def test_chaining(self, sut, rules: RuleCollection, one_rule: Rule):
-            """add_rules() returns self for method chaining."""
             result = sut.add("name", one_rule).add("age", rules)
 
             assert isinstance(result, Validator)
@@ -103,7 +102,6 @@ class TestValidator:
                 assert not sut.validate_dict(dict_with_issues).is_valid
 
             def test_missing_fields_makes_data_invalid(self, sut):
-                """validate_dict() handles missing fields (treats as None)."""
                 data = {}  # user is missing
                 assert not sut.validate_dict(data).is_valid
 
@@ -129,8 +127,7 @@ class TestValidator:
                 user = TestValidator.User(name="ab", email="not-email")
                 assert not sut.validate(user).is_valid
 
-            def test_when_missing_fields(self, sut):
-                """validate() skips fields that don't exist on the object."""
+            def test_request_to_validate_nonexistent_fields_are_considered_valid(self, sut):
                 user = TestValidator.User(name="alice")
                 # Should only validate username, skip email
                 assert sut.validate(user).is_valid
