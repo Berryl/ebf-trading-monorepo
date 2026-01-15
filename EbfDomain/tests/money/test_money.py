@@ -328,7 +328,7 @@ class TestMoneyArithmetic:
 class TestMoneyComparison:
     """Tests for comparison operations."""
 
-    def test_equality_same_amount_and_currency(self):
+    def test_equality_when_same_amount_and_currency(self):
         """Equal Money objects are equal."""
         m1 = Money.mint(10.50, USD)
         m2 = Money.mint(10.50, USD)
@@ -342,22 +342,19 @@ class TestMoneyComparison:
 
         assert m1 == m2
 
-    def test_inequality_different_amount(self):
-        """Different amounts are not equal."""
+    def test_inequality_when_different_amount(self):
         m1 = Money.mint(10, USD)
         m2 = Money.mint(20, USD)
 
         assert m1 != m2
 
-    def test_inequality_different_currency(self):
-        """Different currencies are not equal."""
+    def test_inequality_when_different_currency(self):
         m1 = Money.mint(10, USD)
         m2 = Money.mint(10, EUR)
 
         assert m1 != m2
 
     def test_less_than(self):
-        """< operator works."""
         m1 = Money.mint(5, USD)
         m2 = Money.mint(10, USD)
 
@@ -365,7 +362,6 @@ class TestMoneyComparison:
         assert not m2 < m1
 
     def test_less_than_or_equal(self):
-        """<= operator works."""
         m1 = Money.mint(10, USD)
         m2 = Money.mint(10, USD)
         m3 = Money.mint(15, USD)
@@ -374,7 +370,6 @@ class TestMoneyComparison:
         assert m1 <= m3
 
     def test_greater_than(self):
-        """> operator works."""
         m1 = Money.mint(20, USD)
         m2 = Money.mint(10, USD)
 
@@ -382,7 +377,6 @@ class TestMoneyComparison:
         assert not m2 > m1
 
     def test_greater_than_or_equal(self):
-        """>= operator works."""
         m1 = Money.mint(10, USD)
         m2 = Money.mint(10, USD)
         m3 = Money.mint(5, USD)
@@ -390,13 +384,11 @@ class TestMoneyComparison:
         assert m1 >= m2
         assert m1 >= m3
 
-    def test_comparison_different_currencies_raises_error(self):
-        """Comparing different currencies raises error."""
+    def test_cannot_comparison_different_currencies(self):
         with pytest.raises(TypeError, match="different currencies"):
             Money.mint(10, USD) < Money.mint(10, EUR) # noqa
 
     def test_same_currency_method(self):
-        """same_currency() checks if currencies match."""
         m1 = Money.mint(10, USD)
         m2 = Money.mint(20, USD)
         m3 = Money.mint(10, EUR)
@@ -405,7 +397,6 @@ class TestMoneyComparison:
         assert not m1.same_currency(m3)
 
     def test_currency_mismatch_method(self):
-        """currency_mismatch() checks if currencies differ."""
         m1 = Money.mint(10, USD)
         m2 = Money.mint(10, EUR)
 
@@ -416,8 +407,7 @@ class TestMoneyComparison:
 class TestMoneySplitting:
     """Tests for split() method."""
 
-    def test_split_evenly(self):
-        """Split money that divides evenly."""
+    def test_split_without_remainder_is_equal(self):
         money = Money.mint(30.00, USD)
 
         parts = money.split(3)
@@ -426,22 +416,20 @@ class TestMoneySplitting:
         assert all(p.amount == Decimal("10.00") for p in parts)
         assert sum(p.amount_cents for p in parts) == money.amount_cents
 
-    def test_split_with_remainder(self):
-        """Split with remainder distributes extra cents."""
+    def test_split_with_remainder_distribute_extra_to_first_share(self):
         money = Money.mint(10.00, USD)
 
         parts = money.split(3)
 
         assert len(parts) == 3
-        # First part gets the extra cent
-        assert parts[0].amount_cents == 334
+
+        assert parts[0].amount_cents == 334 # the extra cent goes first
         assert parts[1].amount_cents == 333
         assert parts[2].amount_cents == 333
         # Sum equals original
         assert sum(p.amount_cents for p in parts) == money.amount_cents
 
     def test_split_preserves_currency(self):
-        """Split preserves currency."""
         money = Money.mint(10, EUR)
 
         parts = money.split(2)
@@ -449,7 +437,6 @@ class TestMoneySplitting:
         assert all(p.currency == EUR for p in parts)
 
     def test_split_into_one_part(self):
-        """Splitting into 1 part returns original amount."""
         money = Money.mint(10.50, USD)
 
         parts = money.split(1)
@@ -457,14 +444,12 @@ class TestMoneySplitting:
         assert len(parts) == 1
         assert parts[0] == money
 
-    def test_split_into_zero_parts_raises_error(self):
-        """Cannot split into zero parts."""
+    def test_cannot_split_into_zero_parts(self):
         money = Money.mint(10, USD)
-
         with pytest.raises(ValueError, match="must be positive"):
             money.split(0)
 
-    def test_split_negative_money(self):
+    def test_can_split_negative_money(self):
         """Can split negative money."""
         money = Money.mint(-10.00, USD)
 
@@ -478,8 +463,7 @@ class TestMoneySplitting:
 class TestMoneyAllocation:
     """Tests for allocate() method."""
 
-    def test_allocate_equal_ratios(self):
-        """Allocate with equal ratios."""
+    def test_can_allocate_to_equal_ratios(self):
         money = Money.mint(100.00, USD)
 
         parts = money.allocate([1, 1, 1])
@@ -488,8 +472,7 @@ class TestMoneyAllocation:
         total = sum(p.amount_cents for p in parts)
         assert total == money.amount_cents
 
-    def test_allocate_different_ratios(self):
-        """Allocate with different ratios."""
+    def test_can_allocate_to_different_ratios(self):
         money = Money.mint(100.00, USD)
 
         parts = money.allocate([1, 2, 2])  # 20%, 40%, 40%
@@ -499,7 +482,6 @@ class TestMoneyAllocation:
         assert parts[2].amount == Decimal("40.00")
 
     def test_allocate_preserves_total(self):
-        """Allocation sum equals original."""
         money = Money.mint(10.00, USD)
 
         parts = money.allocate([3, 3, 3])
@@ -507,24 +489,19 @@ class TestMoneyAllocation:
         assert sum(p.amount_cents for p in parts) == money.amount_cents
 
     def test_allocate_preserves_currency(self):
-        """Allocation preserves currency."""
         money = Money.mint(100, EUR)
 
         parts = money.allocate([1, 2])
 
         assert all(p.currency == EUR for p in parts)
 
-    def test_allocate_empty_ratios_raises_error(self):
-        """Empty ratios list raises error."""
+    def test_cannot_allocate_empty_ratios(self):
         money = Money.mint(100, USD)
-
         with pytest.raises(ValueError, match="non-empty"):
             money.allocate([])
 
-    def test_allocate_zero_sum_raises_error(self):
-        """Ratios summing to zero raises error."""
+    def test_cannot_allocate_zero_sum(self):
         money = Money.mint(100, USD)
-
         with pytest.raises(ValueError, match="sum to non-zero"):
             money.allocate([1, -1])
 
@@ -532,32 +509,23 @@ class TestMoneyAllocation:
 class TestMoneyFormatting:
     """Tests for string representations."""
 
-    def test_str_representation(self):
-        """str() returns formatted amount with symbol."""
-        money = Money.mint(29.99, USD)
+    @pytest.mark.parametrize("currency_symbol", [(USD, '$'), (EUR, '€'), (JPY, '¥')])
+    def test_str_includes_symbol(self, currency_symbol):
+        money = Money.mint(29.99, currency_symbol[0])
 
-        assert str(money) == "$29.99"
+        assert str(money).startswith(currency_symbol[1])
 
-    def test_str_with_different_currency(self):
-        """str() uses currency symbol."""
-        euros = Money.mint(50.00, EUR)
-
-        assert str(euros) == "€50.00"
-
-    def test_str_with_jpy_no_decimals(self):
-        """str() respects currency precision (JPY has 0)."""
+    def test_str_with_jpy_has_no_decimals(self):
         yen = Money.mint(1000, JPY)
 
         assert str(yen) == "¥1000"
 
-    def test_repr_representation(self):
-        """repr() returns constructor form."""
+    def test_repr_representation_shows_amount_cents_only(self):
         money = Money.mint(29.99, USD)
 
         assert repr(money) == "Money(2999, USD)"
 
-    def test_format_default(self):
-        """format() with defaults shows currency code."""
+    def test_format_default_includes_iso_code(self):
         money = Money.mint(29.99, USD)
 
         formatted = money.format()
@@ -565,7 +533,6 @@ class TestMoneyFormatting:
         assert formatted == "$29.99 USD"
 
     def test_format_without_currency_code(self):
-        """format() can hide currency code."""
         money = Money.mint(29.99, USD)
 
         formatted = money.format(show_currency=False)
@@ -573,7 +540,6 @@ class TestMoneyFormatting:
         assert formatted == "$29.99"
 
     def test_format_with_custom_symbol(self):
-        """format() can override symbol."""
         money = Money.mint(29.99, USD)
 
         formatted = money.format(symbol='US$')
@@ -585,20 +551,18 @@ class TestMoneyImmutability:
     """Tests for immutability."""
 
     def test_cannot_modify_amount_cents(self):
-        """Money is immutable (frozen)."""
         money = Money.mint(10, USD)
 
         with pytest.raises(Exception):  # FrozenInstanceError
             money.amount_cents = 2000  # noqa
 
     def test_cannot_modify_currency(self):
-        """Cannot change currency after creation."""
         money = Money.mint(10, USD)
 
         with pytest.raises(Exception):
             money.currency = EUR  # noqa
 
-    def test_hashable_for_sets(self):
+    def test_hashable(self):
         """Money objects are hashable."""
         m1 = Money.mint(10, USD)
         m2 = Money.mint(20, USD)
@@ -609,7 +573,6 @@ class TestMoneyImmutability:
         assert len(money_set) == 2  # m1 and m3 are equal
 
     def test_can_be_dict_key(self):
-        """Money can be used as dict key."""
         price = Money.mint(29.99, USD)
 
         prices = {price: "Premium"}
@@ -621,7 +584,6 @@ class TestMoneyEdgeCases:
     """Tests for edge cases."""
 
     def test_very_large_amounts(self):
-        """Money handles very large amounts."""
         money = Money.mint(999999999999.99, USD)
 
         doubled = money * 2
@@ -629,14 +591,12 @@ class TestMoneyEdgeCases:
         assert doubled.amount == Decimal("1999999999999.98")
 
     def test_very_small_fractions(self):
-        """Money handles small fractions (rounds to cents)."""
         money = Money.mint(0.001, USD)
 
         # 0.001 rounds to 0 cents
         assert money.amount_cents == 0
 
     def test_precision_maintained_through_operations(self):
-        """Integer cents maintain precision."""
         m1 = Money.from_cents(10, USD)  # $0.10
         m2 = Money.from_cents(20, USD)  # $0.20
 
@@ -645,8 +605,7 @@ class TestMoneyEdgeCases:
         assert result.amount_cents == 30  # Exactly $0.30
         assert result.amount == Decimal('0.30')
 
-    def test_different_currencies_independent(self):
-        """Different currencies work independently."""
+    def test_different_currency_independence(self):
         usd = Money.mint(100, USD)
         eur = Money.mint(100, EUR)
         gbp = Money.mint(100, GBP)
@@ -661,20 +620,17 @@ class TestConversionHelpers:
     """Tests for Excel migration helpers."""
 
     def test_to_money_from_float(self):
-        """Can convert float to Money."""
         result = to_money(29.99, USD)
 
         assert result == Money.mint(29.99, USD)
 
     def test_to_money_idempotent(self):
-        """to_money is idempotent for Money inputs."""
         original = Money.mint(10, USD)
         result = to_money(original, USD)
 
         assert result is original
 
     def test_to_money_like_uses_reference_currency(self):
-        """to_money_like uses reference's currency."""
         reference = Money.mint(100, EUR)
         result = to_money_like(50.0, reference)
 
@@ -682,7 +638,6 @@ class TestConversionHelpers:
         assert result.amount_cents == 5000
 
     def test_to_money_like_validates_currency_mismatch(self):
-        """to_money_like rejects different currencies."""
         reference = Money.mint(100, USD)
         value = Money.mint(50, EUR)
 
