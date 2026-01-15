@@ -3,12 +3,17 @@ from dataclasses import dataclass
 import pytest
 
 import src.ebf_domain.rules.common_rules as cr
+from ebf_domain.rules.rule import Rule
 from src.ebf_domain.rules.rule_collection import RuleCollection
 from src.ebf_domain.rules.validator import Validator
 
 
 class TestValidator:
     """Tests for Validator."""
+
+    @pytest.fixture(scope="class")
+    def rule(self) -> Rule:
+        return cr.EmailRule()
 
     @pytest.fixture(scope="class")
     def rules(self) -> RuleCollection:
@@ -24,22 +29,23 @@ class TestValidator:
 
     class TestAdding:
 
-        def test_field_rules_are_added(self, rules: RuleCollection):
-            """Can add rules for a specific field."""
-            validator = Validator()
-            assert len(validator.field_rules) == 0
+        @pytest.fixture
+        def sut(self) -> Validator:
+            return Validator()
 
-            validator.add_rules("name", rules)
+        def test_can_add_rules_collection(self, sut, rules: RuleCollection):
+            assert len(sut.field_rules) == 0
 
-            assert len(validator.field_rules) == 1
+            sut.add_rules("name", rules)
 
-        def test_chaining(self):
+            assert len(sut.field_rules) == 1
+
+        def test_chaining(self, sut):
             """add_rules() returns self for method chaining."""
-            validator = Validator()
+            result = sut.add_rules("name", cr.ValueRequiredRule()).add_rules("age", cr.ValueRequiredRule())
 
-            result = validator.add_rules("name", cr.ValueRequiredRule()).add_rules("age", cr.ValueRequiredRule())
-            assert result is validator
-            assert len(validator.field_rules) == 2
+            assert isinstance(result, Validator)
+            assert len(sut.field_rules) == 2
 
     class TestValidating:
 
