@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable, Self, Any
+from typing import Callable, Self, Any
 
 from ebf_domain.rules.rule import Rule
 from src.ebf_domain.rules.rule_collection import RuleCollection

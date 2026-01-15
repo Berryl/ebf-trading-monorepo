@@ -47,12 +47,15 @@ class TestValidator:
 
             assert len(sut.field_rules) == 1
 
-        def test_chaining(self, sut):
+        def test_chaining(self, sut, rules: RuleCollection, one_rule: Rule):
             """add_rules() returns self for method chaining."""
-            result = sut.add("name", cr.ValueRequiredRule()).add("age", cr.ValueRequiredRule())
+            result = sut.add("name", one_rule).add("age", rules)
 
             assert isinstance(result, Validator)
             assert len(sut.field_rules) == 2
+
+            assert isinstance(sut.field_rules["name"], cr.EmailRule)
+            assert len(sut.field_rules["age"]) == 2
 
     class TestValidating:
 
