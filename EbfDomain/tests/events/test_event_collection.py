@@ -66,6 +66,16 @@ class TestEventCollection:
         def test_can_get_last(self, sut_with_events, event_list: list):
             assert sut_with_events.last() == event_list[2]
 
+        def test_can_get_list(self, sut_with_events, event_list: list):
+            assert sut_with_events.to_list() == event_list
+
+        def test_can_iterate(self, sut_with_events):
+            item: SampleEvent
+            k = 1
+            for  item in sut_with_events:
+                assert item.value == k
+                k += 1
+
 #
 #     class TestFiltering:
 #         @pytest.fixture
