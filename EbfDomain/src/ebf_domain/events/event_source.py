@@ -1,8 +1,12 @@
+# event_source.py
+
 """
 EventSource mixin for domain aggregates that raise events.
 """
 
 from dataclasses import dataclass, field, KW_ONLY
+from datetime import UTC, datetime
+from uuid import uuid4, UUID
 
 from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_collection import EventCollection
@@ -13,112 +17,51 @@ class EventSource:
     """
     Mixin for domain aggregates that raise and collect events.
 
-    EventSource manages a private collection of domain events that have
-    occurred on the aggregate. Events can be peeked at or collected (cleared).
-
-    This mixin is designed to work alongside IDBase[T] for aggregates that
-    need both ID management and event tracking.
-
-    Usage:
-        ```python
-        from dataclasses import dataclass
-        from ebf_domain.id_base import IDBase
-        from ebf_domain.events import EventSource, DomainEvent
-
-        @dataclass(eq=False)
-        class Trade[T](IDBase[T], EventSource):
-            symbol: str
-            quantity: int
-
-            @staticmethod
-            def open(symbol: str, quantity: int) -> 'Trade[str]':
-                trade = Trade(symbol=symbol, quantity=quantity)
-                trade.resolve_id("TRADE-001")
-                trade.record_event(TradeOpened)...))
-                return trade
-
-    # noinspection GrazieInspection
-            def fill(self, price: Money) -> None:
-                # Business logic here
-                self.record_event(TradeFilled(...))
-        ```
-
-    Integration with IDBase:
-        When using EventSource with IDBase[T], be aware that:
-        - You can record events on TBD aggregates (they queue up)
-        - Event aggregate_id will use whatever the ID is that the aggregate has
-        - Best practice: resolve ID before recording events, or use
-          a temporary ID during creation
-
-    Design Notes:
-        - Uses KW_ONLY to avoid dataclass field ordering conflicts
-        - EventCollection is private (_pending_events)
-        - Provides both peek (read-only) and collect (destructive) access
+    EventSource owns event metadata (timestamps, aggregate identity/type).
     """
 
     _: KW_ONLY
     _pending_events: EventCollection = field(default_factory=EventCollection, init=False, repr=False)
+    _tbd_event_aggregate_id: UUID = field(default_factory=uuid4, init=False, repr=False)
+
+    @property
+    def aggregate_type(self) -> str:
+        return self.__class__.__name__
+
+    @property
+    def aggregate_id_for_events(self):
+        # Works with IDBase[T] or any class exposing `id_value`.
+        id_value = getattr(self, "id_value", None)
+        return id_value if id_value is not None else self._tbd_event_aggregate_id
+
+    def _event_metadata(self, occurred_at: datetime | None = None) -> dict:
+        now = datetime.now(UTC)
+        return {
+            "event_id": uuid4(),
+            "occurred_at": occurred_at or now,
+            "recorded_at": now,
+            "aggregate_id": self.aggregate_id_for_events,
+            "aggregate_type": self.aggregate_type,
+        }
+
+    def record(self, event_type: type[DomainEvent], *, occurred_at: datetime | None = None, **payload) -> None:
+        self.record_event(event_type(**self._event_metadata(occurred_at), **payload))
 
     def record_event(self, event: DomainEvent) -> None:
-        """
-        Record a domain event that occurred on this aggregate.
-
-        Events are stored in an internal collection until collected.
-
-        Args:
-            event: Domain event to record
-
-        Example:
-            ```python
-            trade.record_event(TradeFilled(
-                **DomainEvent.make_metadata(trade.id, "Trade"),
-                trade_id=trade.id,
-                fill_price=Money.mint(100, USD),
-                quantity=10
-            ))
-            ```
-        """
         self._pending_events.add(event)
 
     def peek_events(self) -> list[DomainEvent]:
-        """
-        View pending events without removing them.
-
-        Useful for testing and inspecting state without side effects.
-
-        Returns:
-            List of pending events (defensive copy)
-        """
         return self._pending_events.to_list()
 
     def collect_events(self) -> list[DomainEvent]:
-        """
-        Collect and clear all pending events.
-
-        This is typically called by the repository after saving the aggregate,
-        or by an event dispatcher to publish events.
-
-        Returns:
-            List of all pending events (events are removed from aggregate)
-
-        Example:
-            ```python
-            # Service or repository collects events for publishing
-            events = trade.collect_events()
-            for event in events:
-                event_bus.publish(event)
-            ```
-        """
         events = self._pending_events.to_list()
         self._pending_events.clear()
         return events
 
     @property
     def has_events(self) -> bool:
-        """Check if there are any pending events."""
         return self._pending_events.has_events
 
     @property
     def event_count(self) -> int:
-        """Get the number of pending events."""
         return self._pending_events.count
