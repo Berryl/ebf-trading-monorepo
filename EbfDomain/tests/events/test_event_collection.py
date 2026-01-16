@@ -123,8 +123,15 @@ class TestEventCollection:
 
         class TestFilterByAggregate:
             @pytest.fixture
-            def sut_with_mixed_types(self, sut_with_events) -> EventCollection:
-                e1 = make_event(AnotherEvent, test_id="100", description="one")
-                e2 = make_event(AnotherEvent, test_id="200", description="two")
-                e3 = make_event(AnotherEvent, test_id="300", description="three")
+            def sut_with_multiple_aggregates(self, sut_with_events) -> EventCollection:
+                e1 = make_event(SampleEvent, test_id="4", value=4, aggregate_id="AGG-999")
+                e2 = make_event(SampleEvent, test_id="5", value=5, aggregate_id="AGG-999")
+                e3 = make_event(SampleEvent, test_id="6", value=6, aggregate_id="AGG-999")
                 sut_with_events.add(e1).add(e2).add(e3)
+                return sut_with_events
+
+            def test_can_get_by_aggregate(self, sut_with_multiple_aggregates):
+                assert sut_with_multiple_aggregates.count == 6
+
+                assert sut_with_multiple_aggregates.for_aggregate("AGG-999").count == 3
+                assert sut_with_multiple_aggregates.for_aggregate("AGG-123").count == 3
