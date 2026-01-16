@@ -11,13 +11,13 @@ from ebf_core.guards.guards import ContractError
 from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_collection import EventCollection
 from ebf_domain.events.event_source import EventSource
-from tests.events.helpers.event_factory import make_event
+from tests.events.helpers.event_factory import make_event, make_degenerate_event
 
 
 @dataclass(frozen=True, kw_only=True)
 class SampleEvent(DomainEvent[object]):
-    test_id: str
-    value: int
+    test_id: str = "TEST-001"
+    value: int = 42
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -64,28 +64,12 @@ class TestDomainEvent:
         assert hash(e1) == hash(e2)
 
     def test_event_id_cannot_be_none(self):
-        with pytest.raises(ContractError, match="cannot be None"):
-            SampleEvent(
-                event_id=None,
-                occurred_at=datetime.now(UTC),
-                recorded_at=datetime.now(UTC),
-                aggregate_id="AGG-123",
-                aggregate_type="TestAggregate",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ContractError, match="Arg 'event_id' cannot be None"):
+            make_degenerate_event(SampleEvent, event_id=None)
 
     def test_occurred_at_cannot_be_none(self):
-        with pytest.raises(ContractError, match="cannot be None"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=None,
-                recorded_at=datetime.now(UTC),
-                aggregate_id="AGG-123",
-                aggregate_type="TestAggregate",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ContractError, match="Arg 'occurred_at' cannot be None"):
+            make_degenerate_event(SampleEvent, event_id=uuid4(), occurred_at=None)
 
     def test_occurred_at_must_be_timezone_aware(self):
         with pytest.raises(ValueError, match="must be timezone-aware"):

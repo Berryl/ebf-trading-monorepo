@@ -51,3 +51,25 @@ def make_event(event_type: Type[DomainEvent], *,
         aggregate_type=aggregate_type,
         **payload,
     )
+
+
+def make_degenerate_event(event_type: Type[DomainEvent], *,
+               event_id: UUID | None = None,
+               aggregate_id="AGG-123",
+               aggregate_type="TestAggregate",
+               occurred_at: datetime | None = None,
+               recorded_at: datetime | None = None,
+               **payload,
+               ):
+    """
+    Thin wrapper to test post-init guards
+    """
+    now = datetime.now(UTC)
+    return event_type(
+        event_id=event_id,
+        occurred_at=occurred_at,
+        recorded_at=recorded_at,
+        aggregate_id=aggregate_id,
+        aggregate_type=aggregate_type,
+        **payload,
+    )
