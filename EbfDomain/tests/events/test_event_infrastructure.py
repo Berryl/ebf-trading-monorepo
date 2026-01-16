@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
 from ebf_core.guards.guards import ContractError
@@ -10,6 +11,7 @@ from ebf_core.guards.guards import ContractError
 from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_collection import EventCollection
 from ebf_domain.events.event_source import EventSource
+from tests.events.helpers.event_factory import make_event
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -29,20 +31,16 @@ class SampleAggregate(EventSource):
     name: str
 
 
+KNOWN_DATE = datetime(2001, 9, 11, 8, 46, 40, tzinfo=ZoneInfo('America/New_York'))
+
+
 class TestDomainEvent:
     @pytest.fixture
     def sut(self) -> DomainEvent:
-        return SampleEvent(
-            event_id=uuid4(),
-            occurred_at=datetime.now(UTC),
-            recorded_at=datetime.now(UTC),
-            aggregate_id="AGG-123",
-            aggregate_type="TestAggregate",
-            test_id="TEST-001",
-            value=42,
-        )
+        return make_event(
+            SampleEvent, occurred_at=KNOWN_DATE, recorded_at=datetime.now(UTC), test_id="TEST-001", value=42)
 
-    def test_event_type_property_returns_class_name(self, sut: DomainEvent):
+    def test_event_type_property_is_class_name(self, sut: DomainEvent):
         assert sut.event_type == "SampleEvent"
 
     def test_immutability(self, sut: DomainEvent):
@@ -54,24 +52,10 @@ class TestDomainEvent:
         when_occurred = datetime(2025, 1, 15, 10, 0, tzinfo=UTC)
         when_recorded = datetime(2025, 1, 15, 10, 1, tzinfo=UTC)
 
-        e1 = SampleEvent(
-            event_id=event_id,
-            occurred_at=when_occurred,
-            recorded_at=when_recorded,
-            aggregate_id="AGG-123",
-            aggregate_type="TestAggregate",
-            test_id="TEST-001",
-            value=42,
-        )
-        e2 = SampleEvent(
-            event_id=event_id,
-            occurred_at=when_occurred,
-            recorded_at=when_recorded,
-            aggregate_id="AGG-123",
-            aggregate_type="TestAggregate",
-            test_id="TEST-001",
-            value=42,
-        )
+        e1 = make_event(SampleEvent, event_id=event_id,
+                        occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
+        e2 = make_event(SampleEvent, event_id=event_id,
+                        occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
 
         assert e1 != sut
         assert hash(e1) != hash(sut)
