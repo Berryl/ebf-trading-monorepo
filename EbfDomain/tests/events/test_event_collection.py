@@ -135,3 +135,10 @@ class TestEventCollection:
 
                 assert sut_with_multiple_aggregates.for_aggregate("AGG-999").count == 3
                 assert sut_with_multiple_aggregates.for_aggregate("AGG-123").count == 3
+
+        class TestFilterByPredicate:
+            def test_can_filter_by_predicate(self, sut_with_events):
+                result = sut_with_events.where(lambda e: e.value % 2 == 1)
+                assert result.count == 2
+                assert result.first().value == 1
+                assert result.last().value == 3
