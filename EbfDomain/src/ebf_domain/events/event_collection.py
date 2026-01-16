@@ -25,26 +25,27 @@ class EventCollection:
         self._events.append(event)
         return self
 
-    def add_all(self, events: list[DomainEvent]) -> None:
+    def add_all(self, events: list[DomainEvent]) -> Self:
         self._events.extend(events)
+        return self
 
-    def of_type(self, event_type: type[TEvent]) -> "EventCollection":
+    def of_type(self, event_type: type[TEvent]) -> Self:
         filtered = [e for e in self._events if isinstance(e, event_type)]
         return EventCollection(filtered)
 
-    def after(self, timestamp: datetime) -> "EventCollection":
+    def after(self, timestamp: datetime) -> Self:
         filtered = [e for e in self._events if e.occurred_at > timestamp]
         return EventCollection(filtered)
 
-    def before(self, timestamp: datetime) -> "EventCollection":
+    def before(self, timestamp: datetime) -> Self:
         filtered = [e for e in self._events if e.occurred_at < timestamp]
         return EventCollection(filtered)
 
-    def for_aggregate(self, aggregate_id) -> "EventCollection":
+    def for_aggregate(self, aggregate_id) -> Self:
         filtered = [e for e in self._events if e.aggregate_id == aggregate_id]
         return EventCollection(filtered)
 
-    def where(self, predicate: Callable[[DomainEvent], bool]) -> "EventCollection":
+    def where(self, predicate: Callable[[DomainEvent], bool]) -> Self:
         filtered = [e for e in self._events if predicate(e)]
         return EventCollection(filtered)
 
