@@ -95,7 +95,7 @@ class TestEventCollection:
 
     class TestFiltering:
 
-        class TestTimeFilters:
+        class TestFilterByTime:
 
             def test_can_get_before_date(self, sut_with_events, now, yesterday):
                 result: DomainEvent = sut_with_events.before(now).first()
@@ -105,7 +105,7 @@ class TestEventCollection:
                 result: DomainEvent = sut_with_events.after(now).first()
                 assert result.occurred_at == tomorrow
 
-        class TestTypeFilters:
+        class TestFilterByType:
             @pytest.fixture
             def sut_with_mixed_types(self, sut_with_events) -> EventCollection:
                 e1 = make_event(AnotherEvent, test_id="100", description="one")
@@ -120,3 +120,11 @@ class TestEventCollection:
 
                 assert sut_with_mixed_types.of_type(AnotherEvent).count == 3
                 assert sut_with_mixed_types.of_type(SampleEvent).count == 3
+
+        class TestFilterByAggregate:
+            @pytest.fixture
+            def sut_with_mixed_types(self, sut_with_events) -> EventCollection:
+                e1 = make_event(AnotherEvent, test_id="100", description="one")
+                e2 = make_event(AnotherEvent, test_id="200", description="two")
+                e3 = make_event(AnotherEvent, test_id="300", description="three")
+                sut_with_events.add(e1).add(e2).add(e3)
