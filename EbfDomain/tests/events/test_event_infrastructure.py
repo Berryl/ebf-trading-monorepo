@@ -48,13 +48,13 @@ class TestDomainEvent:
             sut.value = 99  # noqa
 
     def test_equality(self, sut: DomainEvent):
-        event_id = uuid4()
+        known_id = uuid4()
         when_occurred = datetime(2025, 1, 15, 10, 0, tzinfo=UTC)
         when_recorded = datetime(2025, 1, 15, 10, 1, tzinfo=UTC)
 
-        e1 = make_event(SampleEvent, event_id=event_id,
+        e1 = make_event(SampleEvent, event_id=known_id,
                         occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
-        e2 = make_event(SampleEvent, event_id=event_id,
+        e2 = make_event(SampleEvent, event_id=known_id,
                         occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
 
         assert e1 != sut
@@ -64,60 +64,29 @@ class TestDomainEvent:
         assert hash(e1) == hash(e2)
 
     def test_event_id_cannot_be_none(self):
-        with pytest.raises(ContractError, match="Arg 'event_id' cannot be None"):
+        with pytest.raises(ContractError, match="'event_id' cannot be None"):
             make_degenerate_event(SampleEvent, event_id=None)
 
     def test_occurred_at_cannot_be_none(self):
-        with pytest.raises(ContractError, match="Arg 'occurred_at' cannot be None"):
+        with pytest.raises(ContractError, match="'occurred_at' cannot be None"):
             make_degenerate_event(SampleEvent, event_id=uuid4(), occurred_at=None)
 
     def test_occurred_at_must_be_timezone_aware(self):
-        with pytest.raises(ValueError, match="must be timezone-aware"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=datetime.now(),
-                recorded_at=datetime.now(UTC),
-                aggregate_id="AGG-123",
-                aggregate_type="TestAggregate",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ValueError, match="'occurred_at' must be timezone-aware"):
+            make_degenerate_event(SampleEvent, event_id=uuid4(), occurred_at=datetime.now())
 
     def test_recorded_at_cannot_be_none(self):
-        with pytest.raises(ContractError, match="cannot be None"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=datetime.now(UTC),
-                recorded_at=None,
-                aggregate_id="AGG-123",
-                aggregate_type="TestAggregate",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ContractError, match="'recorded_at' cannot be None"):
+            make_degenerate_event(
+                SampleEvent, event_id=uuid4(), occurred_at=datetime.now(UTC), recorded_at=None)
 
     def test_recorded_at_must_be_timezone_aware(self):
-        with pytest.raises(ValueError, match="must be timezone-aware"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=datetime.now(UTC),
-                recorded_at=datetime.now(),
-                aggregate_id="AGG-123",
-                aggregate_type="TestAggregate",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ValueError, match="'recorded_at' must be timezone-aware"):
+            make_event(SampleEvent, recorded_at=datetime.now())
 
     def test_aggregate_type_must_be_valued(self):
-        with pytest.raises(ContractError, match="cannot be an empty string"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=datetime.now(UTC),
-                recorded_at=datetime.now(UTC),
-                aggregate_id="AGG-123",
-                aggregate_type="",
-                test_id="TEST-001",
-                value=42,
-            )
+        with pytest.raises(ContractError, match="'aggregate_type' cannot be an empty string"):
+            make_event(SampleEvent, aggregate_type="   ")
 
 
 class TestEventSource:
