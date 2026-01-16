@@ -43,22 +43,39 @@ class EventSource:
         }
 
     def record(self, event_type: type[DomainEvent], *, occurred_at: datetime | None = None, **payload) -> None:
+        """
+        Create and record a new domain event of the given type.
+
+        This is the primary production API for raising events:
+        - metadata is stamped here (identity, timestamps, aggregate info)
+        - callers supply only event-specific payload
+        """
         self.record_event(event_type(**self._event_metadata(occurred_at), **payload))
 
     def record_event(self, event: DomainEvent) -> None:
+        """
+        Record an already-constructed domain event.
+
+        Intended for advanced use and testing; bypasses metadata stamping.
+        Most callers should prefer `record(...)`.
+        """
         self._pending_events.add(event)
+
 
     def peek_events(self) -> list[DomainEvent]:
         return self._pending_events.to_list()
+
 
     def collect_events(self) -> list[DomainEvent]:
         events = self._pending_events.to_list()
         self._pending_events.clear()
         return events
 
+
     @property
     def has_events(self) -> bool:
         return self._pending_events.has_events
+
 
     @property
     def event_count(self) -> int:

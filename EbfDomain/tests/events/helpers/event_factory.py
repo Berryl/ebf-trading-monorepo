@@ -24,7 +24,6 @@ from uuid import uuid4, UUID
 from zoneinfo import ZoneInfo
 
 from ebf_domain.events.domain_event import DomainEvent
-from ebf_domain.events.event_source import EventSource
 
 
 def make_event(event_type: Type[DomainEvent], *,
@@ -87,11 +86,6 @@ class SampleEvent(DomainEvent[object]):
 class AnotherEvent(DomainEvent[object]):
     test_id: str
     description: str
-
-
-@dataclass(eq=False)
-class SampleAggregate(EventSource):
-    name: str
 
 
 KNOWN_DATE = datetime(2001, 9, 11, 8, 46, 40, tzinfo=ZoneInfo('America/New_York'))

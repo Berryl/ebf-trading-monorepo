@@ -1,20 +1,34 @@
 # test_event_infrastructure.py
-
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from tests.events.helpers.event_factory import SampleEvent, SampleAggregate
+import pytest
 
+from ebf_domain.events.event_source import EventSource
+from tests.events.helpers.event_factory import SampleEvent
+
+
+
+@dataclass(eq=False)
+class SampleAggregate(EventSource):
+    name: str
 
 class TestEventSource:
-    def test_record_creates_synchronous_event(self):
-        agg = SampleAggregate(name="x")
+    @pytest.fixture
+    def sut(self) -> EventSource:
+        return SampleAggregate(name="X")
 
+    @pytest.fixture
+    def synchronous_event(self, sut) -> SampleEvent:
+        pass
+
+    def test_record_creates_synchronous_event(self, sut):
         before = datetime.now(UTC)
-        agg.record(SampleEvent, test_id="TEST-001", value=42)
+        sut.record(SampleEvent, test_id="TEST-001", value=42)
         after = datetime.now(UTC)
 
-        events = agg.peek_events()
+        events = sut.peek_events()
         assert len(events) == 1
         event = events[0]
         assert isinstance(event, SampleEvent)
@@ -47,5 +61,3 @@ class TestEventSource:
         assert len(collected) == 2
         assert agg.event_count == 0
         assert not agg.has_events
-
-
