@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Type
 from uuid import uuid4, UUID
+from zoneinfo import ZoneInfo
 
 from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_source import EventSource
@@ -91,3 +92,6 @@ class AnotherEvent(DomainEvent[object]):
 @dataclass(eq=False)
 class SampleAggregate(EventSource):
     name: str
+
+
+KNOWN_DATE = datetime(2001, 9, 11, 8, 46, 40, tzinfo=ZoneInfo('America/New_York'))
