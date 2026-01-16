@@ -6,7 +6,7 @@ Event collection for storing and filtering domain events.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Self
 
 from ebf_domain.events.domain_event import DomainEvent
 
@@ -21,8 +21,9 @@ class EventCollection:
 
     _events: list[DomainEvent[object]] = field(default_factory=list)
 
-    def add(self, event: DomainEvent) -> None:
+    def add(self, event: DomainEvent) -> Self:
         self._events.append(event)
+        return self
 
     def add_all(self, events: list[DomainEvent]) -> None:
         self._events.extend(events)
