@@ -1,5 +1,3 @@
-# event_source.py
-
 """
 EventSource mixin for domain aggregates that raise events.
 """

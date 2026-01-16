@@ -1,5 +1,3 @@
-# domain_event.py
-
 """
 Domain event base classes for EbfDomain.
 

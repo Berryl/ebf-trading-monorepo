@@ -30,8 +30,9 @@ class SampleAggregate(EventSource):
 
 
 class TestDomainEvent:
-    def test_event_type_property_returns_class_name(self):
-        event = SampleEvent(
+    @pytest.fixture
+    def sut(self) -> DomainEvent:
+        return SampleEvent(
             event_id=uuid4(),
             occurred_at=datetime.now(UTC),
             recorded_at=datetime.now(UTC),
@@ -40,49 +41,45 @@ class TestDomainEvent:
             test_id="TEST-001",
             value=42,
         )
-        assert event.event_type == "SampleEvent"
 
-    def test_events_are_immutable_after_creation(self):
-        event = SampleEvent(
-            event_id=uuid4(),
-            occurred_at=datetime.now(UTC),
-            recorded_at=datetime.now(UTC),
-            aggregate_id="AGG-123",
-            aggregate_type="TestAggregate",
-            test_id="TEST-001",
-            value=42,
-        )
+    def test_event_type_property_returns_class_name(self, sut: DomainEvent):
+        assert sut.event_type == "SampleEvent"
+
+    def test_immutability(self, sut: DomainEvent):
         with pytest.raises(Exception):
-            event.value = 99  # noqa
+            sut.value = 99  # noqa
 
-    def test_events_equal_when_all_fields_match(self):
+    def test_equality(self, sut: DomainEvent):
         event_id = uuid4()
-        occurred_timestamp = datetime(2025, 1, 15, 10, 0, tzinfo=UTC)
-        recorded_timestamp = datetime(2025, 1, 15, 10, 1, tzinfo=UTC)
+        when_occurred = datetime(2025, 1, 15, 10, 0, tzinfo=UTC)
+        when_recorded = datetime(2025, 1, 15, 10, 1, tzinfo=UTC)
 
-        event1 = SampleEvent(
+        e1 = SampleEvent(
             event_id=event_id,
-            occurred_at=occurred_timestamp,
-            recorded_at=recorded_timestamp,
+            occurred_at=when_occurred,
+            recorded_at=when_recorded,
             aggregate_id="AGG-123",
             aggregate_type="TestAggregate",
             test_id="TEST-001",
             value=42,
         )
-        event2 = SampleEvent(
+        e2 = SampleEvent(
             event_id=event_id,
-            occurred_at=occurred_timestamp,
-            recorded_at=recorded_timestamp,
+            occurred_at=when_occurred,
+            recorded_at=when_recorded,
             aggregate_id="AGG-123",
             aggregate_type="TestAggregate",
             test_id="TEST-001",
             value=42,
         )
 
-        assert event1 == event2
-        assert hash(event1) == hash(event2)
+        assert e1 != sut
+        assert hash(e1) != hash(sut)
 
-    def test_rejects_none_event_id(self):
+        assert e1 == e2
+        assert hash(e1) == hash(e2)
+
+    def test_event_id_cannot_be_none(self):
         with pytest.raises(ContractError, match="cannot be None"):
             SampleEvent(
                 event_id=None,
@@ -94,7 +91,7 @@ class TestDomainEvent:
                 value=42,
             )
 
-    def test_rejects_none_occurred_at(self):
+    def test_occurred_at_cannot_be_none(self):
         with pytest.raises(ContractError, match="cannot be None"):
             SampleEvent(
                 event_id=uuid4(),
@@ -106,7 +103,7 @@ class TestDomainEvent:
                 value=42,
             )
 
-    def test_rejects_naive_occurred_at_datetime(self):
+    def test_occurred_at_must_be_timezone_aware(self):
         with pytest.raises(ValueError, match="must be timezone-aware"):
             SampleEvent(
                 event_id=uuid4(),
@@ -118,19 +115,7 @@ class TestDomainEvent:
                 value=42,
             )
 
-    def test_rejects_empty_aggregate_type(self):
-        with pytest.raises(ContractError, match="cannot be an empty string"):
-            SampleEvent(
-                event_id=uuid4(),
-                occurred_at=datetime.now(UTC),
-                recorded_at=datetime.now(UTC),
-                aggregate_id="AGG-123",
-                aggregate_type="",
-                test_id="TEST-001",
-                value=42,
-            )
-
-    def test_rejects_none_recorded_at(self):
+    def test_recorded_at_cannot_be_none(self):
         with pytest.raises(ContractError, match="cannot be None"):
             SampleEvent(
                 event_id=uuid4(),
@@ -142,7 +127,7 @@ class TestDomainEvent:
                 value=42,
             )
 
-    def test_rejects_naive_recorded_at_datetime(self):
+    def test_recorded_at_must_be_timezone_aware(self):
         with pytest.raises(ValueError, match="must be timezone-aware"):
             SampleEvent(
                 event_id=uuid4(),
@@ -150,6 +135,18 @@ class TestDomainEvent:
                 recorded_at=datetime.now(),
                 aggregate_id="AGG-123",
                 aggregate_type="TestAggregate",
+                test_id="TEST-001",
+                value=42,
+            )
+
+    def test_aggregate_type_must_be_valued(self):
+        with pytest.raises(ContractError, match="cannot be an empty string"):
+            SampleEvent(
+                event_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                recorded_at=datetime.now(UTC),
+                aggregate_id="AGG-123",
+                aggregate_type="",
                 test_id="TEST-001",
                 value=42,
             )
