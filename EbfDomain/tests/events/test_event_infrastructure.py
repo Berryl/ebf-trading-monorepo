@@ -1,92 +1,13 @@
 # test_event_infrastructure.py
 
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
-import pytest
-from ebf_core.guards.guards import ContractError
-
-from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_collection import EventCollection
-from ebf_domain.events.event_source import EventSource
-from tests.events.helpers.event_factory import make_event, make_degenerate_event
-
-
-@dataclass(frozen=True, kw_only=True)
-class SampleEvent(DomainEvent[object]):
-    test_id: str = "TEST-001"
-    value: int = 42
-
-
-@dataclass(frozen=True, kw_only=True)
-class AnotherEvent(DomainEvent[object]):
-    test_id: str
-    description: str
-
-
-@dataclass(eq=False)
-class SampleAggregate(EventSource):
-    name: str
-
+from tests.events.helpers.event_factory import SampleEvent, SampleAggregate
 
 KNOWN_DATE = datetime(2001, 9, 11, 8, 46, 40, tzinfo=ZoneInfo('America/New_York'))
-
-
-class TestDomainEvent:
-    @pytest.fixture
-    def sut(self) -> DomainEvent:
-        return make_event(
-            SampleEvent, occurred_at=KNOWN_DATE, recorded_at=datetime.now(UTC), test_id="TEST-001", value=42)
-
-    def test_event_type_property_is_class_name(self, sut: DomainEvent):
-        assert sut.event_type == "SampleEvent"
-
-    def test_immutability(self, sut: DomainEvent):
-        with pytest.raises(Exception):
-            sut.value = 99  # noqa
-
-    def test_equality(self, sut: DomainEvent):
-        known_id = uuid4()
-        when_occurred = datetime(2025, 1, 15, 10, 0, tzinfo=UTC)
-        when_recorded = datetime(2025, 1, 15, 10, 1, tzinfo=UTC)
-
-        e1 = make_event(SampleEvent, event_id=known_id,
-                        occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
-        e2 = make_event(SampleEvent, event_id=known_id,
-                        occurred_at=when_occurred, recorded_at=when_recorded, test_id="TEST-001", value=42)
-
-        assert e1 != sut
-        assert hash(e1) != hash(sut)
-
-        assert e1 == e2
-        assert hash(e1) == hash(e2)
-
-    def test_event_id_cannot_be_none(self):
-        with pytest.raises(ContractError, match="'event_id' cannot be None"):
-            make_degenerate_event(SampleEvent, event_id=None)
-
-    def test_occurred_at_cannot_be_none(self):
-        with pytest.raises(ContractError, match="'occurred_at' cannot be None"):
-            make_degenerate_event(SampleEvent, event_id=uuid4(), occurred_at=None)
-
-    def test_occurred_at_must_be_timezone_aware(self):
-        with pytest.raises(ValueError, match="'occurred_at' must be timezone-aware"):
-            make_degenerate_event(SampleEvent, event_id=uuid4(), occurred_at=datetime.now())
-
-    def test_recorded_at_cannot_be_none(self):
-        with pytest.raises(ContractError, match="'recorded_at' cannot be None"):
-            make_degenerate_event(
-                SampleEvent, event_id=uuid4(), occurred_at=datetime.now(UTC), recorded_at=None)
-
-    def test_recorded_at_must_be_timezone_aware(self):
-        with pytest.raises(ValueError, match="'recorded_at' must be timezone-aware"):
-            make_event(SampleEvent, recorded_at=datetime.now())
-
-    def test_aggregate_type_must_be_valued(self):
-        with pytest.raises(ContractError, match="'aggregate_type' cannot be an empty string"):
-            make_event(SampleEvent, aggregate_type="   ")
 
 
 class TestEventSource:

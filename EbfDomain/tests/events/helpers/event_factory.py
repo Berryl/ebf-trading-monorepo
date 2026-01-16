@@ -17,12 +17,13 @@ Key points:
 If a test cares about aggregate behavior or event metadata correctness,
 it should use a real aggregate and EventSource instead of this helper.
 """
-
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Type
 from uuid import uuid4, UUID
 
 from ebf_domain.events.domain_event import DomainEvent
+from ebf_domain.events.event_source import EventSource
 
 
 def make_event(event_type: Type[DomainEvent], *,
@@ -73,3 +74,20 @@ def make_degenerate_event(event_type: Type[DomainEvent], *,
         aggregate_type=aggregate_type,
         **payload,
     )
+
+
+@dataclass(frozen=True, kw_only=True)
+class SampleEvent(DomainEvent[object]):
+    test_id: str = "TEST-001"
+    value: int = 42
+
+
+@dataclass(frozen=True, kw_only=True)
+class AnotherEvent(DomainEvent[object]):
+    test_id: str
+    description: str
+
+
+@dataclass(eq=False)
+class SampleAggregate(EventSource):
+    name: str
