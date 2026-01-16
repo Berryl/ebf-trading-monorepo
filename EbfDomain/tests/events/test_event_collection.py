@@ -4,7 +4,7 @@ import pytest
 
 from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_collection import EventCollection
-from tests.events.helpers.event_factory import SampleEvent, make_event, KNOWN_DATE
+from tests.events.helpers.event_factory import SampleEvent, make_event, KNOWN_DATE, AnotherEvent
 
 
 class TestEventCollection:
@@ -105,21 +105,18 @@ class TestEventCollection:
                 result: DomainEvent = sut_with_events.after(now).first()
                 assert result.occurred_at == tomorrow
 
-#
-#
-# def test_can_chain_multiple_filters(self):
-#     sut = EventCollection()
-#     now = datetime.now(UTC)
-#     yesterday =
-#     tomorrow = now + timedelta(days=1)
-#
-#     e1 = make_event(SampleEvent, test_id="OLD", value=1, occurred_at=yesterday)
-#     e2 = make_event(SampleEvent, test_id="NOW", value=2, occurred_at=now)
-#     e3 = make_event(SampleEvent, test_id="FUTURE", value=3, occurred_at=tomorrow)
-#     sut.add(e1).add(e2).add(e3)
-#
-#     result = sut.of_type(SampleEvent).after(yesterday).for_aggregate("AGG-123")
-#
-#     assert result.count == 1
-#     event = result.first()
-#     assert event.test_id == "NOW"
+        class TestTypeFilters:
+            @pytest.fixture
+            def sut_with_mixed_types(self, sut_with_events) -> EventCollection:
+                e1 = make_event(AnotherEvent, test_id="100", description="one")
+                e2 = make_event(AnotherEvent, test_id="200", description="two")
+                e3 = make_event(AnotherEvent, test_id="300", description="three")
+                sut_with_events.add(e1).add(e2).add(e3)
+
+                return sut_with_events
+
+            def test_can_get_by_type(self, sut_with_mixed_types):
+                assert sut_with_mixed_types.count == 6
+
+                assert sut_with_mixed_types.of_type(AnotherEvent).count == 3
+                assert sut_with_mixed_types.of_type(SampleEvent).count == 3
