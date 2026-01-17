@@ -5,7 +5,7 @@ Test helpers for specification testing.
 from dataclasses import dataclass
 from enum import Enum
 
-from specification import Specification
+from ebf_domain.specifications.specification import Specification
 
 
 class ItemStatus(Enum):
