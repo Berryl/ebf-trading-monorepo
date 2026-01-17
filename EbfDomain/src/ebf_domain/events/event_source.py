@@ -16,7 +16,19 @@ class EventSource:
     Mixin for domain aggregates that raise and collect events.
 
     EventSource owns event metadata (timestamps, aggregate identity/type).
-    """
+
+    Event Correlation IDs:
+        The aggregate_id stamped on events is for correlation and downstream
+        processing, not necessarily the aggregate's business identity.
+        - For TBD aggregates: Uses a temporary UUID
+        - After ID resolution: Uses the resolved business ID
+        - Purpose: Event correlation, audit, unit-of-work tracking
+
+    Integration with IDBase[T]:
+        When used with IDBase[T], events will use:
+        - id_value when resolved
+        - _tbd_event_aggregate_id (UUID) when still TBD
+   """
 
     _: KW_ONLY
     _pending_events: EventCollection = field(default_factory=EventCollection, init=False, repr=False)
@@ -28,6 +40,9 @@ class EventSource:
 
     @property
     def aggregate_id_for_events(self):
+        """
+        Return the identifier used to correlate domain events emitted by this aggregate.
+        """
         # Works with IDBase[T] or any class exposing `id_value`.
         id_value = getattr(self, "id_value", None)
         return id_value if id_value is not None else self._tbd_event_aggregate_id
