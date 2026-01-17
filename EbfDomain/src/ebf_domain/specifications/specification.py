@@ -5,12 +5,8 @@ Based on work by Eric Evans and Martin Fowler.
 """
 
 from abc import ABC, abstractmethod
-from typing import TypeVar
 
 import ebf_core.guards.guards as g
-
-T = TypeVar("T")
-
 
 class Specification[T](ABC):
     """
@@ -32,7 +28,7 @@ class Specification[T](ABC):
         class IsOpen(Specification[Trade]):
             def is_satisfied_by(self, trade: Trade) -> bool:
                 return trade.status == TradeStatus.OPEN
-
+#noinspection PyUnusedLocal
         class IsWheel(Specification[Trade]):
             def is_satisfied_by(self, trade: Trade) -> bool:
                 return trade.strategy_type == StrategyType.WHEEL
@@ -67,7 +63,7 @@ class Specification[T](ABC):
             candidate: The object to evaluate
 
         Returns:
-            True if candidate matches this specification's criteria
+            True if the candidate matches this specification's criteria
         """
         raise NotImplementedError()
 
@@ -97,7 +93,7 @@ class Specification[T](ABC):
             other: Specification to combine with
 
         Returns:
-            New specification that requires either to be satisfied
+            New specification that requires either spec to be satisfied
 
         Example:
             ```python
@@ -123,7 +119,7 @@ class Specification[T](ABC):
 
     def and_also(self, other: "Specification[T]") -> "Specification[T]":
         """
-        Explicit method for AND combination (alternative to & operator).
+        Explicit method for AND combination specs (alternative to the '&' operator).
 
         Args:
             other: Specification to combine with
@@ -135,13 +131,13 @@ class Specification[T](ABC):
 
     def or_else(self, other: "Specification[T]") -> "Specification[T]":
         """
-        Explicit method for OR combination (alternative to | operator).
+        Explicit method for OR combination spec (alternative to | operator).
 
         Args:
             other: Specification to combine with
 
         Returns:
-            New specification requiring either to be satisfied
+            New specification requiring either spec to be satisfied
         """
         return self | other
 
@@ -177,7 +173,7 @@ class AndSpecification[T](Specification[T]):
         self._right = right
 
     def is_satisfied_by(self, candidate: T) -> bool:
-        """Check if candidate satisfies both specifications."""
+        """Check if the candidate satisfies both specifications."""
         return self._left.is_satisfied_by(candidate) and self._right.is_satisfied_by(candidate)
 
     def __repr__(self) -> str:
@@ -206,7 +202,7 @@ class OrSpecification[T](Specification[T]):
         self._right = right
 
     def is_satisfied_by(self, candidate: T) -> bool:
-        """Check if candidate satisfies either specification."""
+        """Check if the candidate satisfies either specification."""
         return self._left.is_satisfied_by(candidate) or self._right.is_satisfied_by(candidate)
 
     def __repr__(self) -> str:
@@ -231,7 +227,7 @@ class NotSpecification[T](Specification[T]):
         self._spec = spec
 
     def is_satisfied_by(self, candidate: T) -> bool:
-        """Check if candidate does NOT satisfy the wrapped specification."""
+        """Check if the candidate does NOT satisfy the wrapped specification."""
         return not self._spec.is_satisfied_by(candidate)
 
     def __repr__(self) -> str:

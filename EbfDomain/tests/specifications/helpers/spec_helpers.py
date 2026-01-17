@@ -5,7 +5,7 @@ Test helpers for specification testing.
 from dataclasses import dataclass
 from enum import Enum
 
-from ebf_domain.specifications.specification import Specification
+from src.ebf_domain.specifications.specification import Specification
 
 
 class ItemStatus(Enum):
@@ -102,5 +102,5 @@ def make_item(
     status: ItemStatus = ItemStatus.ACTIVE,
     tags: list[str] | None = None,
 ) -> SampleItem:
-    """Create sample item for testing."""
+    """Create a sample item for testing."""
     return SampleItem(name=name, value=value, status=status, tags=tags or [])
