@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 
+from ebf_domain.events.domain_event import DomainEvent
 from ebf_domain.events.event_source import EventSource
 from tests.events.helpers.event_factory import SampleEvent
 
@@ -19,9 +20,22 @@ class TestEventSource:
     def sut(self) -> EventSource:
         return SampleAggregate(name="X")
 
-    @pytest.fixture
-    def synchronous_event(self, sut) -> SampleEvent:
-        pass
+    class TestRecordEvent:
+        @pytest.fixture
+        def e(self, sut) -> DomainEvent:
+            sut.record(SampleEvent, test_id="TEST-001", value=42)
+            return sut.peek_events()[0]
+
+        def test_record_stamps_metadata(self, e: DomainEvent):
+            assert isinstance(e.event_id, UUID)
+            assert e.aggregate_type == "SampleAggregate"
+            assert e.recorded_at.tzinfo is UTC
+            assert e.occurred_at.tzinfo is UTC
+            assert e.recorded_at >= e.occurred_at
+
+        def test_record_stamps_metadata_and_preserves_payload(self, e: SampleEvent):
+            assert e.test_id == "TEST-001"
+            assert e.value == 42
 
     def test_record_creates_synchronous_event(self, sut):
         before = datetime.now(UTC)

@@ -63,10 +63,20 @@ class EventSource:
 
 
     def peek_events(self) -> list[DomainEvent]:
+        """
+        Return pending events without clearing them.
+
+        Useful for inspection and testing; does not represent delivery.
+        """
         return self._pending_events.to_list()
 
 
     def collect_events(self) -> list[DomainEvent]:
+        """
+        Return and clear all pending events.
+
+        Represents the handoff point to persistence, dispatch, or a unit-of-work.
+        """
         events = self._pending_events.to_list()
         self._pending_events.clear()
         return events
