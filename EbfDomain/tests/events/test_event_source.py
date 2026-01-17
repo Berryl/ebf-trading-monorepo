@@ -20,28 +20,45 @@ class TestEventSource:
     def sut(self) -> EventSource:
         return SampleAggregate(name="X")
 
-    @pytest.fixture
-    def e(self, sut) -> DomainEvent:
-        sut.record(SampleEvent, test_id="TEST-001", value=42)
-        return sut.peek_events()[0]
-
     class TestRecordEvent:
 
-        def test_default_metadata(self, e: DomainEvent):
-            assert isinstance(e.event_id, UUID)
-            assert e.aggregate_type == "SampleAggregate"
-            assert e.recorded_at.tzinfo is UTC
-            assert e.occurred_at.tzinfo is UTC
-            assert e.recorded_at >= e.occurred_at
+        def test_pending_events_are_added_to(self, sut):
+            assert sut.event_count == 0
 
-        def test_payload_is_preserved(self, e: SampleEvent):
-            assert e.test_id == "TEST-001"
-            assert e.value == 42
+            sut.record(SampleEvent, test_id="TEST-RECORD-ADDS-EVENT", value=0)
+            assert sut.event_count == 1
+
+        def test_peek_events_returns_a_list_of_pending_events(self, sut):
+            sut.record(SampleEvent, test_id="TEST-PEEK-EVENTS", value=42)
+
+            result = sut.peek_events()
+
+            assert isinstance(result, list)
+            assert isinstance(result[0], DomainEvent)
+            assert result[0].test_id == "TEST-PEEK-EVENTS"
 
         def test_can_override_occurred_at(self, sut):
             sut.record(SampleEvent, occurred_at=KNOWN_DATE, test_id="TEST-001", value=42)
             e = sut.peek_events()[0]
             assert e.occurred_at == KNOWN_DATE
+
+        class TestEventMetadata:
+
+            @pytest.fixture
+            def e(self, sut) -> DomainEvent:
+                sut.record(SampleEvent, test_id="TEST-001", value=42)
+                return sut.peek_events()[0]
+
+            def test_default_metadata(self, e: DomainEvent):
+                assert isinstance(e.event_id, UUID)
+                assert e.aggregate_type == "SampleAggregate"
+                assert e.recorded_at.tzinfo is UTC
+                assert e.occurred_at.tzinfo is UTC
+                assert e.recorded_at >= e.occurred_at
+
+            def test_payload_is_preserved(self, e: SampleEvent):
+                assert e.test_id == "TEST-001"
+                assert e.value == 42
 
     class TestCollectEvents:
 

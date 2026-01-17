@@ -52,10 +52,9 @@ class DomainEvent[TAggregateId](ABC):
         return self.__class__.__name__
 
 
-def ensure_tz_aware(dt: datetime | None, field_name: str) -> datetime:
+def ensure_tz_aware(dt: datetime | None, field_name: str) -> None:
     g.ensure_not_none(dt, field_name)
     if dt.tzinfo is None:
         raise ValueError(
             f"{field_name!r} must be timezone-aware (use tzinfo=UTC or similar)"  # noqa
         )
-    return dt
