@@ -5,15 +5,16 @@ build-backend = "uv_build"
 [project]
 name = "ebf-core"
 version = "0.2.1"
-description = "EBF utilities package (fileutil, guards, and more)"
+description = "EBF utilities package (fileutil, guards, etc)"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "EBF" }]
-license = { text = "SPDX" }   # ← replace with actual SPDX id e.g. "MIT", "Apache-2.0"
+license = { text = "SPDX" }
 
 dependencies = [
     "typeguard>=4.0.0",
     "pyyaml>=6.0",
+    "inflect>=7.5.0",
 ]
 
 [project.optional-dependencies]
