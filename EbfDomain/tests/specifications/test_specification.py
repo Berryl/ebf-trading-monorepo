@@ -18,19 +18,20 @@ from src.ebf_domain.specifications.specification import Specification, AndSpecif
 
 class TestSpecification:
 
-    @pytest.fixture
-    def active_item(self) -> SampleItem:
-        return make_item(name="Active", value=100, status=ItemStatus.ACTIVE, tags=["important"])
-
-    @pytest.fixture
-    def closed_item(self) -> SampleItem:
-        return make_item(name="Closed", value=50, status=ItemStatus.CLOSED, tags=["archived"])
-
-    @pytest.fixture
-    def pending_item(self) -> SampleItem:
-        return make_item(name="Pending", value=25, status=ItemStatus.PENDING)
-
     class TestSimpleSpec:
+
+        @pytest.fixture
+        def active_item(self) -> SampleItem:
+            return make_item(name="Active", value=100, status=ItemStatus.ACTIVE, tags=["important"])
+
+        @pytest.fixture
+        def closed_item(self) -> SampleItem:
+            return make_item(name="Closed", value=50, status=ItemStatus.CLOSED, tags=["archived"])
+
+        @pytest.fixture
+        def pending_item(self) -> SampleItem:
+            return make_item(name="Pending", value=25, status=ItemStatus.PENDING)
+
         @pytest.fixture
         def sut(self) -> Specification:
             return IsActive()
@@ -197,6 +198,11 @@ class TestSpecification:
                 with pytest.raises(ContractError, match="'other' cannot be None"):
                     IsActive() & None  # noqa
 
+            def test_repr(self):
+                sut = IsActive() & ValueGreaterThan(75)
+
+                assert repr(sut) == "(IsActive() & ValueGreaterThan(75))"
+
         class TestOrOperator:
 
             def test_or_operator_creates_or_specification(self):
@@ -219,6 +225,11 @@ class TestSpecification:
                 with pytest.raises(ContractError, match="'other' cannot be None"):
                     IsActive() | None  # noqa
 
+            def test_repr(self):
+                sut = IsActive() | IsClosed()
+
+                assert repr(sut) == "(IsActive() | IsClosed())"
+
         class TestNotOperator:
 
             def test_not_operator_creates_not_specification(self):
@@ -236,6 +247,11 @@ class TestSpecification:
                 using_operator = ~IsClosed()
 
                 assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
+
+            def test_repr(self):
+                sut = ~IsActive()
+
+                assert repr(sut) == "~IsActive()"
 
     class TestComplexComposition:
 
@@ -321,6 +337,12 @@ class TestSpecification:
             assert sut.is_satisfied_by(not_matching_value) is False
             assert sut.is_satisfied_by(not_matching_tags) is False
 
+        def test_repr(self):
+            sut = (IsActive() & ValueGreaterThan(75)) | IsClosed()
+
+            expected = "((IsActive() & ValueGreaterThan(75)) | IsClosed())"
+            assert repr(sut) == expected
+
     class TestFiltering:
 
         @pytest.fixture
@@ -379,27 +401,3 @@ class TestSpecification:
             result = [item for item in items if spec.is_satisfied_by(item)]
 
             assert len(result) == len(items)
-
-
-class TestSpecificationRepresentation:
-
-    def test_and_spec_repr(self):
-        sut = IsActive() & ValueGreaterThan(75)
-
-        assert repr(sut) == "(IsActive() & ValueGreaterThan(75))"
-
-    def test_or_spec_repr(self):
-        sut = IsActive() | IsClosed()
-
-        assert repr(sut) == "(IsActive() | IsClosed())"
-
-    def test_not_spec_repr(self):
-        sut = ~IsActive()
-
-        assert repr(sut) == "~IsActive()"
-
-    def test_complex_repr(self):
-        sut = (IsActive() & ValueGreaterThan(75)) | IsClosed()
-
-        expected = "((IsActive() & ValueGreaterThan(75)) | IsClosed())"
-        assert repr(sut) == expected
