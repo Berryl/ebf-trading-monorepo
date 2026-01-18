@@ -1,6 +1,8 @@
 import pytest
 from ebf_core.guards.guards import ContractError
 
+from ebf_domain.specifications.specification import (Specification, AndSpecification, OrSpecification, \
+                                                     NotSpecification)
 from helpers.spec_helpers import (
     SampleItem,
     ItemStatus,
@@ -12,12 +14,9 @@ from helpers.spec_helpers import (
     HasTag,
     make_item,
 )
-from ebf_domain.specifications.specification import Specification, AndSpecification, OrSpecification, \
-    NotSpecification
 
 
 class TestSpecification:
-
     class TestSimpleSpec:
 
         @pytest.fixture
@@ -33,7 +32,7 @@ class TestSpecification:
             return make_item(name="Pending", value=25, status=ItemStatus.PENDING)
 
         @pytest.fixture
-        def sut(self) -> Specification:
+        def sut(self) -> Specification[SampleItem]:
             return IsActive()
 
         def test_when_criteria_met(self, sut, active_item):
