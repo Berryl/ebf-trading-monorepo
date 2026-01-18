@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Specification pattern for domain selection criteria.
 
@@ -28,7 +29,7 @@ class Specification[T](ABC):
         class IsOpen(Specification[Trade]):
             def is_satisfied_by(self, trade: Trade) -> bool:
                 return trade.status == TradeStatus.OPEN
-#noinspection PyUnusedLocal
+
         class IsWheel(Specification[Trade]):
             def is_satisfied_by(self, trade: Trade) -> bool:
                 return trade.strategy_type == StrategyType.WHEEL
@@ -67,7 +68,7 @@ class Specification[T](ABC):
         """
         raise NotImplementedError()
 
-    def __and__(self, other: "Specification[T]") -> "Specification[T]":
+    def __and__(self, other: Specification[T]) -> Specification[T]:
         """
         Combine specifications with AND logic.
 
@@ -85,7 +86,7 @@ class Specification[T](ABC):
         g.ensure_not_none(other, "other")
         return AndSpecification(self, other)
 
-    def __or__(self, other: "Specification[T]") -> "Specification[T]":
+    def __or__(self, other: Specification[T]) -> Specification[T]:
         """
         Combine specifications with OR logic.
 
@@ -103,7 +104,7 @@ class Specification[T](ABC):
         g.ensure_not_none(other, "other")
         return OrSpecification(self, other)
 
-    def __invert__(self) -> "Specification[T]":
+    def __invert__(self) -> Specification[T]:
         """
         Negate this specification with NOT logic.
 
@@ -117,7 +118,7 @@ class Specification[T](ABC):
         """
         return NotSpecification(self)
 
-    def and_also(self, other: "Specification[T]") -> "Specification[T]":
+    def and_also(self, other: Specification[T]) -> Specification[T]:
         """
         Explicit method for AND combination specs (alternative to the '&' operator).
 
@@ -129,7 +130,7 @@ class Specification[T](ABC):
         """
         return self & other
 
-    def or_else(self, other: "Specification[T]") -> "Specification[T]":
+    def or_else(self, other: Specification[T]) -> Specification[T]:
         """
         Explicit method for OR combination spec (alternative to | operator).
 
@@ -141,7 +142,7 @@ class Specification[T](ABC):
         """
         return self | other
 
-    def negated(self) -> "Specification[T]":
+    def negated(self) -> Specification[T]:
         """
         Explicit method for NOT (alternative to ~ operator).
 
