@@ -18,6 +18,7 @@ Provide a small set of common building blocks:
 - **File** – atomic writes, temp paths, safe replace.
 - **Config** – YAML/JSON/TOML loaders, layered merge.
 - **Guards** – `ensure_*` functions for argument validation.
+- **Reflection** – cross-cutting reflection utilities.
 - **Time** – timezone-safe helpers.
 - **Ids** – UUID/slug helpers.
 - **Util** – cross-cutting helpers.
