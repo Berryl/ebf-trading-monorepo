@@ -263,13 +263,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "build", marker = "extra == 'dev'" },
-    { name = "mypy", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "build", marker = "extra == 'dev'", specifier = ">=1.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "twine", marker = "extra == 'dev'" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
+    { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typeguard", specifier = ">=4.0.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
 ]
