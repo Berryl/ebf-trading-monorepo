@@ -44,61 +44,58 @@ class TestSpecification:
         def test_does_not_match_when_criteria_not_met(self, sut, closed_item):
             assert sut.is_satisfied_by(closed_item) is False
 
-    def test_parameterized_spec_uses_constructor_params(self):
-        sut = ValueGreaterThan(75)
+        def test_constructor_params(self):
+            sut = ValueGreaterThan(75)
 
-        high_value = make_item(value=100)
-        low_value = make_item(value=50)
-
-        assert sut.is_satisfied_by(high_value) is True
-        assert sut.is_satisfied_by(low_value) is False
+            assert sut.is_satisfied_by(make_item(value=100)) is True
+            assert sut.is_satisfied_by(make_item(value=50)) is False
 
 
-class TestAndSpecification:
+    class TestAndSpecification:
 
-    @pytest.fixture
-    def matches_both(self) -> SampleItem:
-        return make_item(value=100, status=ItemStatus.ACTIVE)
+        @pytest.fixture
+        def matches_both(self) -> SampleItem:
+            return make_item(value=100, status=ItemStatus.ACTIVE)
 
-    @pytest.fixture
-    def matches_first_only(self) -> SampleItem:
-        return make_item(value=25, status=ItemStatus.ACTIVE)
+        @pytest.fixture
+        def matches_first_only(self) -> SampleItem:
+            return make_item(value=25, status=ItemStatus.ACTIVE)
 
-    @pytest.fixture
-    def matches_second_only(self) -> SampleItem:
-        return make_item(value=100, status=ItemStatus.CLOSED)
+        @pytest.fixture
+        def matches_second_only(self) -> SampleItem:
+            return make_item(value=100, status=ItemStatus.CLOSED)
 
-    @pytest.fixture
-    def matches_neither(self) -> SampleItem:
-        return make_item(value=25, status=ItemStatus.CLOSED)
+        @pytest.fixture
+        def matches_neither(self) -> SampleItem:
+            return make_item(value=25, status=ItemStatus.CLOSED)
 
-    def test_satisfied_when_both_specs_match(self, matches_both):
-        sut = AndSpecification(IsActive(), ValueGreaterThan(75))
+        def test_satisfied_when_both_specs_match(self, matches_both):
+            sut = AndSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_both) is True
+            assert sut.is_satisfied_by(matches_both) is True
 
-    def test_not_satisfied_when_only_left_matches(self, matches_first_only):
-        sut = AndSpecification(IsActive(), ValueGreaterThan(75))
+        def test_not_satisfied_when_only_left_matches(self, matches_first_only):
+            sut = AndSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_first_only) is False
+            assert sut.is_satisfied_by(matches_first_only) is False
 
-    def test_not_satisfied_when_only_right_matches(self, matches_second_only):
-        sut = AndSpecification(IsActive(), ValueGreaterThan(75))
+        def test_not_satisfied_when_only_right_matches(self, matches_second_only):
+            sut = AndSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_second_only) is False
+            assert sut.is_satisfied_by(matches_second_only) is False
 
-    def test_not_satisfied_when_neither_matches(self, matches_neither):
-        sut = AndSpecification(IsActive(), ValueGreaterThan(75))
+        def test_not_satisfied_when_neither_matches(self, matches_neither):
+            sut = AndSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_neither) is False
+            assert sut.is_satisfied_by(matches_neither) is False
 
-    def test_rejects_none_left_spec(self):
-        with pytest.raises(ContractError, match="'left' cannot be None"):
-            AndSpecification(None, IsActive())
+        def test_rejects_none_left_spec(self):
+            with pytest.raises(ContractError, match="'left' cannot be None"):
+                AndSpecification(None, IsActive())
 
-    def test_rejects_none_right_spec(self):
-        with pytest.raises(ContractError, match="'right' cannot be None"):
-            AndSpecification(IsActive(), None)
+        def test_rejects_none_right_spec(self):
+            with pytest.raises(ContractError, match="'right' cannot be None"):
+                AndSpecification(IsActive(), None)
 
 
 class TestOrSpecification:
