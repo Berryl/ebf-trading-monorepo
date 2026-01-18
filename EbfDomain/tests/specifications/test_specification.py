@@ -38,10 +38,10 @@ class TestSpecification:
         def test_repr(self, sut):
             assert repr(sut) == "IsActive()"
 
-        def test_matches_when_criteria_met(self, sut, active_item):
+        def test_when_criteria_met(self, sut, active_item):
             assert sut.is_satisfied_by(active_item) is True
 
-        def test_does_not_match_when_criteria_not_met(self, sut, closed_item):
+        def test_when_criteria_not_met(self, sut, closed_item):
             assert sut.is_satisfied_by(closed_item) is False
 
         def test_constructor_params(self):
@@ -91,154 +91,154 @@ class TestSpecification:
 
         def test_rejects_none_left_spec(self):
             with pytest.raises(ContractError, match="'left' cannot be None"):
-                AndSpecification(None, IsActive())
+                AndSpecification(None, IsActive()) # noqa
 
         def test_rejects_none_right_spec(self):
             with pytest.raises(ContractError, match="'right' cannot be None"):
-                AndSpecification(IsActive(), None)
+                AndSpecification(IsActive(), None) # noqa
 
 
-class TestOrSpecification:
+    class TestOrSpecification:
 
-    @pytest.fixture
-    def matches_both(self) -> SampleItem:
-        return make_item(value=100, status=ItemStatus.ACTIVE)
+        @pytest.fixture
+        def matches_both(self) -> SampleItem:
+            return make_item(value=100, status=ItemStatus.ACTIVE)
 
-    @pytest.fixture
-    def matches_first_only(self) -> SampleItem:
-        return make_item(value=25, status=ItemStatus.ACTIVE)
+        @pytest.fixture
+        def matches_first_only(self) -> SampleItem:
+            return make_item(value=25, status=ItemStatus.ACTIVE)
 
-    @pytest.fixture
-    def matches_second_only(self) -> SampleItem:
-        return make_item(value=100, status=ItemStatus.CLOSED)
+        @pytest.fixture
+        def matches_second_only(self) -> SampleItem:
+            return make_item(value=100, status=ItemStatus.CLOSED)
 
-    @pytest.fixture
-    def matches_neither(self) -> SampleItem:
-        return make_item(value=25, status=ItemStatus.CLOSED)
+        @pytest.fixture
+        def matches_neither(self) -> SampleItem:
+            return make_item(value=25, status=ItemStatus.CLOSED)
 
-    def test_satisfied_when_both_specs_match(self, matches_both):
-        sut = OrSpecification(IsActive(), ValueGreaterThan(75))
+        def test_satisfied_when_both_specs_match(self, matches_both):
+            sut = OrSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_both) is True
+            assert sut.is_satisfied_by(matches_both) is True
 
-    def test_satisfied_when_only_left_matches(self, matches_first_only):
-        sut = OrSpecification(IsActive(), ValueGreaterThan(75))
+        def test_satisfied_when_only_left_matches(self, matches_first_only):
+            sut = OrSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_first_only) is True
+            assert sut.is_satisfied_by(matches_first_only) is True
 
-    def test_satisfied_when_only_right_matches(self, matches_second_only):
-        sut = OrSpecification(IsActive(), ValueGreaterThan(75))
+        def test_satisfied_when_only_right_matches(self, matches_second_only):
+            sut = OrSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_second_only) is True
+            assert sut.is_satisfied_by(matches_second_only) is True
 
-    def test_not_satisfied_when_neither_matches(self, matches_neither):
-        sut = OrSpecification(IsActive(), ValueGreaterThan(75))
+        def test_not_satisfied_when_neither_matches(self, matches_neither):
+            sut = OrSpecification(IsActive(), ValueGreaterThan(75))
 
-        assert sut.is_satisfied_by(matches_neither) is False
+            assert sut.is_satisfied_by(matches_neither) is False
 
-    def test_rejects_none_left_spec(self):
-        with pytest.raises(ContractError, match="'left' cannot be None"):
-            OrSpecification(None, IsActive())
+        def test_rejects_none_left_spec(self):
+            with pytest.raises(ContractError, match="'left' cannot be None"):
+                OrSpecification(None, IsActive()) # noqa
 
-    def test_rejects_none_right_spec(self):
-        with pytest.raises(ContractError, match="'right' cannot be None"):
-            OrSpecification(IsActive(), None)
-
-
-class TestNotSpecification:
-
-    def test_satisfied_when_inner_spec_not_satisfied(self):
-        sut = NotSpecification(IsActive())
-        closed_item = make_item(status=ItemStatus.CLOSED)
-
-        assert sut.is_satisfied_by(closed_item) is True
-
-    def test_not_satisfied_when_inner_spec_satisfied(self):
-        sut = NotSpecification(IsActive())
-        active_item = make_item(status=ItemStatus.ACTIVE)
-
-        assert sut.is_satisfied_by(active_item) is False
-
-    def test_double_negation_equals_original(self):
-        item = make_item(status=ItemStatus.ACTIVE)
-        original = IsActive()
-
-        double_negated = NotSpecification(NotSpecification(original))
-
-        assert original.is_satisfied_by(item) == double_negated.is_satisfied_by(item)
-
-    def test_rejects_none_spec(self):
-        with pytest.raises(ContractError, match="'spec' cannot be None"):
-            NotSpecification(None)
+        def test_rejects_none_right_spec(self):
+            with pytest.raises(ContractError, match="'right' cannot be None"):
+                OrSpecification(IsActive(), None) # noqa
 
 
-class TestOperatorOverloading:
+    class TestNotSpecification:
 
-    @pytest.fixture
-    def item(self) -> SampleItem:
-        return make_item(value=100, status=ItemStatus.ACTIVE, tags=["important"])
+        def test_satisfied_when_inner_spec_not_satisfied(self):
+            sut = NotSpecification(IsActive())
+            closed_item = make_item(status=ItemStatus.CLOSED)
 
-    class TestAndOperator:
+            assert sut.is_satisfied_by(closed_item) is True
 
-        def test_and_operator_creates_and_specification(self):
-            result = IsActive() & ValueGreaterThan(75)
+        def test_not_satisfied_when_inner_spec_satisfied(self):
+            sut = NotSpecification(IsActive())
+            active_item = make_item(status=ItemStatus.ACTIVE)
 
-            assert isinstance(result, AndSpecification)
+            assert sut.is_satisfied_by(active_item) is False
 
-        def test_and_operator_evaluates_correctly(self, item):
-            sut = IsActive() & ValueGreaterThan(75)
+        def test_double_negation_equals_original(self):
+            item = make_item(status=ItemStatus.ACTIVE)
+            original = IsActive()
 
-            assert sut.is_satisfied_by(item) is True
+            double_negated = NotSpecification(NotSpecification(original))
 
-        def test_and_also_method_equivalent_to_operator(self, item):
-            using_method = IsActive().and_also(ValueGreaterThan(75))
-            using_operator = IsActive() & ValueGreaterThan(75)
+            assert original.is_satisfied_by(item) == double_negated.is_satisfied_by(item)
 
-            assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
+        def test_rejects_none_spec(self):
+            with pytest.raises(ContractError, match="'spec' cannot be None"):
+                NotSpecification(None) # noqa
 
-        def test_and_operator_rejects_none(self):
-            with pytest.raises(ContractError, match="'other' cannot be None"):
-                IsActive() & None
 
-    class TestOrOperator:
+    class TestOperatorOverloading:
 
-        def test_or_operator_creates_or_specification(self):
-            result = IsActive() | ValueGreaterThan(75)
+        @pytest.fixture
+        def item(self) -> SampleItem:
+            return make_item(value=100, status=ItemStatus.ACTIVE, tags=["important"])
 
-            assert isinstance(result, OrSpecification)
+        class TestAndOperator:
 
-        def test_or_operator_evaluates_correctly(self, item):
-            sut = IsActive() | ValueGreaterThan(1000)
+            def test_and_operator_creates_and_specification(self):
+                result = IsActive() & ValueGreaterThan(75)
 
-            assert sut.is_satisfied_by(item) is True
+                assert isinstance(result, AndSpecification)
 
-        def test_or_else_method_equivalent_to_operator(self, item):
-            using_method = IsActive().or_else(ValueGreaterThan(75))
-            using_operator = IsActive() | ValueGreaterThan(75)
+            def test_and_operator_evaluates_correctly(self, item):
+                sut = IsActive() & ValueGreaterThan(75)
 
-            assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
+                assert sut.is_satisfied_by(item) is True
 
-        def test_or_operator_rejects_none(self):
-            with pytest.raises(ContractError, match="'other' cannot be None"):
-                IsActive() | None
+            def test_and_also_method_equivalent_to_operator(self, item):
+                using_method = IsActive().and_also(ValueGreaterThan(75))
+                using_operator = IsActive() & ValueGreaterThan(75)
 
-    class TestNotOperator:
+                assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
 
-        def test_not_operator_creates_not_specification(self):
-            result = ~IsActive()
+            def test_and_operator_rejects_none(self):
+                with pytest.raises(ContractError, match="'other' cannot be None"):
+                    IsActive() & None # noqa
 
-            assert isinstance(result, NotSpecification)
+        class TestOrOperator:
 
-        def test_not_operator_evaluates_correctly(self, item):
-            sut = ~IsClosed()
+            def test_or_operator_creates_or_specification(self):
+                result = IsActive() | ValueGreaterThan(75)
 
-            assert sut.is_satisfied_by(item) is True
+                assert isinstance(result, OrSpecification)
 
-        def test_negated_method_equivalent_to_operator(self, item):
-            using_method = IsClosed().negated()
-            using_operator = ~IsClosed()
+            def test_or_operator_evaluates_correctly(self, item):
+                sut = IsActive() | ValueGreaterThan(1000)
 
-            assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
+                assert sut.is_satisfied_by(item) is True
+
+            def test_or_else_method_equivalent_to_operator(self, item):
+                using_method = IsActive().or_else(ValueGreaterThan(75))
+                using_operator = IsActive() | ValueGreaterThan(75)
+
+                assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
+
+            def test_or_operator_rejects_none(self):
+                with pytest.raises(ContractError, match="'other' cannot be None"):
+                    IsActive() | None # noqa
+
+        class TestNotOperator:
+
+            def test_not_operator_creates_not_specification(self):
+                result = ~IsActive()
+
+                assert isinstance(result, NotSpecification)
+
+            def test_not_operator_evaluates_correctly(self, item):
+                sut = ~IsClosed()
+
+                assert sut.is_satisfied_by(item) is True
+
+            def test_negated_method_equivalent_to_operator(self, item):
+                using_method = IsClosed().negated()
+                using_operator = ~IsClosed()
+
+                assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
 
 
 class TestComplexComposition:
