@@ -1,45 +1,45 @@
 [build-system]
-requires = ["hatchling >= 1.26"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.4,<1"]
+build-backend = "uv_build"
 
 [project]
 name = "ebf-trading"
 version = "0.1.0"
 description = "Trading application and services using EBF domain model"
 readme = "README.md"
-requires-python = ">=3.13"
-license = "MIT"  # or your choice
-authors = [{ name = "Your Name", email = "your@email.com" }]
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "EBF" }]
 keywords = ["trading", "options", "finance", "domain-driven"]
 
-dependencies = []
-#    "-e ../EbfDomain#egg=ebf-domain-0.1.0",  # editable path dep
-    # "-e ../EbfUtil#egg=ebf-util-0.1.0",     # uncomment if needed
-#]
+dependencies = [
+  "ebf-core",
+  "ebf-domain",
+]
 
 [project.optional-dependencies]
 dev = [
-    "ruff >= 0.7.0",
-    "mypy >= 1.11",
-    "pytest >= 8.3",
-    "pytest-cov >= 5.0",
-    # add more: black, pre-commit, etc.
+  "ruff>=0.7.0",
+  "mypy>=1.11",
+  "pytest>=8.3",
+  "pytest-cov>=5.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/ebf_trading"]
+[tool.uv.sources]
+ebf-core = { workspace = true }
+ebf-domain = { workspace = true }
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "UP", "SIM", "ARG", "ERA", "PL", "PIE"]
-ignore = ["E501"]  # line too long - handled by black/ruff formatter
+ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
@@ -49,8 +49,3 @@ check_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-addopts = "--cov=src/ebf_trading --cov-report=term-missing --cov-report=html"
-
-[tool.coverage.run]
-source = ["src/ebf_trading"]
-branch = true
