@@ -12,7 +12,7 @@ from helpers.spec_helpers import (
     HasTag,
     make_item,
 )
-from src.ebf_domain.specifications.specification import Specification, AndSpecification, OrSpecification, \
+from ebf_domain.specifications.specification import Specification, AndSpecification, OrSpecification, \
     NotSpecification
 
 
