@@ -1,7 +1,6 @@
 import pytest
 from ebf_core.guards.guards import ContractError
 
-from src.ebf_domain.specifications.specification import Specification, AndSpecification, OrSpecification, NotSpecification
 from helpers.spec_helpers import (
     SampleItem,
     ItemStatus,
@@ -9,11 +8,12 @@ from helpers.spec_helpers import (
     IsClosed,
     IsPending,
     ValueGreaterThan,
-    ValueLessThan,
     NameStartsWith,
     HasTag,
     make_item,
 )
+from src.ebf_domain.specifications.specification import Specification, AndSpecification, OrSpecification, \
+    NotSpecification
 
 
 class TestSpecification:
@@ -35,9 +35,6 @@ class TestSpecification:
         def sut(self) -> Specification:
             return IsActive()
 
-        def test_repr(self, sut):
-            assert repr(sut) == "IsActive()"
-
         def test_when_criteria_met(self, sut, active_item):
             assert sut.is_satisfied_by(active_item) is True
 
@@ -50,6 +47,9 @@ class TestSpecification:
             assert sut.is_satisfied_by(make_item(value=100)) is True
             assert sut.is_satisfied_by(make_item(value=50)) is False
 
+        def test_repr(self, sut):
+            assert repr(IsActive()) == "IsActive()"
+            assert repr(ValueGreaterThan(100)) == "ValueGreaterThan(100)"
 
     class TestAndSpecification:
 
@@ -91,12 +91,11 @@ class TestSpecification:
 
         def test_rejects_none_left_spec(self):
             with pytest.raises(ContractError, match="'left' cannot be None"):
-                AndSpecification(None, IsActive()) # noqa
+                AndSpecification(None, IsActive())  # noqa
 
         def test_rejects_none_right_spec(self):
             with pytest.raises(ContractError, match="'right' cannot be None"):
-                AndSpecification(IsActive(), None) # noqa
-
+                AndSpecification(IsActive(), None)  # noqa
 
     class TestOrSpecification:
 
@@ -138,12 +137,11 @@ class TestSpecification:
 
         def test_rejects_none_left_spec(self):
             with pytest.raises(ContractError, match="'left' cannot be None"):
-                OrSpecification(None, IsActive()) # noqa
+                OrSpecification(None, IsActive())  # noqa
 
         def test_rejects_none_right_spec(self):
             with pytest.raises(ContractError, match="'right' cannot be None"):
-                OrSpecification(IsActive(), None) # noqa
-
+                OrSpecification(IsActive(), None)  # noqa
 
     class TestNotSpecification:
 
@@ -169,8 +167,7 @@ class TestSpecification:
 
         def test_rejects_none_spec(self):
             with pytest.raises(ContractError, match="'spec' cannot be None"):
-                NotSpecification(None) # noqa
-
+                NotSpecification(None)  # noqa
 
     class TestOperatorOverloading:
 
@@ -198,7 +195,7 @@ class TestSpecification:
 
             def test_and_operator_rejects_none(self):
                 with pytest.raises(ContractError, match="'other' cannot be None"):
-                    IsActive() & None # noqa
+                    IsActive() & None  # noqa
 
         class TestOrOperator:
 
@@ -220,7 +217,7 @@ class TestSpecification:
 
             def test_or_operator_rejects_none(self):
                 with pytest.raises(ContractError, match="'other' cannot be None"):
-                    IsActive() | None # noqa
+                    IsActive() | None  # noqa
 
         class TestNotOperator:
 
@@ -240,158 +237,151 @@ class TestSpecification:
 
                 assert using_method.is_satisfied_by(item) == using_operator.is_satisfied_by(item)
 
+    class TestComplexComposition:
 
-class TestComplexComposition:
+        def test_chaining_multiple_and_conditions(self):
+            item = make_item(name="ActiveHigh", value=100, status=ItemStatus.ACTIVE)
 
-    def test_chaining_multiple_and_conditions(self):
-        item = make_item(name="ActiveHigh", value=100, status=ItemStatus.ACTIVE)
+            sut = IsActive() & ValueGreaterThan(75) & NameStartsWith("Active")
 
-        sut = IsActive() & ValueGreaterThan(75) & NameStartsWith("Active")
+            assert sut.is_satisfied_by(item) is True
 
-        assert sut.is_satisfied_by(item) is True
+        def test_chaining_multiple_or_conditions(self):
+            item = make_item(value=50, status=ItemStatus.PENDING)
 
-    def test_chaining_multiple_or_conditions(self):
-        item = make_item(value=50, status=ItemStatus.PENDING)
+            sut = IsActive() | IsClosed() | ValueGreaterThan(1000)
 
-        sut = IsActive() | IsClosed() | ValueGreaterThan(1000)
+            assert sut.is_satisfied_by(item) is False
 
-        assert sut.is_satisfied_by(item) is False
+        def test_combining_and_with_or(self):
+            active_low = make_item(value=25, status=ItemStatus.ACTIVE)
+            closed_high = make_item(value=100, status=ItemStatus.CLOSED)
+            active_high = make_item(value=100, status=ItemStatus.ACTIVE)
 
-    def test_combining_and_with_or(self):
-        active_low = make_item(value=25, status=ItemStatus.ACTIVE)
-        closed_high = make_item(value=100, status=ItemStatus.CLOSED)
-        active_high = make_item(value=100, status=ItemStatus.ACTIVE)
+            sut = (IsActive() | IsClosed()) & ValueGreaterThan(75)
 
-        sut = (IsActive() | IsClosed()) & ValueGreaterThan(75)
+            assert sut.is_satisfied_by(active_low) is False
+            assert sut.is_satisfied_by(closed_high) is True
+            assert sut.is_satisfied_by(active_high) is True
 
-        assert sut.is_satisfied_by(active_low) is False
-        assert sut.is_satisfied_by(closed_high) is True
-        assert sut.is_satisfied_by(active_high) is True
+        def test_combining_or_with_and(self):
+            active_high = make_item(value=100, status=ItemStatus.ACTIVE)
+            closed_high = make_item(value=100, status=ItemStatus.CLOSED)
+            active_low = make_item(value=25, status=ItemStatus.ACTIVE)
 
-    def test_combining_or_with_and(self):
-        active_high = make_item(value=100, status=ItemStatus.ACTIVE)
-        closed_high = make_item(value=100, status=ItemStatus.CLOSED)
-        active_low = make_item(value=25, status=ItemStatus.ACTIVE)
+            sut = (IsActive() & ValueGreaterThan(75)) | IsClosed()
 
-        sut = (IsActive() & ValueGreaterThan(75)) | IsClosed()
+            assert sut.is_satisfied_by(active_high) is True
+            assert sut.is_satisfied_by(closed_high) is True
+            assert sut.is_satisfied_by(active_low) is False
 
-        assert sut.is_satisfied_by(active_high) is True
-        assert sut.is_satisfied_by(closed_high) is True
-        assert sut.is_satisfied_by(active_low) is False
+        def test_negation_of_complex_expression(self):
+            item = make_item(value=50, status=ItemStatus.ACTIVE)
 
-    def test_negation_of_complex_expression(self):
-        item = make_item(value=50, status=ItemStatus.ACTIVE)
+            sut = ~(IsActive() & ValueGreaterThan(75))
 
-        sut = ~(IsActive() & ValueGreaterThan(75))
+            assert sut.is_satisfied_by(item) is True
 
-        assert sut.is_satisfied_by(item) is True
+        def test_de_morgans_law_not_and_equals_not_or_not(self):
+            """NOT (A AND B) ≡ (NOT A) OR (NOT B)"""
+            item = make_item(value=50, status=ItemStatus.ACTIVE)
 
-    def test_de_morgans_law_not_and_equals_not_or_not(self):
-        """NOT (A AND B) ≡ (NOT A) OR (NOT B)"""
-        item = make_item(value=50, status=ItemStatus.ACTIVE)
+            left_side = ~(IsActive() & ValueGreaterThan(75))
+            right_side = (~IsActive()) | (~ValueGreaterThan(75))
 
-        left_side = ~(IsActive() & ValueGreaterThan(75))
-        right_side = (~IsActive()) | (~ValueGreaterThan(75))
+            assert left_side.is_satisfied_by(item) == right_side.is_satisfied_by(item)
 
-        assert left_side.is_satisfied_by(item) == right_side.is_satisfied_by(item)
+        def test_de_morgans_law_not_or_equals_not_and_not(self):
+            """NOT (A OR B) ≡ (NOT A) AND (NOT B)"""
+            item = make_item(value=50, status=ItemStatus.PENDING)
 
-    def test_de_morgans_law_not_or_equals_not_and_not(self):
-        """NOT (A OR B) ≡ (NOT A) AND (NOT B)"""
-        item = make_item(value=50, status=ItemStatus.PENDING)
+            left_side = ~(IsActive() | ValueGreaterThan(75))
+            right_side = (~IsActive()) & (~ValueGreaterThan(75))
 
-        left_side = ~(IsActive() | ValueGreaterThan(75))
-        right_side = (~IsActive()) & (~ValueGreaterThan(75))
+            assert left_side.is_satisfied_by(item) == right_side.is_satisfied_by(item)
 
-        assert left_side.is_satisfied_by(item) == right_side.is_satisfied_by(item)
+        def test_complex_business_query(self):
+            matching = make_item(
+                name="ActiveItem",
+                value=100,
+                status=ItemStatus.ACTIVE,
+                tags=["important", "urgent"],
+            )
 
-    def test_complex_business_query(self):
-        matching = make_item(
-            name="ActiveItem",
-            value=100,
-            status=ItemStatus.ACTIVE,
-            tags=["important", "urgent"],
-        )
+            not_matching_status = make_item(value=100, status=ItemStatus.CLOSED, tags=["important"])
 
-        not_matching_status = make_item(value=100, status=ItemStatus.CLOSED, tags=["important"])
+            not_matching_value = make_item(value=25, status=ItemStatus.ACTIVE, tags=["important"])
 
-        not_matching_value = make_item(value=25, status=ItemStatus.ACTIVE, tags=["important"])
+            not_matching_tags = make_item(value=100, status=ItemStatus.ACTIVE, tags=["other"])
 
-        not_matching_tags = make_item(value=100, status=ItemStatus.ACTIVE, tags=["other"])
+            sut = (IsActive() | IsPending()) & ValueGreaterThan(75) & (HasTag("important") | HasTag("urgent"))
 
-        sut = (IsActive() | IsPending()) & ValueGreaterThan(75) & (HasTag("important") | HasTag("urgent"))
+            assert sut.is_satisfied_by(matching) is True
+            assert sut.is_satisfied_by(not_matching_status) is False
+            assert sut.is_satisfied_by(not_matching_value) is False
+            assert sut.is_satisfied_by(not_matching_tags) is False
 
-        assert sut.is_satisfied_by(matching) is True
-        assert sut.is_satisfied_by(not_matching_status) is False
-        assert sut.is_satisfied_by(not_matching_value) is False
-        assert sut.is_satisfied_by(not_matching_tags) is False
+    class TestFiltering:
 
+        @pytest.fixture
+        def items(self) -> list[SampleItem]:
+            return [
+                make_item(name="Active1", value=100, status=ItemStatus.ACTIVE, tags=["important"]),
+                make_item(name="Active2", value=50, status=ItemStatus.ACTIVE, tags=["normal"]),
+                make_item(name="Closed1", value=100, status=ItemStatus.CLOSED, tags=["important"]),
+                make_item(name="Closed2", value=25, status=ItemStatus.CLOSED, tags=["archived"]),
+                make_item(name="Pending1", value=75, status=ItemStatus.PENDING, tags=["new"]),
+            ]
 
-class TestFiltering:
+        def test_single_spec(self, items):
+            spec = IsActive()
 
-    @pytest.fixture
-    def items(self) -> list[SampleItem]:
-        return [
-            make_item(name="Active1", value=100, status=ItemStatus.ACTIVE, tags=["important"]),
-            make_item(name="Active2", value=50, status=ItemStatus.ACTIVE, tags=["normal"]),
-            make_item(name="Closed1", value=100, status=ItemStatus.CLOSED, tags=["important"]),
-            make_item(name="Closed2", value=25, status=ItemStatus.CLOSED, tags=["archived"]),
-            make_item(name="Pending1", value=75, status=ItemStatus.PENDING, tags=["new"]),
-        ]
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_by_single_spec(self, items):
-        spec = IsActive()
+            assert len(result) == 2
+            assert all(item.status == ItemStatus.ACTIVE for item in result)
 
-        result = [item for item in items if spec.is_satisfied_by(item)]
+        def test_combined_specs(self, items):
+            spec = IsActive() & ValueGreaterThan(75)
 
-        assert len(result) == 2
-        assert all(item.status == ItemStatus.ACTIVE for item in result)
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_by_combined_specs(self, items):
-        spec = IsActive() & ValueGreaterThan(75)
+            assert len(result) == 1
+            assert result[0].name == "Active1"
 
-        result = [item for item in items if spec.is_satisfied_by(item)]
+        def test_with_negation(self, items):
+            spec = ~IsClosed()
 
-        assert len(result) == 1
-        assert result[0].name == "Active1"
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_with_negation(self, items):
-        spec = ~IsClosed()
+            assert len(result) == 3
+            assert all(item.status != ItemStatus.CLOSED for item in result)
 
-        result = [item for item in items if spec.is_satisfied_by(item)]
+        def test_complex_query(self, items):
+            spec = (ValueGreaterThan(60) | HasTag("important")) & ~IsPending()
 
-        assert len(result) == 3
-        assert all(item.status != ItemStatus.CLOSED for item in result)
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_with_complex_query(self, items):
-        spec = (ValueGreaterThan(60) | HasTag("important")) & ~IsPending()
+            expected_names = {"Active1", "Closed1"}
+            actual_names = {item.name for item in result}
+            assert actual_names == expected_names
 
-        result = [item for item in items if spec.is_satisfied_by(item)]
+        def test_when_none_match(self, items):
+            spec = IsActive() & ValueGreaterThan(1000)
 
-        expected_names = {"Active1", "Closed1"}
-        actual_names = {item.name for item in result}
-        assert actual_names == expected_names
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_none_match(self, items):
-        spec = IsActive() & ValueGreaterThan(1000)
+            assert len(result) == 0
 
-        result = [item for item in items if spec.is_satisfied_by(item)]
+        def test_when_all_match(self, items):
+            spec = ValueGreaterThan(0)
 
-        assert len(result) == 0
+            result = [item for item in items if spec.is_satisfied_by(item)]
 
-    def test_filter_all_match(self, items):
-        spec = ValueGreaterThan(0)
-
-        result = [item for item in items if spec.is_satisfied_by(item)]
-
-        assert len(result) == len(items)
+            assert len(result) == len(items)
 
 
 class TestSpecificationRepresentation:
-
-    def test_parameterized_spec_repr(self):
-        sut = ValueGreaterThan(100)
-
-        assert repr(sut) == "ValueGreaterThan(100)"
 
     def test_and_spec_repr(self):
         sut = IsActive() & ValueGreaterThan(75)
