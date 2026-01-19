@@ -7,7 +7,7 @@ Based on work by Eric Evans and Martin Fowler.
 
 from abc import ABC, abstractmethod
 
-import ebf_core.guards.guards as g
+from ebf_core.guards import guards as g
 
 class Specification[T](ABC):
     """

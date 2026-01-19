@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Self
 
-import ebf_core.miscutil.string_helpers as sh
+from ebf_core.miscutil import string_helpers as sh
 
 from ebf_domain.rules.rule import RuleViolation
 

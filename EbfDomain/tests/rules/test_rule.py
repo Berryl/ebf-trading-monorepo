@@ -2,7 +2,7 @@ from dataclasses import dataclass, FrozenInstanceError
 
 import pytest
 
-from src.ebf_domain.rules.rule import Rule, RuleViolation
+from ebf_domain.rules.rule import Rule, RuleViolation
 
 
 class TestRuleViolation:

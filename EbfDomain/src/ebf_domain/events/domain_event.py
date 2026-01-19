@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-import ebf_core.guards.guards as g
+from ebf_core.guards import guards as g
 
 
 @dataclass(frozen=True, kw_only=True)

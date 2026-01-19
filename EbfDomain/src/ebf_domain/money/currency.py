@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import ebf_core.guards.guards as g
+from ebf_core.guards import guards as g
 
 
 @dataclass(frozen=True)
