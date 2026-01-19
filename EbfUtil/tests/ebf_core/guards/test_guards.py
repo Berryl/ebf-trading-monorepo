@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-import ebf_core.guards.guards as g
+from ebf_core.guards import guards as g
 import pytest
 
 
