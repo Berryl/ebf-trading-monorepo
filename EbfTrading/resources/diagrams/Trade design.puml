@@ -1,0 +1,39 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam linetype ortho
+
+class Trade {
+  tradeId
+}
+
+class TradeLeg {
+  legId
+}
+
+class TransactionEvent {
+  transactionId
+}
+
+' Core relationships
+Trade "1" *-- "1..*" TradeLeg : contains (strategy legs)
+
+Trade "1" o-- "0..*" TransactionEvent : groups (financial history)
+
+TradeLeg "1" --> "0..*" TransactionEvent : references (fills / events for this leg)
+
+note right of Trade
+  The main trading idea / campaign
+  (e.g. one vertical debit spread)
+end note
+
+note bottom of TradeLeg
+  One leg of the strategy
+  (e.g. long call, short call)
+end note
+
+note right of TransactionEvent
+  Immutable money movement
+  (fill, commission, assignment...)
+end note
+@enduml
