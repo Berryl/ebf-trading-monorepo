@@ -2,7 +2,7 @@
 Order type enumeration for trade execution.
 """
 
-from enum import StrEnum
+from enum import StrEnum, auto
 
 
 class OrderType(StrEnum):
@@ -12,7 +12,7 @@ class OrderType(StrEnum):
     Attributes:
         LMT: Limit order - execute at specified price or better
         MKT: Market order - execute at current market price
-        STOP: Stop order - becomes market order when stop price reached
+        STOP_LOSS: Stop order - becomes market order when stop price reached
         STOP_LIMIT: Stop limit - becomes limit order when stop price reached
     
     Usage:
@@ -25,10 +25,10 @@ class OrderType(StrEnum):
         assert market.is_market
         ```
     """
-    LMT = "LMT"
-    MKT = "MKT"
-    STOP = "STOP"
-    STOP_LIMIT = "STOP_LIMIT"
+    LMT = auto()
+    MKT = auto()
+    STOP_LOSS = auto()
+    STOP_LIMIT = auto()
     
     @property
     def is_limit(self) -> bool:
@@ -38,8 +38,14 @@ class OrderType(StrEnum):
     @property
     def is_market(self) -> bool:
         """True if this is a market order (MKT or STOP)."""
-        return self in (OrderType.MKT, OrderType.STOP)
-    
+        return self in (OrderType.MKT, OrderType.STOP_LOSS)
+
+    # Option 1 - Most readable + maintainable (recommended)
     def __str__(self) -> str:
-        """String representation."""
-        return self.value
+        match self:
+            case OrderType.LMT | OrderType.MKT:
+                return self.value  # or self.name if you prefer
+            case OrderType.STOP_LOSS | OrderType.STOP_LIMIT:
+                return self.name.replace("_", " ").title()
+            case _:
+                raise ValueError(f"Unknown order type: {self}")

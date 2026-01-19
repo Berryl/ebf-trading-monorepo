@@ -7,8 +7,8 @@ from datetime import date, datetime
 
 from ebf_core.guards import guards as g
 from ebf_trading.domain.value_objects.ticker import Ticker
-from ebf_trading.domain.value_objects.strike import Strike
-from ebf_trading.domain.value_objects.option_type import OptionType
+from ebf_trading.domain.value_objects.options.strike import Strike
+from ebf_trading.domain.value_objects.options.option_type import OptionType
 
 
 @dataclass(frozen=True)
