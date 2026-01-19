@@ -54,7 +54,7 @@ class ContractQuantity:
         """Developer representation: ContractQuantity(10)"""
         return f"ContractQuantity({self.contracts})"
     
-    # Arithmetic operations
+    # region Arithmetic operations
     def __mul__(self, scalar: int) -> 'ContractQuantity':
         """Multiply contract quantity by a scalar."""
         if not isinstance(scalar, int):
@@ -91,3 +91,4 @@ class ContractQuantity:
         if not isinstance(other, ContractQuantity):
             return NotImplemented
         return self.contracts >= other.contracts
+    # endregion
