@@ -1,3 +1,6 @@
+import pytest
+from ebf_core.guards.guards import ContractError
+
 from ebf_trading.domain.value_objects.options.option_type import OptionType
 
 
@@ -18,3 +21,11 @@ class TestOptionType:
     def test_to_occ_format(self):
         assert OptionType.CALL.to_occ_format() == "C"
         assert OptionType.PUT.to_occ_format() == "P"
+
+    def test_from_occ_format(self):
+        assert OptionType.from_occ_format('c') == OptionType.CALL
+
+    @pytest.mark.parametrize("value", ["", "123", "123456789"])
+    def test_occ_str_must_be_1_char(self, value: str):
+        with pytest.raises(ContractError, match="OCC symbol"):
+            OptionType.from_occ_format(value)
