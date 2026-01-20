@@ -6,8 +6,8 @@ from ebf_trading.domain.value_objects.options.expiration_date import ExpirationD
 KNOWN_WEDNESDAY_WITHOUT_TIME = datetime(2001, 9, 11)
 KNOWN_WEDNESDAY_WITH_OPEX_TIME = datetime(2001, 9, 11, 17,30, tzinfo=ZoneInfo("America/New_York"))
 
-KNOWN_FRIDAY_WITHOUT_TIME = datetime(2001, 9, 13)
-KNOWN_FRIDAY_WITH_OPEX_TIME = datetime(2001, 9, 13, 17,30, tzinfo=ZoneInfo("America/New_York"))
+KNOWN_FRIDAY_WITHOUT_TIME = datetime(2001, 9, 14)
+KNOWN_FRIDAY_WITH_OPEX_TIME = datetime(2001, 9, 14, 17,30, tzinfo=ZoneInfo("America/New_York"))
 
 class TestExpirationDate:
     def test__can_create_with_any_date(self):
@@ -15,7 +15,8 @@ class TestExpirationDate:
         assert sut.when == KNOWN_WEDNESDAY_WITHOUT_TIME
 
     def test_is_opex_friday(self):
-        pass
+        assert ExpirationDate(KNOWN_FRIDAY_WITHOUT_TIME).is_friday() is True
+        assert ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME).is_friday() is False
 
     def test_to_occ_fmt(self):
         sut = ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME)

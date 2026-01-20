@@ -10,3 +10,6 @@ class ExpirationDate:
     def to_occ_fmt(self):
         g.ensure_not_none(self.when, "when")
         return self.when.strftime('%y%m%d')
+
+    def is_friday(self):
+        return self.when.weekday() == 4
