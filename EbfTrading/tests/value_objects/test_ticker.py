@@ -39,3 +39,14 @@ class TestTicker:
         result = Ticker.from_occ_format(raw)
         assert result.ticker == expected
         assert len(result.ticker) == 6
+
+    @pytest.mark.parametrize(("raw", "expected"),[
+                                 ("hog", "HOG   "),
+        ("gold", "GOLD  "),
+        ("fiver", "FIVER "),
+        ("mighty", "MIGHTY"),
+    ])
+    def test_to_occ_str_returns_padded_value(self, raw: str, expected: str):
+        result = Ticker(raw).to_occ_format()
+        assert result == expected
+        assert len(result) == 6

@@ -61,4 +61,7 @@ class Ticker:
         g.ensure_str_max_length(value, 6, "OCC ticker")
         cls.ticker = value.upper().ljust(6)
         return cls
+
+    def to_occ_format(self) -> str:
+        return self.ticker.ljust(6)
 #
