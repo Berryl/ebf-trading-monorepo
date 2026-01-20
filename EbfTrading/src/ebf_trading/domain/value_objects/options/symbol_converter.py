@@ -2,7 +2,7 @@
 Option symbol format converter.
 
 Converts between Option value objects and various symbol formats.
-Currently supports OCC (Option Clearing Corporation) standard format.
+Supports OCC (Option Clearing Corporation) standard format.
 """
 
 from datetime import date
@@ -18,20 +18,20 @@ class OptionSymbolConverter:
     """
     Convert between Option objects and symbol formats.
 
-    Currently supports:
+    Currently, supports:
     - OCC (Option Clearing Corporation) standard format
 
-    Future formats can be added (Tradier, ThinkorSwim, Interactive Brokers, etc.)
+    Future formats can be added (Tradier, TOS, Interactive Brokers, Fidelity, etc.)
 
     Usage:
         ```python
         # Convert Option to OCC symbol
         option = Option(...)
         occ_symbol = OptionSymbolConverter.to_occ(option)
-        # 'IBM   010928P00042500'
+        # 'HOG   010928P00042500'
 
-        # Parse OCC symbol to Option
-        option = OptionSymbolConverter.from_occ('IBM   010928P00042500')
+        # Parse OCC symbol to an Option.
+        option = OptionSymbolConverter.from_occ('HOG010928P00042500')
         ```
     """
 
@@ -54,16 +54,16 @@ class OptionSymbolConverter:
 
         Example:
             ```python
-            # IBM $42.50 Put expiring 9/28/2001
+            # HOG $42.50 Put expiring 9/28/2001
             option = Option(
-                underlying=Ticker('IBM'),
+                underlying=Ticker('HOG'),
                 strike=Strike.from_amount(42.50),
                 option_type=OptionType.PUT,
-                expiration=date(2001, 9, 28)
+                expiration=date (2001, 9, 28)
             )
 
             symbol = OptionSymbolConverter.to_occ(option)
-            assert symbol == 'IBM   010928P00042500'
+            assert symbol == 'HOG010928P00042500'
             ```
         """
         # Underlying (6 chars, right-padded with spaces)
@@ -90,19 +90,19 @@ class OptionSymbolConverter:
         Format: [Ticker-6chars][YYMMDD][C/P][Strike-8digits]
 
         Args:
-            occ_symbol: OCC format string (e.g., 'IBM   010928P00042500')
+            occ_symbol: OCC format string (e.g., 'HOG   010928P00042500')
 
         Returns:
             New Option instance
 
         Raises:
-            ValueError: If symbol format is invalid
+            ValueError: If the symbol format is invalid
 
         Example:
             ```python
-            option = OptionSymbolConverter.from_occ('IBM   010928P00042500')
+            option = OptionSymbolConverter.from_occ('HOG   010928P00042500')
 
-            assert option.underlying.symbol == 'IBM'
+            assert option.underlying.symbol == 'HOG'
             assert option.strike.price.amount == Decimal('42.50')
             assert option.is_put
             assert option.expiration == date(2001, 9, 28)
@@ -134,7 +134,7 @@ class OptionSymbolConverter:
         except (ValueError, IndexError) as e:
             raise ValueError(f"Invalid expiration date in OCC symbol: {exp_str}") from e
 
-        # Validate and convert option type
+        # Validate and convert the option type
         if type_char not in ('C', 'P'):
             raise ValueError(f"Invalid option type in OCC symbol: {type_char} (must be C or P)")
         option_type = OptionType.CALL if type_char == 'C' else OptionType.PUT
