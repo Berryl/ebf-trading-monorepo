@@ -29,3 +29,8 @@ class TestOptionType:
     def test_occ_str_must_be_1_char(self, value: str):
         with pytest.raises(ContractError, match="OCC symbol"):
             OptionType.from_occ_format(value)
+
+    @pytest.mark.parametrize("value", ["x", "5"])
+    def test_occ_str_must_be_c_or_p(self, value: str):
+        with pytest.raises(ValueError, match="must be C or P"):
+            OptionType.from_occ_format(value)
