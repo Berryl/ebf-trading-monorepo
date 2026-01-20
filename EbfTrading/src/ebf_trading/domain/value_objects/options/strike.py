@@ -94,13 +94,13 @@ class Strike:
 
     @classmethod
     def from_occ_format(cls, occ_str: str):
-        g.ensure_str_exact_length(occ_str, 8, "OCC symbol")
+        g.ensure_str_exact_length(occ_str, 8, "OCC ticker")
         try:
             strike_millidollars = int(occ_str)
             strike_amount = Decimal(strike_millidollars) / 1000
             return Strike.from_amount(float(strike_amount))
         except (ValueError, IndexError) as e:
-            raise ValueError(f"Invalid strike price in OCC symbol: {occ_str}") from e
+            raise ValueError(f"Invalid strike price in OCC ticker: {occ_str}") from e
 
 
 

@@ -1,5 +1,5 @@
 """
-Ticker symbol value object.
+Ticker ticker value object.
 """
 
 from dataclasses import dataclass
@@ -15,7 +15,7 @@ class Ticker:
     Ticker symbols are normalized to uppercase and validated for format.
     
     Attributes:
-        symbol: The ticker symbol (e.g., 'IBM', 'HOG', 'SPY')
+        ticker: The ticker symbol (e.g., 'IBM', 'HOG', 'SPY')
     
     Usage:
         ```python
@@ -30,26 +30,26 @@ class Ticker:
         assert Ticker('IBM') == Ticker('ibm')
         ```
     """
-    symbol: str
+    ticker: str
     
     def __post_init__(self):
-        g.ensure_str_is_valued(self.symbol, 'symbol')
-        g.ensure_str_max_length(self.symbol, 10, 'symbol')
+        g.ensure_str_is_valued(self.ticker, 'ticker')
+        g.ensure_str_max_length(self.ticker, 10, 'ticker')
         
         # Normalize to uppercase
-        normalized = self.symbol.upper().strip()
-        object.__setattr__(self, 'symbol', normalized)
+        normalized = self.ticker.upper().strip()
+        object.__setattr__(self, 'ticker', normalized)
         
         # Validate the format (letters only, with optional . or -)
         if not all(c.isalpha() or c in '.-' for c in normalized):
             raise ValueError(
-                f"Ticker symbol '{self.symbol}' must contain only letters, dots, or hyphens"
+                f"Ticker ticker '{self.ticker}' must contain only letters, dots, or hyphens"
             )
     
     def __str__(self) -> str:
         """String representation: 'IBM'"""
-        return self.symbol
+        return self.ticker
     
     def __repr__(self) -> str:
         """Developer representation: Ticker('IBM')"""
-        return f"Ticker('{self.symbol}')"
+        return f"Ticker('{self.ticker}')"

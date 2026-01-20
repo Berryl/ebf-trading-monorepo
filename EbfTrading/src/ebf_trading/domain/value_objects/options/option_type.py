@@ -48,10 +48,10 @@ class OptionType(StrEnum):
 
     @classmethod
     def from_occ_format(cls, occ_str):
-        g.ensure_str_exact_length(occ_str, 1, "OCC symbol")
+        g.ensure_str_exact_length(occ_str, 1, "OCC ticker")
 
         s = occ_str.upper()
         if s not in ('C', 'P'):
-            raise ValueError(f"Invalid option type in OCC symbol: {occ_str} (must be C or P)")
+            raise ValueError(f"Invalid option type in OCC ticker: {occ_str} (must be C or P)")
         return OptionType.CALL if s == 'C' else OptionType.PUT
 

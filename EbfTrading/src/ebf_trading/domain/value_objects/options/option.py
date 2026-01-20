@@ -40,7 +40,7 @@ class Option:
 
         # Check properties
         assert option.is_put
-        assert option.underlying.symbol == 'IBM'
+        assert option.underlying.ticker == 'IBM'
 
         # Display (human-readable)
         print(option) # "IBM $42.50 Put 2001-09-28"
@@ -69,8 +69,8 @@ class Option:
 
     @property
     def ticker_symbol(self) -> str:
-        """Get the underlying ticker symbol as a string."""
-        return self.underlying.symbol
+        """Get the underlying ticker ticker as a string."""
+        return self.underlying.ticker
 
     @property
     def strike_price(self):
@@ -120,9 +120,9 @@ class Option:
             Formatted display string
         """
         option_type_name = "Call" if self.is_call else "Put"
-        return f"{self.underlying.symbol} {self.strike.price} {option_type_name} {self.expiration}"
+        return f"{self.underlying.ticker} {self.strike.price} {option_type_name} {self.expiration}"
 
     def __repr__(self) -> str:
         """Developer representation."""
-        return (f"Option({self.underlying.symbol}, {self.strike.price.amount}, "
+        return (f"Option({self.underlying.ticker}, {self.strike.price.amount}, "
                 f"{self.option_type}, {self.expiration})")

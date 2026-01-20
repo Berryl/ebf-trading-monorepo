@@ -30,7 +30,7 @@ class TestStrike:
 
     @pytest.mark.parametrize("value", ["", "123", "123456789"])
     def test_occ_str_must_be_8_chars(self, value: str):
-        with pytest.raises(ContractError, match="OCC symbol"):
+        with pytest.raises(ContractError, match="OCC ticker"):
             Strike.from_occ_format(value)
 
     @pytest.mark.parametrize("value", ["0004x500"])

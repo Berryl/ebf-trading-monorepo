@@ -1,7 +1,7 @@
 """
-Option symbol format converter.
+Option ticker format converter.
 
-Converts between Option value objects and various symbol formats.
+Converts between Option value objects and various ticker formats.
 Supports OCC (Option Clearing Corporation) standard format.
 """
 
@@ -16,7 +16,7 @@ from ebf_trading.domain.value_objects.options.option_type import OptionType
 
 class OptionSymbolConverter:
     """
-    Convert between Option objects and symbol formats.
+    Convert between Option objects and ticker formats.
 
     Currently, supports:
     - OCC (Option Clearing Corporation) standard format
@@ -25,12 +25,12 @@ class OptionSymbolConverter:
 
     Usage:
         ```python
-        # Convert Option to OCC symbol
+        # Convert Option to OCC ticker
         option = Option(...)
         occ_symbol = OptionSymbolConverter.to_occ(option)
         # 'HOG   010928P00042500'
 
-        # Parse OCC symbol to an Option.
+        # Parse OCC ticker to an Option.
         option = OptionSymbolConverter.from_occ('HOG010928P00042500')
         ```
     """
@@ -38,7 +38,7 @@ class OptionSymbolConverter:
     @staticmethod
     def to_occ(option: Option) -> str:
         """
-        Generate OCC (Option Clearing Corporation) standard option symbol.
+        Generate OCC (Option Clearing Corporation) standard option ticker.
 
         Format: [Ticker-6chars][YYMMDD][C/P][Strike-8digits]
 
@@ -50,7 +50,7 @@ class OptionSymbolConverter:
             option: Option to convert
 
         Returns:
-            OCC symbol string
+            OCC ticker string
 
         Example:
             ```python
@@ -62,12 +62,12 @@ class OptionSymbolConverter:
                 expiration=date (2001, 9, 28)
             )
 
-            symbol = OptionSymbolConverter.to_occ(option)
-            assert symbol == 'HOG010928P00042500'
+            ticker = OptionSymbolConverter.to_occ(option)
+            assert ticker == 'HOG010928P00042500'
             ```
         """
         # Underlying (6 chars, right-padded with spaces)
-        ticker = option.underlying.symbol.ljust(6)
+        ticker = option.underlying.ticker.ljust(6)
 
         # Expiration (YYMMDD)
         exp_str = option.expiration.strftime('%y%m%d')
@@ -85,7 +85,7 @@ class OptionSymbolConverter:
     @staticmethod
     def from_occ(occ_symbol: str) -> Option:
         """
-        Parse an OCC standard option symbol into an Option object.
+        Parse an OCC standard option ticker into an Option object.
 
         Format: [Ticker-6chars][YYMMDD][C/P][Strike-8digits]
 
@@ -96,13 +96,13 @@ class OptionSymbolConverter:
             New Option instance
 
         Raises:
-            ValueError: If the symbol format is invalid
+            ValueError: If the ticker format is invalid
 
         Example:
             ```python
             option = OptionSymbolConverter.from_occ('HOG   010928P00042500')
 
-            assert option.underlying.symbol == 'HOG'
+            assert option.underlying.ticker == 'HOG'
             assert option.strike.price.amount == Decimal('42.50')
             assert option.is_put
             assert option.expiration == date(2001, 9, 28)
@@ -111,7 +111,7 @@ class OptionSymbolConverter:
         # Validate length
         if len(occ_symbol) != 21:
             raise ValueError(
-                f"OCC symbol must be exactly 21 characters (got {len(occ_symbol)})"
+                f"OCC ticker must be exactly 21 characters (got {len(occ_symbol)})"
             )
 
         # Parse components
@@ -122,7 +122,7 @@ class OptionSymbolConverter:
 
         # Validate and convert ticker
         if not ticker_str:
-            raise ValueError("Ticker portion of OCC symbol cannot be empty")
+            raise ValueError("Ticker portion of OCC ticker cannot be empty")
         ticker = Ticker(ticker_str)
 
         # Validate and convert expiration date
@@ -132,11 +132,11 @@ class OptionSymbolConverter:
             day = int(exp_str[4:6])
             expiration = date(year, month, day)
         except (ValueError, IndexError) as e:
-            raise ValueError(f"Invalid expiration date in OCC symbol: {exp_str}") from e
+            raise ValueError(f"Invalid expiration date in OCC ticker: {exp_str}") from e
 
         # Validate and convert the option type
         if type_char not in ('C', 'P'):
-            raise ValueError(f"Invalid option type in OCC symbol: {type_char} (must be C or P)")
+            raise ValueError(f"Invalid option type in OCC ticker: {type_char} (must be C or P)")
         option_type = OptionType.CALL if type_char == 'C' else OptionType.PUT
 
         # Validate and convert strike price
@@ -145,7 +145,7 @@ class OptionSymbolConverter:
             strike_amount = Decimal(strike_millidollars) / 1000
             strike = Strike.from_amount(float(strike_amount))
         except (ValueError, IndexError) as e:
-            raise ValueError(f"Invalid strike price in OCC symbol: {strike_str}") from e
+            raise ValueError(f"Invalid strike price in OCC ticker: {strike_str}") from e
 
         return Option(
             underlying=ticker,
