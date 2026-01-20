@@ -94,7 +94,7 @@ class Strike:
 
     @classmethod
     def from_occ_format(cls, occ_str: str):
-        g.ensure_str_exact_length(occ_str, 8, "occ_str")
+        g.ensure_str_exact_length(occ_str, 8, "OCC symbol")
         try:
             strike_millidollars = int(occ_str)
             strike_amount = Decimal(strike_millidollars) / 1000
