@@ -33,6 +33,7 @@ class TestTicker:
                                  ("hog", "HOG   "),
         ("gold", "GOLD  "),
         ("fiver", "FIVER "),
+        ("mighty", "MIGHTY"),
     ])
     def test_from_occ_str_returns_padded_value(self, raw: str, expected: str):
         result = Ticker.from_occ_format(raw)
