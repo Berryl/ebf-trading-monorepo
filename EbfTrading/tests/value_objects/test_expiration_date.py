@@ -10,7 +10,12 @@ KNOWN_FRIDAY_WITHOUT_TIME = datetime(2001, 9, 14)
 KNOWN_FRIDAY_WITH_OPEX_TIME = datetime(2001, 9, 14, 17,30, tzinfo=ZoneInfo("America/New_York"))
 
 class TestExpirationDate:
-    def test__can_create_with_any_date(self):
+    def test_can_apply_opex_time_to_any_date(self):
+        sut = ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME)
+        result = sut.apply_opex_time_to(KNOWN_WEDNESDAY_WITH_OPEX_TIME)
+        assert result == KNOWN_WEDNESDAY_WITH_OPEX_TIME
+
+    def test_can_create_with_any_date(self):
         sut = ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME)
         assert sut.when == KNOWN_WEDNESDAY_WITHOUT_TIME
 

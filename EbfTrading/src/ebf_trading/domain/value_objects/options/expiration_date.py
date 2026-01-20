@@ -12,6 +12,11 @@ class ExpirationDate:
     opex_time: time = field(default_factory=lambda: time(17, 30))
     opex_tz: ZoneInfo = field(default_factory=lambda: ZoneInfo("America/New_York"))
 
+    def apply_opex_time_to(self, date: datetime) -> datetime:
+        return date.replace(
+            hour=self.opex_time.hour,
+            minute=self.opex_time.minute,
+            tzinfo=self.opex_tz)
 
     def to_occ_fmt(self):
         g.ensure_not_none(self.when, "when")
