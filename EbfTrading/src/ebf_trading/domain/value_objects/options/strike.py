@@ -38,7 +38,7 @@ class Strike:
     price: Money
     
     def __post_init__(self):
-        g.ensure_positive_number(self.price.amount, description="Strike price")
+        g.ensure_positive_number(self.price.amount_cents, description="Strike price")
 
     @classmethod
     def from_amount(cls, amount: float | int, currency=USD) -> Self:
