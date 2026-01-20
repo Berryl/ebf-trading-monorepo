@@ -22,3 +22,14 @@ class TestTicker:
     def test_ticker_must_be_valued(self, value: str):
         with pytest.raises(ContractError, match="cannot be an empty string"):
             Ticker(value)
+
+
+    @pytest.mark.parametrize("value", ["123456789"])
+    def test_occ_str_must_be_max_6_chars(self, value: str):
+        with pytest.raises(ContractError, match="OCC ticker"):
+            Ticker.from_occ_format(value)
+    #
+    # @pytest.mark.parametrize("value", ["0004x500"])
+    # def test_occ_str_must_be_digits(self, value: str):
+    #     with pytest.raises(ValueError, match=value):
+    #         Strike.from_occ_format(value)

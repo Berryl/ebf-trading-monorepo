@@ -53,3 +53,8 @@ class Ticker:
     def __repr__(self) -> str:
         """Developer representation: Ticker('IBM')"""
         return f"Ticker('{self.ticker}')"
+
+    @classmethod
+    def from_occ_format(cls, value):
+        g.ensure_str_is_valued(value,"OCC ticker")
+        g.ensure_str_max_length(value, 6, "OCC ticker")
