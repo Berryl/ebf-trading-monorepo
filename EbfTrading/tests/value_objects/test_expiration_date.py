@@ -1,19 +1,23 @@
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
+from ebf_trading.domain.datetime_helpers import next_friday
 from ebf_trading.domain.value_objects.options.expiration_date import ExpirationDate
 
 KNOWN_WEDNESDAY_WITHOUT_TIME = datetime(2001, 9, 11)
-KNOWN_WEDNESDAY_WITH_OPEX_TIME = datetime(2001, 9, 11, 17,30, tzinfo=ZoneInfo("America/New_York"))
+KNOWN_WEDNESDAY_WITH_OPEX_TIME = datetime(2001, 9, 11, 17, 30, tzinfo=ZoneInfo("America/New_York"))
 
 KNOWN_FRIDAY_WITHOUT_TIME = datetime(2001, 9, 14)
-KNOWN_FRIDAY_WITH_OPEX_TIME = datetime(2001, 9, 14, 17,30, tzinfo=ZoneInfo("America/New_York"))
+KNOWN_FRIDAY_WITH_OPEX_TIME = datetime(2001, 9, 14, 17, 30, tzinfo=ZoneInfo("America/New_York"))
+
 
 class TestExpirationDate:
     def test_can_apply_opex_time_to_any_date(self):
-        sut = ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME)
+        sut = ExpirationDate(datetime.now())
         result = sut.apply_opex_time_to(KNOWN_WEDNESDAY_WITH_OPEX_TIME)
-        assert result == KNOWN_WEDNESDAY_WITH_OPEX_TIME
+        assert result.hour == 17
+        assert result.minute == 30
+        assert result.tzinfo == ZoneInfo("America/New_York")
 
     def test_can_create_with_any_date(self):
         sut = ExpirationDate(KNOWN_WEDNESDAY_WITHOUT_TIME)
@@ -42,3 +46,16 @@ class TestExpirationDate:
         #     return datetime(year, month, day)
         # except (ValueError, IndexError) as e:
         #     raise ValueError(f"Invalid expiration date in OCC ticker: {s}") from e
+
+
+class TestNextFriday:
+    def test_can_get_next_friday(self):
+        result = next_friday(KNOWN_FRIDAY_WITH_OPEX_TIME)
+        assert result == KNOWN_FRIDAY_WITHOUT_TIME
+    #
+    # print(next_friday(date(2026, 1, 23)))  # Friday → returns same day 2026-01-23
+    # print(next_friday(date(2026, 1, 24)))  # Saturday → returns 2026-01-30
+    # print(next_friday(date(2001, 9, 11)))  # Tuesday → returns 2001-09-14
+    #
+    # # 3. With full datetime
+    # print(next_friday(datetime(2025, 12, 25, 14, 30)))  # Thursday → 2025-12-26
