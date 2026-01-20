@@ -62,10 +62,3 @@ class TestNextFriday:
     def test_when_no_arg(self):
         result = next_friday()
         assert result.weekday() == 4
-#
-    # print(next_friday(date(2026, 1, 23)))  # Friday → returns same day 2026-01-23
-    # print(next_friday(date(2026, 1, 24)))  # Saturday → returns 2026-01-30
-    # print(next_friday(date(2001, 9, 11)))  # Tuesday → returns 2001-09-14
-    #
-    # # 3. With full datetime
-    # print(next_friday(datetime(2025, 12, 25, 14, 30)))  # Thursday → 2025-12-26

@@ -1,5 +1,13 @@
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 from typing import Union, Optional
+from zoneinfo import ZoneInfo
+
+OPEX_TIME_ET_NAIVE = time(16, 0)                           # 4:00 PM – use this most often
+OPEX_TZ = ZoneInfo("America/New_York")
+
+def opex_time()-> time:
+    ## 4 PM
+    return time(16, 0, tzinfo=ZoneInfo("America/New_York"))
 
 def next_friday(from_date: Optional[Union[date, datetime]] = None) -> datetime:
     """
