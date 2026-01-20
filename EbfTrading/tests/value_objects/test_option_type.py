@@ -10,3 +10,11 @@ class TestOptionType:
     def test_is_put(self):
         assert not OptionType.CALL.is_put
         assert OptionType.PUT.is_put
+
+    def test_str(self):
+        assert str(OptionType.CALL) == "call"
+        assert str(OptionType.PUT) == "put"
+
+    def test_to_occ_format(self):
+        assert OptionType.CALL.to_occ_format() == "C"
+        assert OptionType.PUT.to_occ_format() == "P"

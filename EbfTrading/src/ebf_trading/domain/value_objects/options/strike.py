@@ -86,7 +86,7 @@ class Strike:
         g.ensure_type(other, Strike, description="Comparison with other Strike")
         return self.price >= other.price
 
-    def to_occ_format(self):
+    def to_occ_format(self) -> str:
         # Strike (8 digits: whole dollars + cents, e.g., 00042500 for $42.50)
         # Multiply by 1000 to get millidollars, then format as 8 digits
         strike_millidollars = int(self.price.amount * 1000)

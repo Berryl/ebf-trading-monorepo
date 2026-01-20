@@ -41,3 +41,6 @@ class OptionType(StrEnum):
     def __str__(self) -> str:
         """String representation."""
         return self.value
+
+    def to_occ_format(self) -> str:
+         return self.__str__()[0].upper()
