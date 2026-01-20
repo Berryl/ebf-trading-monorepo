@@ -34,27 +34,3 @@ def from_underlying_str(s: str, fnt: OptionFormat = OptionFormat.OCC) -> str:
             raise ValueError(f"Unknown format: {fnt}")
 
     return s.strip().upper()
-
-
-def to_expiration_str(o: Option, fnt: OptionFormat = OptionFormat.OCC) -> str:
-    # Expiration (YYMMDD)
-    match fnt:
-        case OptionFormat.OCC | OptionFormat.OCC_SANS_PADDING:
-            return o.expiration.strftime('%y%m%d')
-        case _:
-            raise ValueError(f"Unknown format: {fnt}")
-
-
-def from_expiration(s: str, fnt: OptionFormat = OptionFormat.OCC) -> datetime:
-    match fnt:
-        case OptionFormat.OCC | OptionFormat.OCC_SANS_PADDING:
-            g.ensure_str_exact_length(s, 6, "expiration date")
-        case _:
-            raise ValueError(f"Unknown format: {fnt}")
-    try:
-        year = int(s[0:2]) + 2000  # YY -> YYYY
-        month = int(s[2:4])
-        day = int(s[4:6])
-        return datetime(year, month, day)
-    except (ValueError, IndexError) as e:
-        raise ValueError(f"Invalid expiration date in OCC ticker: {s}") from e
