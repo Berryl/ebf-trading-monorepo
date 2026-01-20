@@ -49,10 +49,20 @@ class TestExpirationDate:
 
 
 class TestNextFriday:
-    def test_can_get_next_friday(self):
-        result = next_friday(KNOWN_FRIDAY_WITH_OPEX_TIME)
+
+    def test_can_get_next_friday_from_past_date(self):
+        result = next_friday(KNOWN_WEDNESDAY_WITHOUT_TIME)
+        assert result.weekday() == 4
+
+    def test_if_friday_is_passed_then_same_friday_is_return(self):
+        result = next_friday(KNOWN_FRIDAY_WITHOUT_TIME)
         assert result == KNOWN_FRIDAY_WITHOUT_TIME
-    #
+        assert result.weekday() == 4
+
+    def test_when_no_arg(self):
+        result = next_friday()
+        assert result.weekday() == 4
+#
     # print(next_friday(date(2026, 1, 23)))  # Friday → returns same day 2026-01-23
     # print(next_friday(date(2026, 1, 24)))  # Saturday → returns 2026-01-30
     # print(next_friday(date(2001, 9, 11)))  # Tuesday → returns 2001-09-14
