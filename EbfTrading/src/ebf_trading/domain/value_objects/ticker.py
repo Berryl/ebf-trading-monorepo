@@ -3,6 +3,7 @@ Ticker ticker value object.
 """
 
 from dataclasses import dataclass
+from typing import Self
 
 from ebf_core.guards import guards as g
 
@@ -31,7 +32,7 @@ class Ticker:
         ```
     """
     ticker: str
-    
+
     def __post_init__(self):
         g.ensure_str_is_valued(self.ticker, 'ticker')
         g.ensure_str_max_length(self.ticker, 10, 'ticker')
@@ -55,6 +56,9 @@ class Ticker:
         return f"Ticker('{self.ticker}')"
 
     @classmethod
-    def from_occ_format(cls, value):
+    def from_occ_format(cls, value: str) -> Self:
         g.ensure_str_is_valued(value,"OCC ticker")
         g.ensure_str_max_length(value, 6, "OCC ticker")
+        cls.ticker = value.upper().ljust(6)
+        return cls
+#

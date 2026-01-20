@@ -93,7 +93,7 @@ class Strike:
         return f"{strike_millidollars:08d}"
 
     @classmethod
-    def from_occ_format(cls, occ_str: str):
+    def from_occ_format(cls, occ_str: str) -> Self:
         g.ensure_str_exact_length(occ_str, 8, "OCC ticker")
         try:
             strike_millidollars = int(occ_str)

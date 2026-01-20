@@ -28,8 +28,13 @@ class TestTicker:
     def test_occ_str_must_be_max_6_chars(self, value: str):
         with pytest.raises(ContractError, match="OCC ticker"):
             Ticker.from_occ_format(value)
-    #
-    # @pytest.mark.parametrize("value", ["0004x500"])
-    # def test_occ_str_must_be_digits(self, value: str):
-    #     with pytest.raises(ValueError, match=value):
-    #         Strike.from_occ_format(value)
+
+    @pytest.mark.parametrize(("raw", "expected"),[
+                                 ("hog", "HOG   "),
+        ("gold", "GOLD  "),
+        ("fiver", "FIVER "),
+    ])
+    def test_from_occ_str_returns_padded_value(self, raw: str, expected: str):
+        result = Ticker.from_occ_format(raw)
+        assert result.ticker == expected
+        assert len(result.ticker) == 6
