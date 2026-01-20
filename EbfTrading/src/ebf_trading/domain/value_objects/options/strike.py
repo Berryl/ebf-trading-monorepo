@@ -3,6 +3,7 @@ Strike price value object.
 """
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Self
 
 from ebf_domain.money.money import Money
@@ -90,3 +91,16 @@ class Strike:
         # Multiply by 1000 to get millidollars, then format as 8 digits
         strike_millidollars = int(self.price.amount * 1000)
         return f"{strike_millidollars:08d}"
+
+    @classmethod
+    def from_occ_format(cls, occ_str: str):
+        g.ensure_str_exact_length(occ_str, 8, "occ_str")
+        try:
+            strike_millidollars = int(occ_str)
+            strike_amount = Decimal(strike_millidollars) / 1000
+            return Strike.from_amount(float(strike_amount))
+        except (ValueError, IndexError) as e:
+            raise ValueError(f"Invalid strike price in OCC symbol: {occ_str}") from e
+
+
+

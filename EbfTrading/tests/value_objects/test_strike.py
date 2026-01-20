@@ -23,3 +23,12 @@ class TestStrike:
     def test_to_occ_format(self):
         strike = Strike.from_amount(42.50)
         assert strike.to_occ_format() == "00042500"
+
+    @pytest.mark.parametrize("value", ["", "123", "123456789"])
+    def test_occ_str_must_be_8_chars(self, value: str):
+        with pytest.raises(ContractError, match="Strike price"):
+            Strike(Money.mint(-10, USD))
+
+    def test_from_occ_format(self):
+        strike = Strike.from_occ_format("00042500")
+        assert strike.price == Money.mint(42.50, USD)
