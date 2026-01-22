@@ -1,0 +1,14 @@
+# ruff.toml (stand-alone)
+line-length = 120
+target-version = "py39"
+fix = true
+
+[lint]
+select = ["E", "F", "I", "UP"]  # pycodestyle, pyflakes, isort, pyupgrade
+ignore = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

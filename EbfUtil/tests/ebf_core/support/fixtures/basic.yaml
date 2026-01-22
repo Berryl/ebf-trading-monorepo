@@ -1,0 +1,12 @@
+# basic app config
+app: myapp
+theme: light
+paths:
+  data: /var/app/data
+  log: /var/app/log
+features:
+  - launcher
+  - telemetry
+limits:
+  retries: 3
+  timeout_sec: 10

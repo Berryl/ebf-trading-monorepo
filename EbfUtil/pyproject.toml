@@ -1,0 +1,36 @@
+[build-system]
+requires = ["uv_build>=0.4,<1"]
+build-backend = "uv_build"
+
+[project]
+name = "ebf-core"
+version = "0.2.1"
+description = "EBF utilities package (fileutil, guards, etc)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "EBF" }]
+license = { text = "SPDX" }
+
+dependencies = [
+    "typeguard>=4.0.0",
+    "pyyaml>=6.0",
+    "inflect>=7.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "types-PyYAML",
+    "build>=1.0",
+    "twine>=5.0",
+]
+
+# Optional: if you want to configure pytest via pyproject.toml (already had ini_options)
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
